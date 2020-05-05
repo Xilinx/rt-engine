@@ -1,4 +1,4 @@
-Simple & fast runtime engine for Vitis accelerators
+Minimal & fast runtime engine for Vitis accelerators
 
 ```
 runner/src

@@ -17,14 +17,14 @@ INC_DIRS := $(shell find $(SRC_DIRS) -type d)
 INC_FLAGS := $(addprefix -I,$(INC_DIRS))
 
 VART_INCLUDES := -I $(VART_PATH)/runner/include
-CPPFLAGS ?= $(INC_FLAGS) $(VART_INCLUDES) -Wall -Wextra -std=c++11 -O3 -L$(BUILD_DIR)
+CPPFLAGS ?= $(INC_FLAGS) $(VART_INCLUDES) -Wall -Wextra -std=c++11 -O3 -L$(BUILD_DIR) 
 
 .PHONY: all
 all: $(BUILD_DIR)/$(TARGET_LIB) $(TEST_BINS)
 
 $(BUILD_DIR)/tests/%.exe: tests/%/*.cpp
 	$(MKDIR_P) $(dir $@)
-	$(CXX) $(CPPFLAGS) -o $@ $(dir $<)*.cpp -lengine
+	$(CXX) $(CPPFLAGS) -o $@ $(dir $<)*.cpp -lengine -lpthread
 
 $(BUILD_DIR)/$(TARGET_LIB): $(OBJS)
 	$(CXX) -fPIC -shared -o $@ $^
