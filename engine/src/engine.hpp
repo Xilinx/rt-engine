@@ -1,5 +1,7 @@
 #pragma once
 
+#include <functional>
+
 class Engine final {
   public:
     static const Engine &get_instance() {
@@ -7,8 +9,8 @@ class Engine final {
       return instance;
     }
     
-    void submit(int id);
-    void wait(int id);
+    void submit(int id, std::function<void()> func) const;
+    void wait(int id) const;
 
   private:
     Engine();

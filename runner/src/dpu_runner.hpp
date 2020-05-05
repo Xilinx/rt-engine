@@ -18,8 +18,8 @@ class DpuRunner: public vart::Runner {
     DpuRunner& operator=(const DpuRunner& other) = delete;
 
     virtual std::pair<uint32_t, int> execute_async(
-      const std::vector<vart::TensorBuffer*>& input,
-      const std::vector<vart::TensorBuffer*>& output) override;
+      const std::vector<vart::TensorBuffer*>& inputs,
+      const std::vector<vart::TensorBuffer*>& outputs) override;
     virtual int wait(int jobid, int timeout) override;
     virtual std::vector<const xir::Tensor*> get_input_tensors() override; 
     virtual std::vector<const xir::Tensor*> get_output_tensors() override; 

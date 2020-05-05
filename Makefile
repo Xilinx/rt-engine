@@ -24,7 +24,7 @@ all: $(BUILD_DIR)/$(TARGET_LIB) $(TEST_BINS)
 
 $(BUILD_DIR)/tests/%.exe: tests/%/*.cpp
 	$(MKDIR_P) $(dir $@)
-	$(CXX) $(CPPFLAGS) -lengine -o $@ $(dir $<)*.cpp
+	$(CXX) $(CPPFLAGS) -o $@ $(dir $<)*.cpp -lengine
 
 $(BUILD_DIR)/$(TARGET_LIB): $(OBJS)
 	$(CXX) -fPIC -shared -o $@ $^

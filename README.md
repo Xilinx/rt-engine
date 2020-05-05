@@ -26,14 +26,15 @@ engine/src
         exec()                   Calls DpuController.run()
         download()               Calls DeviceTransferManager.download()
     
-test/
-  app.cpp                        Vitis API Resnet example, creates DpuRunner
-    DpuRunner()
-    DpuRunner.execute_async()
-    DpuRunner.wait()
+tests/
+  app/
+    app.cpp                      Vitis API Resnet example, creates DpuRunner
+      DpuRunner()
+      DpuRunner.execute_async()
+      DpuRunner.wait()
  
-  model/
-    meta.json
-    model.data
-    dpu.xclbin
+    model/
+      meta.json
+      model.data
+      dpu.xclbin
 ```
