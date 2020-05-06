@@ -45,6 +45,31 @@ tests/
       dpu.xclbin
 ```
 
+EXAMPLE
+
+```
+http://xcdl190260/aaronn/rt-engine/blob/master/runner/src/dpu_runner.cpp:
+
+std::pair<uint32_t, int> DpuRunner::execute_async(
+  const std::vector<vart::TensorBuffer*>& inputs,
+  const std::vector<vart::TensorBuffer*>& outputs) {
+  Engine& engine = Engine::get_instance();
+  auto job_id = engine.submit([&inputs, &outputs] {
+    prepare_and_upload(inputs);
+    dpu_controller.run();
+    download_and_post_process(outputs)
+  });
+  return std::pair<uint32_t, int>(job_id, 0);
+}
+
+int DpuRunner::wait(int jobid, int timeout) {
+  Engine& engine = Engine::get_instance();
+  engine.wait(jobid);
+
+  return 0;
+}
+```
+
 BUILD
 
 make clean; make
