@@ -2,7 +2,6 @@
 
 #include <condition_variable>
 #include <functional>
-#include <unordered_map>
 #include <mutex>
 #include <thread>
 #include <vector>
