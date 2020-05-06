@@ -44,3 +44,13 @@ tests/
       model.data
       dpu.xclbin
 ```
+
+BUILD
+
+make clean; make
+
+
+RUN
+
+LD_LIBRARY_PATH=build build/tests/engine.exe
+LD_LIBRARY_PATH=build build/tests/app.exe
