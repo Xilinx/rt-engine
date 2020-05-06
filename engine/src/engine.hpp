@@ -8,11 +8,6 @@
 #include <vector>
 #include "blockingconcurrentqueue.hpp"
 
-class EngineTask {
-  public:
-    virtual void operator()(void) {};
-};
-
 class EngineThreadPool {
   public: 
     enum TaskState { NEW, RUNNING, DONE };
@@ -20,18 +15,17 @@ class EngineThreadPool {
     EngineThreadPool();
     ~EngineThreadPool();
 
-    uint32_t enqueue(EngineTask *t);
+    uint32_t enqueue(std::function<void()> task);
     void wait(uint32_t id);
 
   private:
     void run();
     std::mutex status_mtx_;
-    std::condition_variable cvar_;
-    moodycamel::BlockingConcurrentQueue<std::pair<int, EngineTask*> > taskq_;
+    std::condition_variable status_cvar_;
+    moodycamel::BlockingConcurrentQueue<std::pair<int, std::function<void()> > > taskq_;
     moodycamel::BlockingConcurrentQueue<uint32_t> task_ids_;
     std::vector<int> task_status_; // ID -> status
-    bool terminate_;
-
+    std::atomic<bool> terminate_;
     std::vector<std::thread> threads_;
 };
 
@@ -42,7 +36,7 @@ class Engine {
       return instance;
     }
     
-    uint32_t submit(EngineTask *t);
+    uint32_t submit(std::function<void()> task);
     void wait(uint32_t id);
 
   private:
@@ -55,4 +49,3 @@ class Engine {
 
     EngineThreadPool tpool_;
 };
-

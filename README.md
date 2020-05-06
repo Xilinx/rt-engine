@@ -1,4 +1,4 @@
-Minimal & fast runtime engine for Vitis accelerators
+Minimal & fast runtime engine for Vitis accelerators. Capable of servicing > 300K QPS.
 
 ```
 runner/src

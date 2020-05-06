@@ -15,27 +15,14 @@ std::vector<const xir::Tensor*> DpuRunner::get_output_tensors() {
   return std::vector<const xir::Tensor*>();
 }
 
-class DpuTask : public EngineTask {
-  public:
-    DpuTask(
-      const std::vector<vart::TensorBuffer*>& inputs,
-      const std::vector<vart::TensorBuffer*>& outputs) 
-      : inputs_(inputs), outputs_(outputs) { }
-    virtual void operator()(void) {
-      std::cout << "Hello!" << std::endl;
-      std::cout << inputs_.size() << " " << outputs_.size() << std::endl;
-    }
-
-  private:
-    const std::vector<vart::TensorBuffer*>& inputs_;
-    const std::vector<vart::TensorBuffer*>& outputs_;
-};
-
 std::pair<uint32_t, int> DpuRunner::execute_async(
   const std::vector<vart::TensorBuffer*>& inputs,
   const std::vector<vart::TensorBuffer*>& outputs) {
   Engine& engine = Engine::get_instance();
-  auto job_id = engine.submit(new DpuTask(inputs, outputs));
+  auto job_id = engine.submit([&inputs, &outputs] {
+    std::cout << "Hello!" << std::endl;
+    std::cout << inputs.size() << " " << outputs.size() << std::endl;
+  });
   return std::pair<uint32_t, int>(job_id, 0);
 }
 
