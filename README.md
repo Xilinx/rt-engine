@@ -50,7 +50,7 @@ tests/
 ### Example
 
 ```
-http://xcdl190260/aaronn/rt-engine/blob/master/runner/src/dpu_runner.cpp:
+runner/src/dpu_runner.cpp:
 
 std::pair<uint32_t, int> DpuRunner::execute_async(
   const std::vector<vart::TensorBuffer*>& inputs,
