@@ -59,7 +59,7 @@ std::pair<uint32_t, int> DpuRunner::execute_async(
   auto job_id = engine.submit([&inputs, &outputs] {
     prepare_and_upload(inputs);
     dpu_controller.run();
-    download_and_post_process(outputs)
+    download_and_post_process(outputs);
   });
   return std::pair<uint32_t, int>(job_id, 0);
 }
