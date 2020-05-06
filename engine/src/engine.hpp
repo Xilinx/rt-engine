@@ -6,37 +6,43 @@
 #include <mutex>
 #include <thread>
 #include <vector>
-#include <queue>
+#include "blockingconcurrentqueue.hpp"
 
-class EngineThreadPool final {
+class EngineTask {
+  public:
+    virtual void operator()(void) {};
+};
+
+class EngineThreadPool {
   public: 
     enum TaskState { NEW, RUNNING, DONE };
 
     EngineThreadPool();
     ~EngineThreadPool();
 
-    void enqueue(uint32_t id, std::function<void()> func);
+    uint32_t enqueue(EngineTask *t);
     void wait(uint32_t id);
 
   private:
     void run();
-    std::mutex mtx_;
+    std::mutex status_mtx_;
     std::condition_variable cvar_;
-    std::queue<std::pair<int, std::function<void()> > > taskq_;
-    std::unordered_map<uint32_t, int> tasks_; // { ID -> status }
+    moodycamel::BlockingConcurrentQueue<std::pair<int, EngineTask*> > taskq_;
+    moodycamel::BlockingConcurrentQueue<uint32_t> task_ids_;
+    std::vector<int> task_status_; // ID -> status
     bool terminate_;
 
     std::vector<std::thread> threads_;
 };
 
-class Engine final {
+class Engine {
   public:
     static Engine &get_instance() {
       static Engine instance; // magic static is thread-safe in C++11
       return instance;
     }
     
-    void submit(uint32_t id, std::function<void()> func);
+    uint32_t submit(EngineTask *t);
     void wait(uint32_t id);
 
   private:

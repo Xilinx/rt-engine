@@ -6,67 +6,60 @@
  */
 
 EngineThreadPool::EngineThreadPool() : terminate_(false) {
+  const unsigned maxConcurrentTasks = 1000;
+  task_status_.resize(maxConcurrentTasks, EngineThreadPool::DONE);
+  for (uint32_t i=0; i < maxConcurrentTasks; i++)
+    task_ids_.enqueue(i);
+  
   for (int i=0; i < 128; i++)
     threads_.emplace_back(std::thread([this]{run();}));
 }
 
 EngineThreadPool::~EngineThreadPool() {
-  {
-    std::unique_lock<std::mutex> lock(mtx_);
-    terminate_ = true;
-    cvar_.notify_all();
-  }
-   
+  terminate_ = true;
   for (unsigned i=0; i < threads_.size(); i++)
     threads_[i].join();
 }
 
-void EngineThreadPool::enqueue(uint32_t id, std::function<void()> func) {
-  std::unique_lock<std::mutex> lock(mtx_);
-
-  if (tasks_.find(id) != tasks_.end())
-    throw; // this ID is already in use
-
-  taskq_.push(std::make_pair(id, func));
-  tasks_[id] = EngineThreadPool::NEW;
-  cvar_.notify_all();
+uint32_t EngineThreadPool::enqueue(EngineTask *task) {
+  uint32_t id;
+  task_ids_.wait_dequeue(id);
+  task_status_[id] = EngineThreadPool::NEW;
+  taskq_.enqueue(std::make_pair(id, task));
+  return id;
 }
 
 void EngineThreadPool::wait(uint32_t id) {
-  std::unique_lock<std::mutex> lock(mtx_);
-  if (tasks_.find(id) == tasks_.end())
-    throw; // unknown ID
-
-  while (tasks_[id] != EngineThreadPool::DONE)
-    cvar_.wait(lock);
-
-  tasks_.erase(id);
+  {
+    std::unique_lock<std::mutex> lock(status_mtx_);
+    while (task_status_[id] != EngineThreadPool::DONE)
+      cvar_.wait(lock);
+  }
+  task_ids_.enqueue(id);
 }
 
 void EngineThreadPool::run() {
   while (1) {
     // get new task
-    std::pair<int, std::function<void()> > task;
+    std::pair<int, EngineTask*> task;
+    bool found = taskq_.wait_dequeue_timed(task, std::chrono::milliseconds(5));
+    if (!found)
     {
-      std::unique_lock<std::mutex> lock(mtx_);
-      while (taskq_.empty() && !terminate_)
-        cvar_.wait(lock);
-
       if (terminate_)
         break;
-
-      task = taskq_.front();
-      taskq_.pop();
-      tasks_[task.first] = EngineThreadPool::RUNNING;
+      else
+        continue;
     }
 
+    task_status_[task.first] = EngineThreadPool::RUNNING;
+
     // run task
-    task.second();
+    (*task.second)();
 
     // report task done
     {
-      std::unique_lock<std::mutex> lock(mtx_);
-      tasks_[task.first] = EngineThreadPool::DONE;
+      std::unique_lock<std::mutex> lock(status_mtx_);
+      task_status_[task.first] = EngineThreadPool::DONE;
       cvar_.notify_all();
     }
   }
@@ -83,11 +76,10 @@ Engine::Engine() {
 Engine::~Engine() {
 }
 
-void Engine::submit(uint32_t id, std::function<void()> func) {
-  tpool_.enqueue(id, func);      
+uint32_t Engine::submit(EngineTask *task) {
+  return tpool_.enqueue(task);
 }
 
 void Engine::wait(uint32_t id) {
   tpool_.wait(id);
 }
-

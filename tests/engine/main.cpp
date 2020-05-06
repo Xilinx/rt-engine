@@ -2,6 +2,7 @@
 
 #include <iostream>
 #include <chrono>
+#include <vector>
 #include <vart/runner.hpp> 
 #include "engine.hpp"
 
@@ -9,18 +10,20 @@ int main() {
   Engine& engine = Engine::get_instance();
   int numQueries = 100000;
   auto t1 = std::chrono::high_resolution_clock::now();
+  EngineTask t;
+
+  std::vector<uint32_t> ids;
+  unsigned doneIdx = 0;
+
   for (int i=0; i < numQueries; i++)
   {
-    //const std::vector<vart::TensorBuffer*> inputs;
-    //const std::vector<vart::TensorBuffer*> outputs;
-
-    //engine.submit(i, [&inputs, &outputs]{ 
-    //  inputs.size();
-    //  outputs.size();
-    //});
-    
-    engine.submit(i, []{});
+    ids.emplace_back(engine.submit(&t));
+    if (ids.size() >= 500)
+      engine.wait(ids[doneIdx++]);
   }
+  for (; doneIdx < ids.size(); doneIdx++)
+    engine.wait(ids[doneIdx]);
+
   auto t2 = std::chrono::high_resolution_clock::now();
   std::chrono::duration<double> elapsed = t2-t1;
   std::cout << "Elapsed: " << elapsed.count() << std::endl;
