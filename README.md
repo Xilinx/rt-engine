@@ -1,5 +1,7 @@
 Minimal & fast runtime engine for Vitis accelerators. Capable of servicing > 300K QPS.
 
+### Overview
+
 ```
 runner/src
   dpu_runner.cpp                 Implementation of Vitis API DpuRunner
@@ -45,7 +47,7 @@ tests/
       dpu.xclbin
 ```
 
-EXAMPLE
+### Example
 
 ```
 http://xcdl190260/aaronn/rt-engine/blob/master/runner/src/dpu_runner.cpp:
@@ -70,12 +72,12 @@ int DpuRunner::wait(int jobid, int timeout) {
 }
 ```
 
-BUILD
+### Build
 
 make clean; make
 
 
-RUN
+### Run
 
 LD_LIBRARY_PATH=build build/tests/engine.exe
 LD_LIBRARY_PATH=build build/tests/app.exe
