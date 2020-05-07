@@ -1,4 +1,4 @@
-Minimal & fast runtime engine for Vitis accelerators. Capable of servicing > 300K QPS.
+Minimal & fast runtime engine for Vitis accelerators. Capable of servicing > 800K QPS.
 
 ### Overview
 
@@ -8,32 +8,34 @@ runner/src
                                  Initialize DpuController from meta.json or XIR
     execute_async()             
       lambda_func:               Lambda function submitted to engine Q, get job_id
-        upload()                 Call DeviceTransferManager.upload()
-        exec()                   Call DpuController.run()
-        download()               Call DeviceTransferManager.download()
+        upload()                 Call DpuController.upload()
+        run()                    Call DpuController.run()
+        download()               Call DpuController.download()
     wait()                       Wait for engine to complete job_id
 
 device/src
-  transfer_manager.cpp           Manage host_ptr->fpga_buffer mapping
-    upload()                     Write from host to FPGA
-    download()                   Read from FPGA to host
-  dpu_control_xrt.cpp
-  xrt_cu.cpp
+  xrt_cu.cpp                     XrtCu acquires FPGA handle, holds metadata, runs IP
 
 controller/src
-  dpu_controller.cpp             XRT programming for IP
-    init()                       Get device handle, program core(s)
+  dpu_controller.cpp             XRT programming for IP, holds one XrtCu
+    init()                       Set up IP core to run specific model
+    alloc()                      Allocate in_addr/out_addr device bufs for host ptrs
+    upload()                     Write from host to FPGA
+    run()                        Pass in_addr/out_addr to core, execute
+    download()                   Read from FPGA to host
 
 engine/src
   engine.cpp                  
     Engine
       EngineThreadPool
-        run()                    Fetch new job from Q, exec lambda_func given by user
+        run()                    Fetch new job from Q, exec user lambda_func
         wait()                   Block until job done
 
 tests/
   engine/
-    main.cpp                     Engine max throughput test, shows > 300K QPS
+    main.cpp                     Engine max throughput tests
+    single_thread.cpp            shows >300K QPS
+    multi_thread.cpp             shows >800K QPS
 
   app/
     main.cpp                     Vitis API Resnet example, uses DpuRunner

@@ -3,7 +3,7 @@ VART_PATH := /proj/xsjhdstaff1/aaronn/git/xcdl/Vitis-AI/vart
 TARGET_LIB := libengine.so 
 
 BUILD_DIR ?= ./build
-SRC_DIRS ?= ./engine/src ./runner/src
+SRC_DIRS ?= ./engine/src ./runner/src ./device/src
 
 CXX := g++
 SRCS := $(shell find $(SRC_DIRS) -name *.cpp)
