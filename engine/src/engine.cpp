@@ -66,8 +66,8 @@ void EngineThreadPool::run() {
 
     // report task done
     {
-      std::unique_lock<std::mutex> lock(status_mtx_);
       task_status_[task.first] = EngineThreadPool::DONE;
+      std::unique_lock<std::mutex> lock(status_mtx_);
       status_cvar_.notify_all();
     }
   }

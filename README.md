@@ -28,8 +28,8 @@ engine/src
   engine.cpp                  
     Engine
       EngineThreadPool
-        run()                    Get new job from Q 
-                                 Execute lambda function given by user
+        run()                    Fetch new job from Q, exec lambda_func given by user
+        wait()                   Block until job done
 
 tests/
   engine/
@@ -56,9 +56,9 @@ std::pair<uint32_t, int> DpuRunner::execute_async(
   const std::vector<vart::TensorBuffer*>& inputs,
   const std::vector<vart::TensorBuffer*>& outputs) {
   Engine& engine = Engine::get_instance();
-  auto job_id = engine.submit([&inputs, &outputs] {
+  auto job_id = engine.submit([&inputs, &outputs, &dpu_controller_] {
     prepare_and_upload(inputs);
-    dpu_controller.run();
+    dpu_controller_.run();
     download_and_post_process(outputs);
   });
   return std::pair<uint32_t, int>(job_id, 0);
