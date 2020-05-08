@@ -14,15 +14,16 @@ runner/src
     wait()                       Wait for engine to complete job_id
 
 device/src
-  xrt_cu.cpp                     XrtCu acquires FPGA handle, holds metadata, runs IP
+  device_handle.cpp              Acquire FPGA DeviceHandle, store metadata
 
 controller/src
-  dpu_controller.cpp             XRT programming for IP, holds one XrtCu
-    init()                       Set up IP core to run specific model
-    alloc()                      Allocate in_addr/out_addr device bufs for host ptrs
-    upload()                     Write from host to FPGA
-    run()                        Pass in_addr/out_addr to core, execute
-    download()                   Read from FPGA to host
+  dpu_controller.cpp             XRT programming for IP, holds one DeviceHandle
+    DpuController()              Init IP core with meta.json or XIR
+    run()
+      alloc()                    Allocate in_addr/out_addr device bufs for host ptrs
+      upload()                   Write from host to FPGA
+      execute()                  Pass in_addr/out_addr to core, execute
+      download()                 Read from FPGA to host
 
 engine/src
   engine.cpp                  
@@ -76,7 +77,7 @@ int DpuRunner::wait(int jobid, int timeout) {
 
 ### Build
 
-make clean; make
+make clean; make -j
 
 
 ### Run

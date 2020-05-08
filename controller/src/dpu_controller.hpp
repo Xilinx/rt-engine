@@ -1,5 +1,7 @@
 #pragma once
 
+#include "device_handle.hpp"
+
 /*
  * xrt-device-handle/src/xrt_device_handle_butler.cpp
  * xir::XrtDeviceHandle acquires resource
@@ -18,3 +20,17 @@
  * mem.get_host_ptr()
  *
  */
+
+class DpuController {
+ public:
+  DpuController();
+  ~DpuController();
+  void run(void *in_ptr, void *out_ptr);
+
+ private:
+  // alloc()
+  // upload()
+  // download()
+  // execute()
+  DeviceHandle handle_;
+};

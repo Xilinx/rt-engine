@@ -1,6 +1,7 @@
 #pragma once
 
 #include <vart/runner.hpp> 
+#include "dpu_controller.hpp"
 
 /*
  * References:
@@ -25,4 +26,5 @@ class DpuRunner: public vart::Runner {
     virtual std::vector<const xir::Tensor*> get_output_tensors() override; 
 
   private:
+    std::vector<std::unique_ptr<DpuController> > dpu_controller_;
 };
