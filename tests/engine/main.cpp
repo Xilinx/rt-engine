@@ -4,7 +4,7 @@
 #include "tests.hpp"
 
 int main() {
-  const unsigned numQueries = 100000;
+  const unsigned numQueries = 500000;
   const unsigned numThreads = 100;
 
   std::cout << std::endl << "Testing single thread..." << std::endl;

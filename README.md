@@ -82,5 +82,6 @@ make clean; make -j
 
 ### Run
 
-LD_LIBRARY_PATH=build build/tests/engine.exe
-LD_LIBRARY_PATH=build build/tests/app.exe
+export LD_LIBRARY_PATH=build:${CONDA_PREFIX}/lib:/opt/xilinx/xrt/lib
+build/tests/engine.exe
+build/tests/app.exe
