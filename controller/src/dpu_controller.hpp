@@ -23,7 +23,7 @@
 
 class DpuController {
  public:
-  DpuController();
+  DpuController(std::string meta);
   ~DpuController();
   void run(void *in_ptr, void *out_ptr);
 

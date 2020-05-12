@@ -2,7 +2,8 @@
 #include "dpu_runner.hpp"
 #include "engine.hpp"
 
-DpuRunner::DpuRunner() {
+DpuRunner::DpuRunner(std::string meta) {
+  dpu_controller_.emplace_back(new DpuController(meta));
 }
 
 DpuRunner::~DpuRunner() {

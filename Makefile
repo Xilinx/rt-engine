@@ -10,7 +10,7 @@ SRCS := $(shell find $(SRC_DIRS) -name *.cpp)
 OBJS := $(SRCS:%=$(BUILD_DIR)/%.o)
 DEPS := $(OBJS:.o=.d)
 
-TESTS := $(shell find tests -mindepth 1 -type d)
+TESTS := $(shell find tests -mindepth 1 -maxdepth 1 -type d)
 TEST_BINS := $(TESTS:%=$(BUILD_DIR)/%.exe)
 
 INC_DIRS := $(shell find $(SRC_DIRS) -type d)
@@ -26,7 +26,7 @@ all: $(BUILD_DIR)/$(TARGET_LIB) $(TEST_BINS)
 
 $(BUILD_DIR)/tests/%.exe: tests/%/*.cpp $(BUILD_DIR)/$(TARGET_LIB)
 	$(MKDIR_P) $(dir $@)
-	$(CXX) $(CPPFLAGS) -o $@ $(dir $<)*.cpp -lengine -lpthread -lbutler -lxilinxopencl -lxrt_core
+	$(CXX) $(CPPFLAGS) -o $@ $(dir $<)*.cpp -lengine -lpthread -lbutler -lxilinxopencl -lxrt_core -ljson-c
 
 $(BUILD_DIR)/$(TARGET_LIB): $(OBJS)
 	$(CXX) -fPIC -shared -o $@ $^ 

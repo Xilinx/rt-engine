@@ -13,7 +13,7 @@
 
 class DpuRunner: public vart::Runner {
   public:
-    DpuRunner();
+    DpuRunner(std::string meta);
     ~DpuRunner();
     DpuRunner(const DpuRunner&) = delete;
     DpuRunner& operator=(const DpuRunner& other) = delete;

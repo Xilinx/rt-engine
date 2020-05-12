@@ -1,4 +1,4 @@
-Minimal & fast runtime engine for Vitis accelerators. Capable of servicing > 800K QPS.
+Minimal & fast runtime engine for Vitis accelerators. Capable of servicing > 800K requests per second.
 
 ### Overview
 
@@ -35,8 +35,8 @@ engine/src
 tests/
   engine/
     main.cpp                     Engine max throughput tests
-    single_thread.cpp            shows >300K QPS
-    multi_thread.cpp             shows >800K QPS
+    single_thread.cpp            shows >300K requests per second
+    multi_thread.cpp             shows >800K requests per second
 
   app/
     main.cpp                     Vitis API Resnet example, uses DpuRunner
@@ -49,6 +49,13 @@ tests/
       model.data
       dpu.xclbin
 ```
+
+### Requirements
+
+* Xilinx Butler (http://xcdl190260/vitis/XIP)
+* XRT (https://github.com/Xilinx/XRT)
+* json-c (https://github.com/json-c/json-c)
+
 
 ### Example
 
@@ -77,11 +84,16 @@ int DpuRunner::wait(int jobid, int timeout) {
 
 ### Build
 
+```
 make clean; make -j
+```
 
 
 ### Run
 
-export LD_LIBRARY_PATH=build:${CONDA_PREFIX}/lib:/opt/xilinx/xrt/lib
+```
+export LD_LIBRARY_PATH=build:${CONDA_PREFIX}/lib:/opt/xilinx/xrt/lib 
+export XILINX_XRT=/opt/xilinx/xrt
 build/tests/engine.exe
 build/tests/app.exe
+```

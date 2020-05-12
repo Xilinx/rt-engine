@@ -28,7 +28,7 @@ class DeviceHandle {
  public:
   DeviceHandle();
   ~DeviceHandle();
-  void acquire(std::string xclbin);
+  void acquire(std::string kernelName, std::string xclbin);
  
  private:
   std::unique_ptr<DeviceObject> obj_;
