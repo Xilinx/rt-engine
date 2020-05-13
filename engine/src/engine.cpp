@@ -3,6 +3,7 @@
 
 /*
  * Engine Thread Pool
+ * General purpose pool that can execute any std::function
  */
 
 EngineThreadPool::EngineThreadPool() : terminate_(false) {

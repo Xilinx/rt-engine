@@ -8,9 +8,7 @@ runner/src
                                  Initialize DpuController from meta.json or XIR
     execute_async()             
       lambda_func:               Lambda function submitted to engine Q, get job_id
-        upload()                 Call DpuController.upload()
         run()                    Call DpuController.run()
-        download()               Call DpuController.download()
     wait()                       Wait for engine to complete job_id
 
 device/src

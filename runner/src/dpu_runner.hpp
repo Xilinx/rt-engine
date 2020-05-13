@@ -1,6 +1,7 @@
 #pragma once
 
-#include <vart/runner.hpp> 
+#include "runner.hpp"
+#include "tensor.hpp"
 #include "dpu_controller.hpp"
 
 /*
@@ -19,11 +20,11 @@ class DpuRunner: public vart::Runner {
     DpuRunner& operator=(const DpuRunner& other) = delete;
 
     virtual std::pair<uint32_t, int> execute_async(
-      const std::vector<vart::TensorBuffer*>& inputs,
-      const std::vector<vart::TensorBuffer*>& outputs) override;
+      const std::vector<xir::vart::TensorBuffer*>& inputs,
+      const std::vector<xir::vart::TensorBuffer*>& outputs) override;
     virtual int wait(int jobid, int timeout) override;
-    virtual std::vector<const xir::Tensor*> get_input_tensors() override; 
-    virtual std::vector<const xir::Tensor*> get_output_tensors() override; 
+    virtual std::vector<const xir::vart::Tensor*> get_input_tensors() override; 
+    virtual std::vector<const xir::vart::Tensor*> get_output_tensors() override; 
 
   private:
     std::vector<std::unique_ptr<DpuController> > dpu_controller_;

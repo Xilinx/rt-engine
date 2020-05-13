@@ -1,6 +1,9 @@
 #pragma once
 
+#include <vector>
+#include "tensor_buffer.hpp"
 #include "device_handle.hpp"
+#include "device_memory.hpp"
 
 /*
  * xrt-device-handle/src/xrt_device_handle_butler.cpp
@@ -14,23 +17,19 @@
  * auto-manage buffers -- free if exceed total_memory/num_buffers limit
  * LRU displace buffers?
  *
- * mem = makeFpgaBuffer(host_ptr, sz, ddr_bank, rw)
- * mem.transfer()
- * mem.get_fpga_addr()
- * mem.get_host_ptr()
- *
  */
 
 class DpuController {
  public:
   DpuController(std::string meta);
   ~DpuController();
-  void run(void *in_ptr, void *out_ptr);
+  void run(const std::vector<xir::vart::TensorBuffer*> &inputs, 
+           const std::vector<xir::vart::TensorBuffer*> &outputs);
 
  private:
-  cl_mem alloc(void *host_ptr, size_t sz, cl_mem_flags flags);
-  void upload(void *in_ptr);
-  void download(void *out_ptr);
-  void execute();
+  std::unique_ptr<OclDeviceBuffer> alloc(void *hptr, size_t sz, cl_mem_flags flags);
+  void upload(OclDeviceBuffer*);
+  void download(OclDeviceBuffer*);
+  void execute(OclDeviceBuffer *in, OclDeviceBuffer *out);
   OclDeviceHandle handle_;
 };

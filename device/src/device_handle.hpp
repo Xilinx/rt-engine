@@ -1,7 +1,7 @@
 #pragma once
 
 /*
- * Reference: xrt-device-handle/src/xrt_device_handle_butler.hpp
+ * Reference: vart/xrt-device-handle/src/xrt_device_handle_butler.hpp
  */
 
 #include <string>
@@ -29,12 +29,10 @@ class DeviceHandle {
   DeviceHandle();
   ~DeviceHandle();
   virtual void acquire(std::string kernelName, std::string xclbin);
-  const DeviceInfo& getDeviceInfo() { return *info_; }
-
- protected:
-  std::unique_ptr<DeviceInfo> info_;
+  const DeviceInfo& get_device_info() const { return *info_; }
 
  private:
+  std::unique_ptr<DeviceInfo> info_;
   std::unique_ptr<butler::handle> handle_;
   std::unique_ptr<butler::ButlerClient> client_;
 };
@@ -42,9 +40,9 @@ class DeviceHandle {
 class OclDeviceHandle : public DeviceHandle {
  public:
   virtual void acquire(std::string kernelName, std::string xclbin) override;
-  const cl_context& getContext() { return context_; }
-  const cl_command_queue& getCommandQueue() { return commands_; }
-  const cl_program& getProgram() { return program_; }
+  const cl_context& get_context() const { return context_; }
+  const cl_command_queue& get_command_queue() const { return commands_; }
+  const cl_program& get_program() const { return program_; }
   
  private:
   cl_context context_;

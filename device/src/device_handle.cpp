@@ -64,17 +64,17 @@ void OclDeviceHandle::acquire(std::string kernelName, std::string xclbin) {
 
   // create context
   int err;
-  context_ = clCreateContext(0, 1, &info_->device_id, NULL, NULL, &err);
+  context_ = clCreateContext(0, 1, &get_device_info().device_id, NULL, NULL, &err);
   if (!context_)
     throw std::runtime_error("Error: failed to create a compute context");
 
   const int qprop = CL_QUEUE_OUT_OF_ORDER_EXEC_MODE_ENABLE;
-  commands_ = clCreateCommandQueue(context_, info_->device_id, qprop, &err);
+  commands_ = clCreateCommandQueue(context_, get_device_info().device_id, qprop, &err);
   if (!commands_)
     throw std::runtime_error("Error: failed to create command queue");
  
   // read xclbin and create program
-  std::string fnm = std::string(info_->xclbin_path);
+  std::string fnm = std::string(get_device_info().xclbin_path);
   std::ifstream stream(fnm);
   stream.seekg(0,stream.end);
   size_t size = stream.tellg();
@@ -84,5 +84,5 @@ void OclDeviceHandle::acquire(std::string kernelName, std::string xclbin) {
   auto data = reinterpret_cast<const unsigned char*>(xclbinChar.data());
   cl_int status = CL_SUCCESS;
   program_ = clCreateProgramWithBinary(
-    context_, 1, &info_->device_id, &size, &data, &status, &err);
+    context_, 1, &get_device_info().device_id, &size, &data, &status, &err);
 }

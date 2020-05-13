@@ -1,9 +1,10 @@
 #include <fstream>
 #include <sstream>
 
+#pragma GCC diagnostic push 
+#pragma GCC diagnostic ignored "-Wignored-qualifiers"
 #include "CL/cl_ext_xilinx.h"
-#include "experimental/xrt++.hpp"
-
+#pragma GCC diagnostic pop 
 #include "dpu_controller.hpp"
 #include "json-c/json.h"
 
@@ -33,21 +34,52 @@ DpuController::DpuController(std::string meta) {
 DpuController::~DpuController() {
 }
 
-void DpuController::run(void *in_ptr, void *out_ptr) {
-  (void)in_ptr;
-  (void)out_ptr;
+void DpuController::run(const std::vector<xir::vart::TensorBuffer*> &inputs, 
+                        const std::vector<xir::vart::TensorBuffer*> &outputs) {
+  std::cout << "DpuController::run() !" << std::endl;
+  void *in_ptr = (void*)(inputs[0]->data().first);
+  void *out_ptr = (void*)(outputs[0]->data().first);
+
+  std::unique_ptr<OclDeviceBuffer> inbuf = alloc(in_ptr, 
+    inputs[0]->get_tensor()->get_element_num()*sizeof(int8_t), CL_MEM_READ_ONLY);
+  std::unique_ptr<OclDeviceBuffer> outbuf = alloc(out_ptr, 
+    outputs[0]->get_tensor()->get_element_num()*sizeof(int8_t), CL_MEM_WRITE_ONLY);
+
+  upload(inbuf.get());
+  execute(inbuf.get(), outbuf.get());
+  download(outbuf.get());
 }
 
-void DpuController::upload(void *in_ptr) {
+void DpuController::upload(OclDeviceBuffer *buf) {
+  cl_event event;
+  int err = clEnqueueMigrateMemObjects(handle_.get_command_queue(), 
+    1, &(buf->get_mem()), 
+    0, // do migration from host
+    0, NULL, &event);
+  if (err != CL_SUCCESS)
+    throw std::runtime_error("Error: upload to device failed");
+  clWaitForEvents(1, &event);
+
 }
 
-void DpuController::download(void *out_ptr) {
+void DpuController::download(OclDeviceBuffer *buf) {
+  cl_event event;
+  int err = clEnqueueMigrateMemObjects(handle_.get_command_queue(), 
+    1, &(buf->get_mem()), 
+    CL_MIGRATE_MEM_OBJECT_HOST, 
+    0, NULL, &event);
+  if (err != CL_SUCCESS)
+    throw std::runtime_error("Error: download from device failed");
+  clWaitForEvents(1, &event);
 }
 
-void DpuController::execute() {
+void DpuController::execute(OclDeviceBuffer *in, OclDeviceBuffer *out) {
+  (void)in;
+  (void)out;
 }
 
-cl_mem DpuController::alloc(void *host_ptr, size_t size, cl_mem_flags flags) {
+std::unique_ptr<OclDeviceBuffer> 
+DpuController::alloc(void *host_ptr, size_t size, cl_mem_flags flags) {
   const std::vector<unsigned> ddrBankMap = {
     XCL_MEM_DDR_BANK0,
     XCL_MEM_DDR_BANK1,
@@ -55,15 +87,6 @@ cl_mem DpuController::alloc(void *host_ptr, size_t size, cl_mem_flags flags) {
     XCL_MEM_DDR_BANK3
   };
 
-  cl_mem_ext_ptr_t cfg;
-  cfg.flags = ddrBankMap[handle_.getDeviceInfo().ddr_bank];
-  cfg.obj = host_ptr;
-  cfg.param = 0;
-
-  cl_mem_flags memFlags = flags | CL_MEM_EXT_PTR_XILINX | CL_MEM_USE_HOST_PTR;
-  cl_mem mem = clCreateBuffer(handle_.getContext(), memFlags, size, &cfg, NULL);
-  if (mem == 0)
-    throw std::runtime_error("Error: failed to allocate device memory\n");
-
-  return mem;
+  return std::unique_ptr<OclDeviceBuffer>(new OclDeviceBuffer(
+    handle_, host_ptr, size, ddrBankMap[handle_.get_device_info().ddr_bank], flags));
 }
