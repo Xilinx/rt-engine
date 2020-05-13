@@ -28,9 +28,9 @@ class DpuController {
   void run(void *in_ptr, void *out_ptr);
 
  private:
-  // alloc()
-  // upload()
-  // download()
-  // execute()
-  DeviceHandle handle_;
+  cl_mem alloc(void *host_ptr, size_t sz, cl_mem_flags flags);
+  void upload(void *in_ptr);
+  void download(void *out_ptr);
+  void execute();
+  OclDeviceHandle handle_;
 };

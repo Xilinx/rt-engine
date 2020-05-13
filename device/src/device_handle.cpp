@@ -1,4 +1,5 @@
 #include "device_handle.hpp"
+#include <fstream>
 #include <memory>
 
 DeviceHandle::DeviceHandle() {
@@ -8,8 +9,8 @@ DeviceHandle::DeviceHandle() {
 }
 
 DeviceHandle::~DeviceHandle() {
-  if (client_.get() && obj_.get())
-    client_->releaseResources(obj_->butler_handle);
+  if (client_.get() && handle_.get())
+    client_->releaseResources(*handle_);
 }
 
 static uint64_t getDDRBankFromButlerBitmask(unsigned bitmask)
@@ -39,15 +40,49 @@ void DeviceHandle::acquire(std::string kernelName, std::string xclbin) {
   auto cu_full_name = xcu.getKernelName() + ":" + xcu.getName() + ":" +
     std::to_string(xcu.getFPGAIdx()) + ":" + std::to_string(xcu.getCUIdx());
 
-  obj_.reset(new DeviceObject{
+  info_.reset(new DeviceInfo{
     .cu_base_addr = xcu.getBaseAddr(),
     .ddr_bank = getDDRBankFromButlerBitmask(xcu.getKernelArgMemIdxMapAt(0)),
+    .device_index = size_t(xcu.getFPGAIdx()),
     .cu_index = size_t(xcu.getCUIdx()),
     .cu_mask = (1u << xcu.getCUIdx()),
+    .xclbin_path = xcu.getXCLBINPath(),
     .full_name = cu_full_name,
-    .device_id = size_t(xcu.getFPGAIdx()),
-    .core_id = size_t(xcu.getCUIdx()),
+    .device_id = xcu.getOCLDev(),
     .fingerprint = 0,
-    .butler_handle = alloc.myHandle
   });
+
+  handle_.reset(new butler::handle(alloc.myHandle));
+}
+
+/* 
+ * OCL device handle
+ */
+
+void OclDeviceHandle::acquire(std::string kernelName, std::string xclbin) {
+  DeviceHandle::acquire(kernelName, xclbin);
+
+  // create context
+  int err;
+  context_ = clCreateContext(0, 1, &info_->device_id, NULL, NULL, &err);
+  if (!context_)
+    throw std::runtime_error("Error: failed to create a compute context");
+
+  const int qprop = CL_QUEUE_OUT_OF_ORDER_EXEC_MODE_ENABLE;
+  commands_ = clCreateCommandQueue(context_, info_->device_id, qprop, &err);
+  if (!commands_)
+    throw std::runtime_error("Error: failed to create command queue");
+ 
+  // read xclbin and create program
+  std::string fnm = std::string(info_->xclbin_path);
+  std::ifstream stream(fnm);
+  stream.seekg(0,stream.end);
+  size_t size = stream.tellg();
+  stream.seekg(0,stream.beg);
+  std::vector<char> xclbinChar(size);
+  stream.read(xclbinChar.data(),size);
+  auto data = reinterpret_cast<const unsigned char*>(xclbinChar.data());
+  cl_int status = CL_SUCCESS;
+  program_ = clCreateProgramWithBinary(
+    context_, 1, &info_->device_id, &size, &data, &status, &err);
 }
