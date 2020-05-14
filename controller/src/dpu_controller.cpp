@@ -36,13 +36,12 @@ DpuController::~DpuController() {
 
 void DpuController::run(const std::vector<xir::vart::TensorBuffer*> &inputs, 
                         const std::vector<xir::vart::TensorBuffer*> &outputs) {
-  std::cout << "DpuController::run() !" << std::endl;
-  void *in_ptr = (void*)(inputs[0]->data().first);
-  void *out_ptr = (void*)(outputs[0]->data().first);
+  void *indata = (void*)(inputs[0]->data().first);
+  void *outdata = (void*)(outputs[0]->data().first);
 
-  std::unique_ptr<OclDeviceBuffer> inbuf = alloc(in_ptr, 
+  std::unique_ptr<OclDeviceBuffer> inbuf = alloc(indata, 
     inputs[0]->get_tensor()->get_element_num()*sizeof(int8_t), CL_MEM_READ_ONLY);
-  std::unique_ptr<OclDeviceBuffer> outbuf = alloc(out_ptr, 
+  std::unique_ptr<OclDeviceBuffer> outbuf = alloc(outdata, 
     outputs[0]->get_tensor()->get_element_num()*sizeof(int8_t), CL_MEM_WRITE_ONLY);
 
   upload(inbuf.get());
@@ -76,17 +75,18 @@ void DpuController::download(OclDeviceBuffer *buf) {
 void DpuController::execute(OclDeviceBuffer *in, OclDeviceBuffer *out) {
   (void)in;
   (void)out;
+  // TODO run kernel
 }
 
 std::unique_ptr<OclDeviceBuffer> 
 DpuController::alloc(void *host_ptr, size_t size, cl_mem_flags flags) {
-  const std::vector<unsigned> ddrBankMap = {
+  static const std::vector<unsigned> ddrBankMap = {
     XCL_MEM_DDR_BANK0,
     XCL_MEM_DDR_BANK1,
     XCL_MEM_DDR_BANK2,
     XCL_MEM_DDR_BANK3
   };
 
-  return std::unique_ptr<OclDeviceBuffer>(new OclDeviceBuffer(
-    handle_, host_ptr, size, ddrBankMap[handle_.get_device_info().ddr_bank], flags));
+  return std::unique_ptr<OclDeviceBuffer>(new OclDeviceBuffer(handle_, 
+    host_ptr, size, ddrBankMap[handle_.get_device_info().ddr_bank], flags));
 }
