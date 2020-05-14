@@ -2,24 +2,26 @@
 #include "dpu_runner.hpp"
 #include "engine.hpp"
 
-DpuRunner::DpuRunner(std::string meta) {
-  dpu_controller_.emplace_back(new DpuController(meta));
+DpuRunner::DpuRunner(std::string meta)
+ : dpu_controller_(new DpuController(meta)) {
 }
 
 DpuRunner::~DpuRunner() {
 }
 
 std::vector<const xir::vart::Tensor*> DpuRunner::get_input_tensors() {
-  // TODO get from compiler.json
-  static const std::vector<std::int32_t> dims = { 1, 224, 224, 3 };
-  static xir::vart::Tensor tensor("input", dims, xir::vart::Tensor::DataType::INT8); 
-  return std::vector<const xir::vart::Tensor*>{ &tensor };
+  return dpu_controller_->get_input_tensors();
 }
 std::vector<const xir::vart::Tensor*> DpuRunner::get_output_tensors() {
-  // TODO get from compiler.json
-  static const std::vector<std::int32_t> dims = { 1, 1, 1, 1000 };
-  static xir::vart::Tensor tensor("output", dims, xir::vart::Tensor::DataType::INT8); 
-  return std::vector<const xir::vart::Tensor*>{ &tensor };
+  return dpu_controller_->get_output_tensors();
+}
+
+std::vector<xir::vart::TensorBuffer*> DpuRunner::get_inputs(unsigned id) {
+  return dpu_controller_->get_inputs(id);
+}
+
+std::vector<xir::vart::TensorBuffer*> DpuRunner::get_outputs(unsigned id) {
+  return dpu_controller_->get_outputs(id);
 }
 
 std::pair<uint32_t, int> DpuRunner::execute_async(
@@ -27,7 +29,7 @@ std::pair<uint32_t, int> DpuRunner::execute_async(
   const std::vector<xir::vart::TensorBuffer*>& outputs) {
   Engine& engine = Engine::get_instance();
   auto job_id = engine.submit([this, &inputs, &outputs] {
-    dpu_controller_[0]->run(inputs, outputs);
+    dpu_controller_->run(inputs, outputs);
   });
   return std::pair<uint32_t, int>(job_id, 0);
 }

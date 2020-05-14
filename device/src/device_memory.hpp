@@ -9,6 +9,7 @@
 class OclDeviceBuffer {
  public:
   OclDeviceBuffer(const OclDeviceHandle &handle, void *host_ptr, size_t size, unsigned bank, cl_mem_flags flags);
+  void *get_host_ptr() const { return host_ptr_; }
   const cl_mem& get_mem() const { return mem_; }
   uint64_t get_phys_addr() const { return phys_addr_; }
   ~OclDeviceBuffer();

@@ -8,23 +8,8 @@ SingleThreadTest::SingleThreadTest(std::string runner_dir, unsigned num_queries)
 }
 
 void SingleThreadTest::run() {
-  auto inTensor = runner_->get_input_tensors()[0];
-  auto outTensor = runner_->get_output_tensors()[0];
-
-  // allocate memory
-  void *inData, *outData;
-  if (posix_memalign(&inData, getpagesize(), 
-    inTensor->get_element_num() * sizeof(int8_t)))
-    throw std::bad_alloc();
-  if (posix_memalign(&outData, getpagesize(), 
-    outTensor->get_element_num() * sizeof(int8_t)))
-    throw std::bad_alloc();
-
-  // construct input objects
-  xir::vart::CpuFlatTensorBuffer inbuf(inData, inTensor);
-  xir::vart::CpuFlatTensorBuffer outbuf(outData, outTensor);
-  const std::vector<xir::vart::TensorBuffer*> inputs{&inbuf};
-  const std::vector<xir::vart::TensorBuffer*> outputs{&outbuf};
+  auto inputs = runner_->get_inputs();
+  auto outputs = runner_->get_inputs();
 
   for (unsigned i=0; i < num_queries_; i++)
   {
