@@ -25,8 +25,8 @@ class DpuRunner: public vart::Runner {
     virtual int wait(int jobid, int timeout) override;
     virtual std::vector<const xir::vart::Tensor*> get_input_tensors() override; 
     virtual std::vector<const xir::vart::Tensor*> get_output_tensors() override; 
-    virtual std::vector<xir::vart::TensorBuffer*> get_inputs(unsigned id=0);
-    virtual std::vector<xir::vart::TensorBuffer*> get_outputs(unsigned id=0);
+    virtual std::vector<xir::vart::TensorBuffer*> get_inputs();
+    virtual std::vector<xir::vart::TensorBuffer*> get_outputs();
 
   private:
     std::unique_ptr<DpuController> dpu_controller_;

@@ -16,12 +16,12 @@ std::vector<const xir::vart::Tensor*> DpuRunner::get_output_tensors() {
   return dpu_controller_->get_output_tensors();
 }
 
-std::vector<xir::vart::TensorBuffer*> DpuRunner::get_inputs(unsigned id) {
-  return dpu_controller_->get_inputs(id);
+std::vector<xir::vart::TensorBuffer*> DpuRunner::get_inputs() {
+  return dpu_controller_->get_inputs();
 }
 
-std::vector<xir::vart::TensorBuffer*> DpuRunner::get_outputs(unsigned id) {
-  return dpu_controller_->get_outputs(id);
+std::vector<xir::vart::TensorBuffer*> DpuRunner::get_outputs() {
+  return dpu_controller_->get_outputs();
 }
 
 std::pair<uint32_t, int> DpuRunner::execute_async(
