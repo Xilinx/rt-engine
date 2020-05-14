@@ -1,4 +1,4 @@
-Minimal & fast runtime engine for Vitis accelerators. Capable of servicing > 800K requests per second.
+Minimal & fast async runtime engine for Vitis accelerators. Capable of servicing > 800K requests per second.
 
 ### Overview
 
@@ -64,10 +64,8 @@ std::pair<uint32_t, int> DpuRunner::execute_async(
   const std::vector<vart::TensorBuffer*>& inputs,
   const std::vector<vart::TensorBuffer*>& outputs) {
   Engine& engine = Engine::get_instance();
-  auto job_id = engine.submit([&inputs, &outputs, &dpu_controller_] {
-    prepare_and_upload(inputs);
-    dpu_controller_.run();
-    download_and_post_process(outputs);
+  auto job_id = engine.submit([this, &inputs, &outputs] {
+    dpu_controller_[0]->run(inputs, outputs);
   });
   return std::pair<uint32_t, int>(job_id, 0);
 }
