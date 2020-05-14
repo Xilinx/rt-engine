@@ -37,9 +37,9 @@ DpuController::~DpuController() {
 }
 
 void DpuController::run(const std::vector<xir::vart::TensorBuffer*> &inputs, 
-                        const std::vector<xir::vart::TensorBuffer*> &outputs) const {
-  OclDeviceBuffer* inbuf = tbuf2obuf_.find(inputs[0])->second.get();
-  OclDeviceBuffer* outbuf = tbuf2obuf_.find(outputs[0])->second.get();
+                        const std::vector<xir::vart::TensorBuffer*> &outputs) {
+  OclDeviceBuffer* inbuf = alloc(inputs[0], CL_MEM_READ_ONLY);
+  OclDeviceBuffer* outbuf = alloc(outputs[0], CL_MEM_READ_WRITE);
   upload(inbuf);
   execute(inbuf, outbuf);
   download(outbuf);
@@ -73,8 +73,8 @@ void DpuController::execute(OclDeviceBuffer *in, OclDeviceBuffer *out) const {
   // TODO run kernel
 }
 
-std::unique_ptr<OclDeviceBuffer>
-DpuController::alloc(void *host_ptr, size_t size, cl_mem_flags flags) const {
+OclDeviceBuffer*
+DpuController::alloc(xir::vart::TensorBuffer *tbuf, cl_mem_flags flags) {
   static const std::vector<unsigned> ddrBankMap = {
     XCL_MEM_DDR_BANK0,
     XCL_MEM_DDR_BANK1,
@@ -82,8 +82,24 @@ DpuController::alloc(void *host_ptr, size_t size, cl_mem_flags flags) const {
     XCL_MEM_DDR_BANK3
   };
 
-  return std::unique_ptr<OclDeviceBuffer>(new OclDeviceBuffer(handle_, 
-    host_ptr, size, ddrBankMap[handle_.get_device_info().ddr_bank], flags));
+  {
+    std::unique_lock<std::mutex> lock(tbuf_mtx_);
+    auto it = tbuf2dbuf_.find(tbuf);
+    if (it != tbuf2dbuf_.end())
+      return it->second.get();
+  }
+
+  void *host_ptr = (void*)tbuf->data().first;
+  size_t size = tbuf->get_tensor()->get_element_num() * sizeof(int8_t);
+  OclDeviceBuffer *dbuf = new OclDeviceBuffer(handle_, 
+    host_ptr, size, ddrBankMap[handle_.get_device_info().ddr_bank], flags);
+
+  {
+    std::unique_lock<std::mutex> lock(tbuf_mtx_);
+    tbuf2dbuf_.emplace(tbuf, std::unique_ptr<OclDeviceBuffer>(dbuf));
+  }
+
+  return dbuf;
 }
 
 std::vector<const xir::vart::Tensor*> DpuController::get_input_tensors() const {
@@ -100,45 +116,29 @@ std::vector<const xir::vart::Tensor*> DpuController::get_output_tensors() const 
 }
 
 std::vector<xir::vart::TensorBuffer*> DpuController::get_inputs() {
-  std::vector<xir::vart::TensorBuffer*> ibufs;
-  auto inTensors = get_input_tensors();
-  for (unsigned ti=0; ti < inTensors.size(); ti++)
-  {
-    void *data;
-    size_t size = inTensors[ti]->get_element_num() * sizeof(int8_t);
-    if (posix_memalign(&data, getpagesize(), size))
-      throw std::bad_alloc();
-
-    auto bufptr = new xir::vart::CpuFlatTensorBuffer(data, inTensors[ti]);
-    std::unique_ptr<OclDeviceBuffer> dbuf(alloc(data, size, CL_MEM_READ_ONLY));
-    ibufs.emplace_back(bufptr);
-    {
-      std::unique_lock<std::mutex> lock(tbuf_mtx_);
-      tbufs_.emplace_back(std::unique_ptr<xir::vart::CpuFlatTensorBuffer>(bufptr));
-      tbuf2obuf_.emplace(bufptr, std::move(dbuf));
-    }
-  }
-  return ibufs;
+  return create_tensor_buffers(get_input_tensors());
 }
 
 std::vector<xir::vart::TensorBuffer*> DpuController::get_outputs() {
-  std::vector<xir::vart::TensorBuffer*> obufs;
-  auto outTensors = get_output_tensors();
-  for (unsigned ti=0; ti < outTensors.size(); ti++)
+  return create_tensor_buffers(get_output_tensors());
+}
+
+std::vector<xir::vart::TensorBuffer*> 
+DpuController::create_tensor_buffers(const std::vector<const xir::vart::Tensor*> &tensors) {
+  std::vector<xir::vart::TensorBuffer*> tbufs;
+  for (unsigned ti=0; ti < tensors.size(); ti++)
   {
     void *data;
-    size_t size = outTensors[ti]->get_element_num() * sizeof(int8_t);
+    size_t size = tensors[ti]->get_element_num() * sizeof(int8_t);
     if (posix_memalign(&data, getpagesize(), size))
       throw std::bad_alloc();
 
-    auto bufptr = new xir::vart::CpuFlatTensorBuffer(data, outTensors[ti]);
-    std::unique_ptr<OclDeviceBuffer> dbuf(alloc(data, size, CL_MEM_WRITE_ONLY));
-    obufs.emplace_back(bufptr);
+    auto bufptr = new xir::vart::CpuFlatTensorBuffer(data, tensors[ti]);
+    tbufs.emplace_back(bufptr);
     {
       std::unique_lock<std::mutex> lock(tbuf_mtx_);
       tbufs_.emplace_back(std::unique_ptr<xir::vart::CpuFlatTensorBuffer>(bufptr));
-      tbuf2obuf_.emplace(bufptr, std::move(dbuf));
     }
   }
-  return obufs;
+  return tbufs;
 }

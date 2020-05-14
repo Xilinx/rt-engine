@@ -12,7 +12,7 @@ OclDeviceBuffer::OclDeviceBuffer(const OclDeviceHandle &handle, void *host_ptr, 
   if (mem_ == 0)
     throw std::runtime_error("Error: failed to allocate device buffer");
 
-  if (flags == CL_MEM_WRITE_ONLY) {
+  if (flags == CL_MEM_WRITE_ONLY || flags == CL_MEM_READ_WRITE) {
     // initialize memory
     cl_event event;
     int err = clEnqueueMigrateMemObjects(handle.get_command_queue(), 1, &mem_,
