@@ -60,7 +60,7 @@ void DeviceHandle::acquire(std::string kernelName, std::string xclbin) {
  */
 
 OclDeviceHandle::OclDeviceHandle() 
- : program_(nullptr), commands_(nullptr), context_(nullptr) {
+ : context_(nullptr), commands_(nullptr), program_(nullptr) {
 }
 
 OclDeviceHandle::~OclDeviceHandle() {
