@@ -20,7 +20,7 @@ void SingleThreadTest::run() {
     // fill the pipe
     const std::vector<xir::vart::TensorBuffer*> inputs;
     const std::vector<xir::vart::TensorBuffer*> outputs;
-    ids.emplace_back(engine.submit([&inputs, &outputs]{ 
+    ids.emplace_back(engine.submit([this, &inputs, &outputs]{ 
       inputs.size();
       outputs.size();
     }));

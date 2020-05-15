@@ -27,7 +27,7 @@ struct DeviceInfo {
 class DeviceHandle {
  public:
   DeviceHandle();
-  ~DeviceHandle();
+  virtual ~DeviceHandle();
   virtual void acquire(std::string kernelName, std::string xclbin);
   const DeviceInfo& get_device_info() const { return *info_; }
 
@@ -39,6 +39,8 @@ class DeviceHandle {
 
 class OclDeviceHandle : public DeviceHandle {
  public:
+  OclDeviceHandle();
+  virtual ~OclDeviceHandle();
   virtual void acquire(std::string kernelName, std::string xclbin) override;
   const cl_context& get_context() const { return context_; }
   const cl_command_queue& get_command_queue() const { return commands_; }

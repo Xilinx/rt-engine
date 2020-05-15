@@ -31,10 +31,10 @@ void DeviceHandle::acquire(std::string kernelName, std::string xclbin) {
   auto alloc = acquireResult.first;
   if (alloc.myErrCode != butler::errCode::SUCCESS)
   {
-    std::cerr << alloc << std::endl;
+    //std::cerr << alloc << std::endl;
     throw std::runtime_error("Error: could not acquire device handle");
   }
-  std::cout << "Device acquired" << std::endl << alloc << std::endl;
+  //std::cout << "Device acquired" << std::endl << alloc << std::endl;
 
   auto xcu = acquireResult.second[0];
   auto cu_full_name = xcu.getKernelName() + ":" + xcu.getName() + ":" +
@@ -59,6 +59,19 @@ void DeviceHandle::acquire(std::string kernelName, std::string xclbin) {
  * OCL device handle
  */
 
+OclDeviceHandle::OclDeviceHandle() 
+ : program_(nullptr), commands_(nullptr), context_(nullptr) {
+}
+
+OclDeviceHandle::~OclDeviceHandle() {
+  if (program_ != nullptr)
+    clReleaseProgram(program_);
+  if (commands_ != nullptr)
+    clReleaseCommandQueue(commands_);
+  if (context_ != nullptr)
+    clReleaseContext(context_);
+}
+
 void OclDeviceHandle::acquire(std::string kernelName, std::string xclbin) {
   DeviceHandle::acquire(kernelName, xclbin);
 
@@ -82,6 +95,16 @@ void OclDeviceHandle::acquire(std::string kernelName, std::string xclbin) {
   std::vector<char> xclbinChar(size);
   stream.read(xclbinChar.data(),size);
   auto data = reinterpret_cast<const unsigned char*>(xclbinChar.data());
+
+  /*
+   * Note: the clCreateProgramWithBinary below may emit an error in 2019.x 
+   * if the device is already programmed. (This is okay -- we don't want to 
+   * reprogram and we can continue using the device with is current program.) 
+   * Soren has fixed this in 2020.x to be more forgiving. I.e. allowing multiple 
+   * calls to clCreateProgramWithBinary as long as same binary is used. 
+   * https://github.com/Xilinx/XRT/pull/3379.  
+   * http://jira.xilinx.com/browse/CR-1056085.
+   */
   cl_int status = CL_SUCCESS;
   program_ = clCreateProgramWithBinary(
     context_, 1, &get_device_info().device_id, &size, &data, &status, &err);

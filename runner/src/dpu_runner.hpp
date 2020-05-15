@@ -30,4 +30,5 @@ class DpuRunner: public vart::Runner {
 
   private:
     std::vector<std::unique_ptr<DpuController>> dpu_controller_;
+    std::atomic<unsigned> exec_core_idx_;
 };

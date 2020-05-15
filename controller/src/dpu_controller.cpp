@@ -29,7 +29,7 @@ DpuController::DpuController(std::string meta) {
   if (!json_object_object_get_ex(jobj, "xclbin", &xclbinObj))
     throw std::runtime_error("Error: missing 'xclbin' field in meta.json");
   std::string xclbinPath = json_object_get_string(xclbinObj);
-  std::cout << "xclbin: " << xclbinPath << std::endl;
+  std::cout << "loading xclbin: " << xclbinPath << std::endl;
   handle_.acquire(kernelName, xclbinPath);
 }
 
