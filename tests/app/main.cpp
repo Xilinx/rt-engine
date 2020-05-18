@@ -20,7 +20,7 @@ int main(int argc, char** argv) {
   }
 
   {
-    const unsigned numQueries = 50000;
+    const unsigned numQueries = 10000;
     const unsigned numThreads = 100;
     std::cout << std::endl << "Testing multi thread (single runner)..." << std::endl;
     auto multiThreadSingleRunnerTest 
@@ -34,11 +34,12 @@ int main(int argc, char** argv) {
   }
 
   {
-    const unsigned numQueries = 50000;
-    const unsigned numThreads = 2; /* numThreads == numRunners == numCUs */
+    const unsigned numQueries = 10000;
+    const unsigned numThreads = 100; 
+    const unsigned numRunners = 2; 
     std::cout << std::endl << "Testing multi thread (multi runner)..." << std::endl;
     auto multiThreadMultiRunnerTest 
-      = MultiThreadMultiRunnerTest(argv[1], numQueries, numThreads);
+      = MultiThreadMultiRunnerTest(argv[1], numQueries, numThreads, numRunners);
     auto t1 = std::chrono::high_resolution_clock::now();
     multiThreadMultiRunnerTest.run();
     auto t2 = std::chrono::high_resolution_clock::now();

@@ -13,7 +13,7 @@ DpuRunner::DpuRunner(std::string meta) : exec_core_idx_(0) {
   json_object *jobj = json_tokener_parse(metabuf.str().c_str());
 
   // get num_cores requested
-  int num_cores = 1;
+  int num_cores = 1; // default 1 core per runner
   json_object *nCoresObj = NULL;
   if (json_object_object_get_ex(jobj, "num_cores", &nCoresObj))
     num_cores = json_object_get_int(nCoresObj);

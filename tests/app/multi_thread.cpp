@@ -31,18 +31,20 @@ void MultiThreadSingleRunnerTest::run() {
 }
 
 MultiThreadMultiRunnerTest::MultiThreadMultiRunnerTest(
-  std::string runner_dir, unsigned num_queries, unsigned num_threads) 
- : num_queries_(num_queries), num_threads_(num_threads)
+  std::string runner_dir, unsigned nqueries, unsigned nthreads, unsigned nrunners) 
+ : num_queries_(nqueries), num_threads_(nthreads), num_runners_(nrunners)
 {
-  for (unsigned ti=0; ti < num_threads_; ti++)
+  for (unsigned ti=0; ti < num_runners_; ti++)
     runners_.emplace_back(new DpuRunner(runner_dir));
 }
 
 void MultiThreadMultiRunnerTest::run() {
   std::vector<std::thread> threads(num_threads_);
-
   for (unsigned ti=0; ti < threads.size(); ti++)
-    threads[ti] = std::thread(run_thread, runners_[ti].get(), num_queries_/num_threads_);
+  {
+    auto ri = ti % runners_.size();
+    threads[ti] = std::thread(run_thread, runners_[ri].get(), num_queries_/num_threads_);
+  }
 
   for (unsigned ti=0; ti < threads.size(); ti++)
     threads[ti].join();
