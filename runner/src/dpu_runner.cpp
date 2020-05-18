@@ -6,20 +6,11 @@
 #include "json-c/json.h"
 
 DpuRunner::DpuRunner(std::string meta) : exec_core_idx_(0) {
-  // load meta file
-  std::ifstream f(meta);
-  std::stringstream metabuf;
-  metabuf << f.rdbuf();
-  json_object *jobj = json_tokener_parse(metabuf.str().c_str());
+  // default: 1 core per runner (set -1 to acquire all FPGAs on host)
+  const int num_cores = 1; 
 
-  // get num_cores requested
-  int num_cores = 1; // default 1 core per runner
-  json_object *nCoresObj = NULL;
-  if (json_object_object_get_ex(jobj, "num_cores", &nCoresObj))
-    num_cores = json_object_get_int(nCoresObj);
-
-  // initialize one DpuController per core
-  while (1) {
+  // make one DpuController for each core
+  while(1) {
     try {
       dpu_controller_.emplace_back(new DpuController(meta));
       if (num_cores > 0 && dpu_controller_.size() >= num_cores)

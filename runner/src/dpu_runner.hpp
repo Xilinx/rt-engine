@@ -28,7 +28,7 @@ class DpuRunner: public vart::Runner {
     virtual std::vector<xir::vart::TensorBuffer*> get_inputs();
     virtual std::vector<xir::vart::TensorBuffer*> get_outputs();
 
-  private:
+  protected:
     std::vector<std::unique_ptr<DpuController>> dpu_controller_;
     std::atomic<unsigned> exec_core_idx_;
 };
