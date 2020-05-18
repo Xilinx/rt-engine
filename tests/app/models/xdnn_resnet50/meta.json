@@ -1,0 +1,8 @@
+{ 
+  "target": "xdnn", 
+  "filename": "", 
+  "kernel": "kernelSxdnn_0", 
+  "config_file": "", 
+  "lib": "/wrk/hdstaff/aaronn/git/MLsuite/vai/dpuv1/rt/xdnn_cpp/lib/libxfdnn.so", 
+  "xclbin": "/opt/xilinx/overlaybins/xdnnv3"
+}

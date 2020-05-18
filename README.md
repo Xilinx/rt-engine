@@ -18,17 +18,19 @@ controller/src
   dpu_controller.cpp             XRT programming for IP, holds one DeviceHandle
     DpuController()              Init IP core with meta.json or XIR
     run()
-      alloc()                    Allocate in_addr/out_addr device bufs for host ptrs
-      upload()                   Write from host to FPGA
+      alloc()                    Allocate in_addr/out_addr FPGA bufs for host ptrs
+      upload()                   Write from host to FPGA DDR
       execute()                  Pass in_addr/out_addr to core, execute
-      download()                 Read from FPGA to host
+      download()                 Read from FPGA to host DDR
 
 engine/src
   engine.cpp                  
     Engine
-      EngineThreadPool
-        run()                    Fetch new job from Q, exec user lambda_func
-        wait()                   Block until job done
+      submit()                   Push new DPU task (lambda function) to Q
+      wait()                     Block until task done
+
+    EngineThreadPool
+      run()                      Fetch new task from Q, exec user lambda_func
 
 tests/
   engine/
@@ -37,15 +39,13 @@ tests/
     multi_thread.cpp             shows >800K requests per second
 
   app/
-    main.cpp                     Vitis API Resnet example, uses DpuRunner
-      DpuRunner()
-      DpuRunner.execute_async()
-      DpuRunner.wait()
+    main.cpp                     Vitis API app throughput tests, uses DpuRunner
+    single_thread.cpp            shows ~4K requests per second (limited by XRT)
+    multi_thread.cpp             shows ~13K requests per second (limited by XRT)
  
-    model/
-      meta.json
-      model.data
-      dpu.xclbin
+    models/
+      xdnn_resnet50/
+        meta.json                Describes configs/files to create this DpuRunner
 ```
 
 ### Requirements
@@ -91,5 +91,5 @@ make clean; make -j
 export LD_LIBRARY_PATH=build:${CONDA_PREFIX}/lib:/opt/xilinx/xrt/lib 
 export XILINX_XRT=/opt/xilinx/xrt
 build/tests/engine.exe
-build/tests/app.exe
+build/tests/app.exe tests/app/models/xdnn_resnet50/meta.json
 ```
