@@ -17,25 +17,18 @@ class SingleThreadTest : public Test {
     std::unique_ptr<DpuRunner> runner_;
 };
 
-class MultiThreadSingleRunnerTest : public Test {
+class MultiThreadTest : public Test {
   public:
-    MultiThreadSingleRunnerTest(std::string runner_dir, unsigned num_queries, unsigned num_threads);
+    MultiThreadTest(std::string runner_dir, unsigned nqueries, unsigned nthreads, unsigned nrunners);
     virtual void run();
 
   private:
-    unsigned num_queries_;
-    unsigned num_threads_;
-    std::unique_ptr<DpuRunner> runner_;
-};
+    void init_thread(unsigned ridx);
+    void run_thread(unsigned ridx, unsigned n);
 
-class MultiThreadMultiRunnerTest : public Test {
-  public:
-    MultiThreadMultiRunnerTest(std::string runner_dir, unsigned nqueries, unsigned nthreads, unsigned nrunners);
-    virtual void run();
-
-  private:
     unsigned num_queries_;
     unsigned num_threads_;
     unsigned num_runners_;
+    std::string runner_dir_;
     std::vector<std::unique_ptr<DpuRunner>> runners_;
 };

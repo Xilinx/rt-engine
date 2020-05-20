@@ -10,7 +10,7 @@ int main(int argc, char** argv) {
   {
     const unsigned numQueries = 10000;
     std::cout << std::endl << "Testing single thread..." << std::endl;
-    auto singleThreadTest = SingleThreadTest(argv[1], numQueries);
+    SingleThreadTest singleThreadTest(argv[1], numQueries);
     auto t1 = std::chrono::high_resolution_clock::now();
     singleThreadTest.run();
     auto t2 = std::chrono::high_resolution_clock::now();
@@ -23,10 +23,9 @@ int main(int argc, char** argv) {
     const unsigned numQueries = 10000;
     const unsigned numThreads = 100;
     std::cout << std::endl << "Testing multi thread (single runner)..." << std::endl;
-    auto multiThreadSingleRunnerTest 
-      = MultiThreadSingleRunnerTest(argv[1], numQueries, numThreads);
+    MultiThreadTest multiThreadTest(argv[1], numQueries, numThreads, /*numRunners*/1);
     auto t1 = std::chrono::high_resolution_clock::now();
-    multiThreadSingleRunnerTest.run();
+    multiThreadTest.run();
     auto t2 = std::chrono::high_resolution_clock::now();
     std::chrono::duration<double> elapsed = t2-t1;
     std::cout << "Elapsed: " << elapsed.count() << std::endl;
@@ -38,10 +37,9 @@ int main(int argc, char** argv) {
     const unsigned numThreads = 100; 
     const unsigned numRunners = 2; 
     std::cout << std::endl << "Testing multi thread (multi runner)..." << std::endl;
-    auto multiThreadMultiRunnerTest 
-      = MultiThreadMultiRunnerTest(argv[1], numQueries, numThreads, numRunners);
+    MultiThreadTest multiThreadTest(argv[1], numQueries, numThreads, numRunners);
     auto t1 = std::chrono::high_resolution_clock::now();
-    multiThreadMultiRunnerTest.run();
+    multiThreadTest.run();
     auto t2 = std::chrono::high_resolution_clock::now();
     std::chrono::duration<double> elapsed = t2-t1;
     std::cout << "Elapsed: " << elapsed.count() << std::endl;
