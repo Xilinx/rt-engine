@@ -37,10 +37,10 @@ class DeviceHandle {
   std::unique_ptr<butler::ButlerClient> client_;
 };
 
-class OclDeviceHandle : public DeviceHandle {
+class XclDeviceHandle : public DeviceHandle {
  public:
-  OclDeviceHandle();
-  virtual ~OclDeviceHandle();
+  XclDeviceHandle();
+  virtual ~XclDeviceHandle();
   virtual void acquire(std::string kernelName, std::string xclbin) override;
   const cl_context& get_context() const { return context_; }
   const cl_command_queue& get_command_queue() const { return commands_; }

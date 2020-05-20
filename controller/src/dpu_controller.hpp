@@ -24,10 +24,10 @@ class DpuController {
   DpuController() = delete;
 };
 
-class OclDpuController : public DpuController {
+class XclDpuController : public DpuController {
  public:
-  OclDpuController(std::string meta);
-  virtual ~OclDpuController() override;
+  XclDpuController(std::string meta);
+  virtual ~XclDpuController() override;
   virtual void run(const std::vector<xir::vart::TensorBuffer*> &inputs, 
            const std::vector<xir::vart::TensorBuffer*> &outputs) override;
   virtual std::vector<const xir::vart::Tensor*> get_input_tensors() const override; 
@@ -38,13 +38,13 @@ class OclDpuController : public DpuController {
  protected:
   virtual std::vector<xir::vart::TensorBuffer*> 
     create_tensor_buffers(const std::vector<const xir::vart::Tensor*> &tensors);
-  OclDeviceBuffer *alloc(xir::vart::TensorBuffer *tb, cl_mem_flags flags);
-  virtual void upload(OclDeviceBuffer*) const;
-  virtual void download(OclDeviceBuffer*) const;
-  virtual void execute(OclDeviceBuffer *in, OclDeviceBuffer *out) const;
+  XclDeviceBuffer *alloc(xir::vart::TensorBuffer *tb, cl_mem_flags flags);
+  virtual void upload(XclDeviceBuffer*) const;
+  virtual void download(XclDeviceBuffer*) const;
+  virtual void execute(XclDeviceBuffer *in, XclDeviceBuffer *out) const;
 
-  OclDeviceHandle handle_;
+  XclDeviceHandle handle_;
   std::vector<std::unique_ptr<xir::vart::TensorBuffer>> tbufs_;
-  std::unordered_map<xir::vart::TensorBuffer*, std::unique_ptr<OclDeviceBuffer>> tbuf2dbuf_;
+  std::unordered_map<xir::vart::TensorBuffer*, std::unique_ptr<XclDeviceBuffer>> tbuf2dbuf_;
   std::mutex tbuf_mtx_;
 };

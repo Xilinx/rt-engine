@@ -1,6 +1,6 @@
 #include "device_memory.hpp"
 
-OclDeviceBuffer::OclDeviceBuffer(const OclDeviceHandle &handle, void *host_ptr, size_t size, unsigned bank, cl_mem_flags flags) 
+XclDeviceBuffer::XclDeviceBuffer(const XclDeviceHandle &handle, void *host_ptr, size_t size, unsigned bank, cl_mem_flags flags) 
  : host_ptr_(host_ptr), size_(size), bank_(bank) {
   cl_mem_ext_ptr_t cfg;
   cfg.flags = bank_;
@@ -26,6 +26,6 @@ OclDeviceBuffer::OclDeviceBuffer(const OclDeviceHandle &handle, void *host_ptr, 
     mem_, handle.get_device_info().device_id, sizeof(phys_addr_), &phys_addr_);
 }
 
-OclDeviceBuffer::~OclDeviceBuffer() {
+XclDeviceBuffer::~XclDeviceBuffer() {
   clReleaseMemObject(mem_);
 }

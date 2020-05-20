@@ -56,14 +56,14 @@ void DeviceHandle::acquire(std::string kernelName, std::string xclbin) {
 }
 
 /* 
- * OCL device handle
+ * XCL device handle
  */
 
-OclDeviceHandle::OclDeviceHandle() 
+XclDeviceHandle::XclDeviceHandle() 
  : context_(nullptr), commands_(nullptr), program_(nullptr) {
 }
 
-OclDeviceHandle::~OclDeviceHandle() {
+XclDeviceHandle::~XclDeviceHandle() {
   if (program_ != nullptr)
     clReleaseProgram(program_);
   if (commands_ != nullptr)
@@ -72,7 +72,7 @@ OclDeviceHandle::~OclDeviceHandle() {
     clReleaseContext(context_);
 }
 
-void OclDeviceHandle::acquire(std::string kernelName, std::string xclbin) {
+void XclDeviceHandle::acquire(std::string kernelName, std::string xclbin) {
   DeviceHandle::acquire(kernelName, xclbin);
 
   // create context
