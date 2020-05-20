@@ -11,14 +11,29 @@
 
 class DpuController {
  public:
-  DpuController(std::string meta);
-  virtual ~DpuController();
+  DpuController(std::string meta) {}
+  virtual ~DpuController() {}
   virtual void run(const std::vector<xir::vart::TensorBuffer*> &inputs, 
-           const std::vector<xir::vart::TensorBuffer*> &outputs);
-  virtual std::vector<const xir::vart::Tensor*> get_input_tensors() const; 
-  virtual std::vector<const xir::vart::Tensor*> get_output_tensors() const; 
-  virtual std::vector<xir::vart::TensorBuffer*> get_inputs();
-  virtual std::vector<xir::vart::TensorBuffer*> get_outputs();
+           const std::vector<xir::vart::TensorBuffer*> &outputs) = 0;
+  virtual std::vector<const xir::vart::Tensor*> get_input_tensors() const = 0; 
+  virtual std::vector<const xir::vart::Tensor*> get_output_tensors() const = 0; 
+  virtual std::vector<xir::vart::TensorBuffer*> get_inputs() = 0;
+  virtual std::vector<xir::vart::TensorBuffer*> get_outputs() = 0;
+
+ private:
+  DpuController() = delete;
+};
+
+class OclDpuController : public DpuController {
+ public:
+  OclDpuController(std::string meta);
+  virtual ~OclDpuController() override;
+  virtual void run(const std::vector<xir::vart::TensorBuffer*> &inputs, 
+           const std::vector<xir::vart::TensorBuffer*> &outputs) override;
+  virtual std::vector<const xir::vart::Tensor*> get_input_tensors() const override; 
+  virtual std::vector<const xir::vart::Tensor*> get_output_tensors() const override; 
+  virtual std::vector<xir::vart::TensorBuffer*> get_inputs() override;
+  virtual std::vector<xir::vart::TensorBuffer*> get_outputs() override;
 
  protected:
   virtual std::vector<xir::vart::TensorBuffer*> 

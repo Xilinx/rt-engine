@@ -10,8 +10,7 @@
 #include "dpu_controller.hpp"
 #include "json-c/json.h"
 
-
-DpuController::DpuController(std::string meta) {
+OclDpuController::OclDpuController(std::string meta) : DpuController(meta) {
   // load meta file
   std::ifstream f(meta);
   std::stringstream metabuf;
@@ -33,10 +32,10 @@ DpuController::DpuController(std::string meta) {
   handle_.acquire(kernelName, xclbinPath);
 }
 
-DpuController::~DpuController() {
+OclDpuController::~OclDpuController() {
 }
 
-void DpuController::run(const std::vector<xir::vart::TensorBuffer*> &inputs, 
+void OclDpuController::run(const std::vector<xir::vart::TensorBuffer*> &inputs, 
                         const std::vector<xir::vart::TensorBuffer*> &outputs) {
   OclDeviceBuffer* inbuf = alloc(inputs[0], CL_MEM_READ_ONLY);
   OclDeviceBuffer* outbuf = alloc(outputs[0], CL_MEM_READ_WRITE);
@@ -45,7 +44,7 @@ void DpuController::run(const std::vector<xir::vart::TensorBuffer*> &inputs,
   download(outbuf);
 }
 
-void DpuController::upload(OclDeviceBuffer *buf) const {
+void OclDpuController::upload(OclDeviceBuffer *buf) const {
   cl_event event;
   int err = clEnqueueMigrateMemObjects(handle_.get_command_queue(), 
     1, &(buf->get_mem()), 
@@ -56,7 +55,7 @@ void DpuController::upload(OclDeviceBuffer *buf) const {
   clWaitForEvents(1, &event);
 }
 
-void DpuController::download(OclDeviceBuffer *buf) const {
+void OclDpuController::download(OclDeviceBuffer *buf) const {
   cl_event event;
   int err = clEnqueueMigrateMemObjects(handle_.get_command_queue(), 
     1, &(buf->get_mem()), 
@@ -67,14 +66,14 @@ void DpuController::download(OclDeviceBuffer *buf) const {
   clWaitForEvents(1, &event);
 }
 
-void DpuController::execute(OclDeviceBuffer *in, OclDeviceBuffer *out) const {
+void OclDpuController::execute(OclDeviceBuffer *in, OclDeviceBuffer *out) const {
   (void)in;
   (void)out;
   // TODO run kernel
 }
 
 OclDeviceBuffer*
-DpuController::alloc(xir::vart::TensorBuffer *tbuf, cl_mem_flags flags) {
+OclDpuController::alloc(xir::vart::TensorBuffer *tbuf, cl_mem_flags flags) {
   static const std::vector<unsigned> ddrBankMap = {
     XCL_MEM_DDR_BANK0,
     XCL_MEM_DDR_BANK1,
@@ -102,29 +101,29 @@ DpuController::alloc(xir::vart::TensorBuffer *tbuf, cl_mem_flags flags) {
   return dbuf;
 }
 
-std::vector<const xir::vart::Tensor*> DpuController::get_input_tensors() const {
+std::vector<const xir::vart::Tensor*> OclDpuController::get_input_tensors() const {
   // TODO get from compiler.json
   static const std::vector<std::int32_t> dims = { 4, 224, 224, 3 };
   static xir::vart::Tensor tensor("input", dims, xir::vart::Tensor::DataType::INT8); 
   return std::vector<const xir::vart::Tensor*>{ &tensor };
 }
-std::vector<const xir::vart::Tensor*> DpuController::get_output_tensors() const {
+std::vector<const xir::vart::Tensor*> OclDpuController::get_output_tensors() const {
   // TODO get from compiler.json
   static const std::vector<std::int32_t> dims = { 4, 1, 1, 1000 };
   static xir::vart::Tensor tensor("output", dims, xir::vart::Tensor::DataType::INT8); 
   return std::vector<const xir::vart::Tensor*>{ &tensor };
 }
 
-std::vector<xir::vart::TensorBuffer*> DpuController::get_inputs() {
+std::vector<xir::vart::TensorBuffer*> OclDpuController::get_inputs() {
   return create_tensor_buffers(get_input_tensors());
 }
 
-std::vector<xir::vart::TensorBuffer*> DpuController::get_outputs() {
+std::vector<xir::vart::TensorBuffer*> OclDpuController::get_outputs() {
   return create_tensor_buffers(get_output_tensors());
 }
 
 std::vector<xir::vart::TensorBuffer*> 
-DpuController::create_tensor_buffers(const std::vector<const xir::vart::Tensor*> &tensors) {
+OclDpuController::create_tensor_buffers(const std::vector<const xir::vart::Tensor*> &tensors) {
   std::vector<xir::vart::TensorBuffer*> tbufs;
   for (unsigned ti=0; ti < tensors.size(); ti++)
   {

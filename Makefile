@@ -16,7 +16,7 @@ INC_FLAGS := $(addprefix -I,$(INC_DIRS))
 
 XILINX_XRT := /opt/xilinx/xrt/
 VITIS_INCLUDES := -I $(XILINX_XRT)/include -I$(CONDA_PREFIX)/include/xip/butler -I$(CONDA_PREFIX)/include
-VITIS_LIBS := -L$(BUILD_DIR)  -L$(CONDA_PREFIX)/lib -L$(XILINX_XRT)/lib
+VITIS_LIBS := -L$(BUILD_DIR) -L$(XILINX_XRT)/lib -L$(CONDA_PREFIX)/lib
 CPPFLAGS ?= $(INC_FLAGS) $(VITIS_INCLUDES) $(VITIS_LIBS) -Wall -std=c++11 -O3
 
 .PHONY: all
