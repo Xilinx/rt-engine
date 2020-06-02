@@ -23,5 +23,17 @@ int main() {
   std::cout << "Elapsed: " << elapsed.count() << std::endl;
   std::cout << "QPS: " << numQueries/elapsed.count() << std::endl;
 
+  const unsigned timeoutMs = 500;
+  std::cout << std::endl << "Testing " << timeoutMs << "ms timeout..." << std::endl;
+  t1 = std::chrono::high_resolution_clock::now();
+  try {
+    TimeoutTest(timeoutMs).run();
+  } catch(std::runtime_error& e) {
+    std::cout << "Exception caught: '" << e.what() << "'" << std::endl;
+  }
+  t2 = std::chrono::high_resolution_clock::now();
+  elapsed = t2-t1;
+  std::cout << "Elapsed: " << elapsed.count() << std::endl;
+
   return 0;
 }

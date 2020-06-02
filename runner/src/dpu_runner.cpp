@@ -54,9 +54,8 @@ std::pair<uint32_t, int> DpuRunner::execute_async(
 }
 
 int DpuRunner::wait(int jobid, int timeout) {
-  (void)timeout;
   Engine& engine = Engine::get_instance();
-  engine.wait(jobid);
+  engine.wait(jobid, timeout);
 
   return 0;
 }

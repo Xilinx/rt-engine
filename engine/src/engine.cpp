@@ -1,3 +1,4 @@
+#include <chrono>
 #include <iostream>
 #include "engine.hpp"
 
@@ -35,12 +36,29 @@ uint32_t EngineThreadPool::enqueue(std::function<void()> task) {
   return id;
 }
 
-void EngineThreadPool::wait(uint32_t id) {
+void EngineThreadPool::wait(uint32_t id, int timeoutMs) {
   // wait for task to be done
+  const auto waitInterval = (timeoutMs > 0) ? 
+    std::chrono::milliseconds(timeoutMs) : std::chrono::seconds(5);
+  const auto startTime = std::chrono::high_resolution_clock::now();
+
   {
     std::unique_lock<std::mutex> lock(status_mtx_);
     while (task_status_[id] != EngineThreadPool::DONE)
-      status_cvar_.wait(lock);
+    {
+      (void)status_cvar_.wait_for(lock, waitInterval);
+
+      if (timeoutMs <= 0)
+        continue; // no timeout requested, keep waiting
+
+      auto currTime = std::chrono::high_resolution_clock::now();
+      std::chrono::duration<double> elapsedTime
+        = std::chrono::duration_cast<std::chrono::duration<double>>(
+            currTime - startTime);
+
+      if (elapsedTime.count()*1000 > timeoutMs)
+        throw std::runtime_error("Task timeout: " + std::to_string(id));
+    }
   }
 
   // return task id to id pool
@@ -88,6 +106,6 @@ uint32_t Engine::submit(std::function<void()> task) {
   return tpool_.enqueue(task);
 }
 
-void Engine::wait(uint32_t id) {
-  tpool_.wait(id);
+void Engine::wait(uint32_t id, int timeout_ms) {
+  tpool_.wait(id, timeout_ms);
 }

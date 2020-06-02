@@ -22,3 +22,12 @@ class MultiThreadTest : public Test {
     unsigned num_queries_;
     unsigned num_threads_;
 };
+
+class TimeoutTest : public Test {
+  public:
+    TimeoutTest(unsigned timeout_ms);
+    virtual void run();
+
+  private:
+    unsigned timeout_ms_;
+};

@@ -15,7 +15,7 @@ class EngineThreadPool {
     ~EngineThreadPool();
 
     uint32_t enqueue(std::function<void()> task);
-    void wait(uint32_t id);
+    void wait(uint32_t id, int timeout_ms=-1);
 
   private:
     void run();
@@ -36,7 +36,7 @@ class Engine {
     }
     
     uint32_t submit(std::function<void()> task);
-    void wait(uint32_t id);
+    void wait(uint32_t id, int timeout_ms=-1);
 
   private:
     Engine();
