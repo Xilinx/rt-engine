@@ -49,6 +49,7 @@ void DeviceHandle::acquire(std::string kernelName, std::string xclbin) {
     .xclbin_path = xcu.getXCLBINPath(),
     .full_name = cu_full_name,
     .device_id = xcu.getOCLDev(),
+    .xdev = xcu.getXDev(),
     .fingerprint = 0,
   });
 

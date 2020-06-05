@@ -21,6 +21,7 @@ struct DeviceInfo {
   std::string xclbin_path;
   std::string full_name;
   cl_device_id device_id;
+  xrt_device *xdev;
   uint32_t fingerprint;
 };
 
