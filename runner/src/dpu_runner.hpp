@@ -1,5 +1,7 @@
 #pragma once
 
+#include <atomic>
+#include <memory>
 #include "runner.hpp"
 #include "tensor.hpp"
 #include "dpu_controller.hpp"

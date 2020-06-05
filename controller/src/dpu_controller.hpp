@@ -1,5 +1,6 @@
 #pragma once
 
+#include <mutex>
 #include <vector>
 #include "tensor_buffer.hpp"
 #include "device_handle.hpp"
