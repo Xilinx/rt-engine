@@ -2,17 +2,6 @@
 #include <fstream>
 #include <memory>
 
-DeviceHandle::DeviceHandle() {
-  client_.reset(new butler::ButlerClient()); 
-  if (client_->Ping() != butler::errCode::SUCCESS)
-    throw std::runtime_error("Error: cannot ping butler server");
-}
-
-DeviceHandle::~DeviceHandle() {
-  if (client_.get() && handle_.get())
-    client_->releaseResources(*handle_);
-}
-
 static uint64_t getDDRBankFromButlerBitmask(unsigned bitmask)
 {
   const int numBits = sizeof(bitmask) * CHAR_BIT;
@@ -23,8 +12,11 @@ static uint64_t getDDRBankFromButlerBitmask(unsigned bitmask)
   throw std::runtime_error("Error: unknown ddr_bank config");
 }
 
+DeviceHandle::DeviceHandle(std::string kernelName, std::string xclbin) {
+  client_.reset(new butler::ButlerClient()); 
+  if (client_->Ping() != butler::errCode::SUCCESS)
+    throw std::runtime_error("Error: cannot ping butler server");
 
-void DeviceHandle::acquire(std::string kernelName, std::string xclbin) {
   std::pair<butler::Alloc, std::vector<butler::xCU>> acquireResult;
   acquireResult = client_->acquireCU(kernelName, xclbin);
 
@@ -56,26 +48,18 @@ void DeviceHandle::acquire(std::string kernelName, std::string xclbin) {
   handle_.reset(new butler::handle(alloc.myHandle));
 }
 
+DeviceHandle::~DeviceHandle() {
+  if (client_.get() && handle_.get())
+    client_->releaseResources(*handle_);
+}
+
 /* 
  * XCL device handle
  */
 
-XclDeviceHandle::XclDeviceHandle() 
- : context_(nullptr), commands_(nullptr), program_(nullptr) {
-}
-
-XclDeviceHandle::~XclDeviceHandle() {
-  if (program_ != nullptr)
-    clReleaseProgram(program_);
-  if (commands_ != nullptr)
-    clReleaseCommandQueue(commands_);
-  if (context_ != nullptr)
-    clReleaseContext(context_);
-}
-
-void XclDeviceHandle::acquire(std::string kernelName, std::string xclbin) {
-  DeviceHandle::acquire(kernelName, xclbin);
-
+XclDeviceHandle::XclDeviceHandle(std::string kernelName, std::string xclbin) 
+ : DeviceHandle(kernelName, xclbin),
+   context_(nullptr), commands_(nullptr), program_(nullptr) {
   // create context
   int err;
   context_ = clCreateContext(0, 1, &get_device_info().device_id, NULL, NULL, &err);
@@ -109,4 +93,26 @@ void XclDeviceHandle::acquire(std::string kernelName, std::string xclbin) {
   cl_int status = CL_SUCCESS;
   program_ = clCreateProgramWithBinary(
     context_, 1, &get_device_info().device_id, &size, &data, &status, &err);
+}
+
+XclDeviceHandle::~XclDeviceHandle() {
+  if (program_)
+    clReleaseProgram(program_);
+  if (commands_)
+    clReleaseCommandQueue(commands_);
+  if (context_)
+    clReleaseContext(context_);
+}
+
+/* 
+ * XRT device handle
+ */
+
+XrtDeviceHandle::XrtDeviceHandle(std::string kernelName, std::string xclbin) 
+: DeviceHandle(kernelName, xclbin) {
+  xhandle_ = xclOpen(get_device_info().device_index, NULL, XCL_INFO);
+}
+
+XrtDeviceHandle::~XrtDeviceHandle() {
+  xclClose(xhandle_);
 }

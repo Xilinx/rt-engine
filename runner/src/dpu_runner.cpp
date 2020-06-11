@@ -12,7 +12,7 @@ DpuRunner::DpuRunner(std::string meta) : exec_core_idx_(0) {
   // make one DpuController for each core
   while(1) {
     try {
-      dpu_controller_.emplace_back(new XclDpuController(meta));
+      dpu_controller_.emplace_back(new SampleDpuController(meta));
       if (num_cores > 0 && dpu_controller_.size() >= num_cores)
         break;
     } catch(...) {

@@ -6,6 +6,7 @@
 
 #include <string>
 #include <memory>
+#include <xrt.h>
 #pragma GCC diagnostic push 
 #pragma GCC diagnostic ignored "-Wignored-qualifiers"
 #include "butler_client.h"
@@ -27,9 +28,8 @@ struct DeviceInfo {
 
 class DeviceHandle {
  public:
-  DeviceHandle();
+  DeviceHandle(std::string kernelName, std::string xclbin);
   virtual ~DeviceHandle();
-  virtual void acquire(std::string kernelName, std::string xclbin);
   const DeviceInfo& get_device_info() const { return *info_; }
 
  private:
@@ -40,9 +40,8 @@ class DeviceHandle {
 
 class XclDeviceHandle : public DeviceHandle {
  public:
-  XclDeviceHandle();
+  XclDeviceHandle(std::string kernelName, std::string xclbin);
   virtual ~XclDeviceHandle();
-  virtual void acquire(std::string kernelName, std::string xclbin) override;
   const cl_context& get_context() const { return context_; }
   const cl_command_queue& get_command_queue() const { return commands_; }
   const cl_program& get_program() const { return program_; }
@@ -53,3 +52,12 @@ class XclDeviceHandle : public DeviceHandle {
   cl_program program_;
 };
 
+class XrtDeviceHandle : public DeviceHandle {
+ public:
+  XrtDeviceHandle(std::string kernelName, std::string xclbin);
+  virtual ~XrtDeviceHandle();
+  const xclDeviceHandle& get_dev_handle() const { return xhandle_; }
+  
+ private:
+  xclDeviceHandle xhandle_;
+};

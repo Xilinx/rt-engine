@@ -21,3 +21,6 @@ class XclDeviceBuffer {
   uint64_t phys_addr_;
   cl_mem mem_;
 };
+
+class XrtDeviceBuffer {
+};

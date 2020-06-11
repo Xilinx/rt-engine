@@ -25,12 +25,13 @@ class DpuController {
   DpuController() = delete;
 };
 
+template <class TDhandle, class TDbuf>
 class XclDpuController : public DpuController {
  public:
   XclDpuController(std::string meta);
   virtual ~XclDpuController() override;
   virtual void run(const std::vector<xir::vart::TensorBuffer*> &inputs, 
-           const std::vector<xir::vart::TensorBuffer*> &outputs) override;
+      const std::vector<xir::vart::TensorBuffer*> &outputs) override;
   virtual std::vector<const xir::vart::Tensor*> get_input_tensors() const override; 
   virtual std::vector<const xir::vart::Tensor*> get_output_tensors() const override; 
   virtual std::vector<xir::vart::TensorBuffer*> get_inputs() override;
@@ -39,13 +40,23 @@ class XclDpuController : public DpuController {
  protected:
   virtual std::vector<xir::vart::TensorBuffer*> 
     create_tensor_buffers(const std::vector<const xir::vart::Tensor*> &tensors);
-  XclDeviceBuffer *alloc(xir::vart::TensorBuffer *tb, cl_mem_flags flags);
+  TDbuf *alloc(xir::vart::TensorBuffer *tb, cl_mem_flags flags);
+
+  std::unique_ptr<TDhandle> handle_;
+  std::vector<std::unique_ptr<xir::vart::TensorBuffer>> tbufs_;
+  std::unordered_map<xir::vart::TensorBuffer*, std::unique_ptr<TDbuf>> tbuf2dbuf_;
+  std::mutex tbuf_mtx_;
+};
+
+class SampleDpuController : public XclDpuController<XclDeviceHandle, XclDeviceBuffer> {
+ public:
+  SampleDpuController(std::string meta);
+  virtual ~SampleDpuController() override;
+  virtual void run(const std::vector<xir::vart::TensorBuffer*> &inputs, 
+      const std::vector<xir::vart::TensorBuffer*> &outputs) override;
+
+ private:
   virtual void upload(XclDeviceBuffer*) const;
   virtual void download(XclDeviceBuffer*) const;
   virtual void execute(XclDeviceBuffer *in, XclDeviceBuffer *out) const;
-
-  XclDeviceHandle handle_;
-  std::vector<std::unique_ptr<xir::vart::TensorBuffer>> tbufs_;
-  std::unordered_map<xir::vart::TensorBuffer*, std::unique_ptr<XclDeviceBuffer>> tbuf2dbuf_;
-  std::mutex tbuf_mtx_;
 };
