@@ -1,4 +1,5 @@
 #include "device_handle.hpp"
+#include "xrt_bin_stream.hpp"
 #include <fstream>
 #include <memory>
 
@@ -110,9 +111,20 @@ XclDeviceHandle::~XclDeviceHandle() {
 
 XrtDeviceHandle::XrtDeviceHandle(std::string kernelName, std::string xclbin) 
 : DeviceHandle(kernelName, xclbin) {
+  auto handle = xclOpen(get_device_info().device_index, NULL, XCL_INFO);
+  std::string fnm = std::string(get_device_info().xclbin_path);
+  xir::XrtBinStream binstream(fnm); 
+  binstream.burn(handle);
+  xclClose(handle);
+
+  uuid_ = binstream.get_uuid();
   xhandle_ = xclOpen(get_device_info().device_index, NULL, XCL_INFO);
+  auto ret = xclOpenContext(xhandle_, &uuid_[0], get_device_info().cu_index, true);
+  if (ret)
+    throw std::runtime_error("Error: xclOpenContext failed");
 }
 
 XrtDeviceHandle::~XrtDeviceHandle() {
+  xclCloseContext(xhandle_, &uuid_[0], get_device_info().cu_index);
   xclClose(xhandle_);
 }

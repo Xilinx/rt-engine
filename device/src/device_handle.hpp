@@ -60,4 +60,5 @@ class XrtDeviceHandle : public DeviceHandle {
   
  private:
   xclDeviceHandle xhandle_;
+  std::array<unsigned char, sizeof(xuid_t)> uuid_;
 };
