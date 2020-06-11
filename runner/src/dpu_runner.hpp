@@ -5,7 +5,6 @@
 #include "runner.hpp"
 #include "tensor.hpp"
 #include "dpu_controller.hpp"
-#include "dpuv4e_controller.hpp"
 
 /*
  * References:

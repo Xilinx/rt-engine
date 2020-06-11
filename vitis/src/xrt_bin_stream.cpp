@@ -16,7 +16,6 @@
 #include "xrt_bin_stream.hpp"
 
 #include <fcntl.h>
-#include <glog/logging.h>
 #include <sys/mman.h>
 #include <sys/stat.h>
 #include <sys/types.h>
@@ -27,14 +26,15 @@
 #include <cstring>
 #include <map>
 #include <numeric>
+#include <sstream>
 
 namespace xir {
 
 static size_t get_size(int fd) {
   struct stat statbuf;
   const auto r_stat = fstat(fd, &statbuf);
-  CHECK_EQ(r_stat, 0) << "fstat error: ";
-  CHECK_GT(statbuf.st_size, 0) << "must not empty file";
+  if (r_stat) throw std::runtime_error("fstat error");
+  if (statbuf.st_size == 0) throw std::runtime_error("must not empty file");
   return statbuf.st_size;
 }
 
@@ -54,9 +54,9 @@ XrtBinStream::~XrtBinStream() {
 }
 void XrtBinStream::init_fd(const std::string filename) {
   fd_ = open(filename.c_str(), O_RDONLY | O_CLOEXEC);
-  CHECK_GT(fd_, 0) << ", open(" << filename << ") failed.";
+  if (!fd_) throw std::runtime_error("open(" + filename + ") failed.");
   data_ = mmap(NULL, get_size(fd_), PROT_READ, MAP_PRIVATE, fd_, 0);
-  CHECK_NE(data_, MAP_FAILED) << "cannot mmap";
+  if (data_ == MAP_FAILED) throw std::runtime_error("cannot mmap");
 }
 void XrtBinStream::init_top() { top_ = (const axlf*)data_; }
 void XrtBinStream::init_uuid() {  //
@@ -100,26 +100,26 @@ static std::string to_string(const xuid_t x) {
 }
 
 void XrtBinStream::dump_layout() const {
-  LOG(INFO) << "uuid: " << to_string(uuid_) << "\nDSA: " << dsa_;
+  //LOG(INFO) << "uuid: " << to_string(uuid_) << "\nDSA: " << dsa_;
   for (auto i = 0; i < ip_layout_->m_count; ++i) {
     if (ip_layout_->m_ip_data[i].m_type != IP_KERNEL) continue;
-    LOG(INFO) << "TYPE: " << ip_layout_->m_ip_data[i].m_type << "\n"
-              << "cu[" << i << "] = " << ip_layout_->m_ip_data[i].m_name
-              << "\n"                                                   //
-              << "ip type " << ip_layout_->m_ip_data[i].m_type << "\n"  //
-              << "ip interrupt enabled "                                //
-              << (ip_layout_->m_ip_data[i].properties & 0x1) << "\n"    //
-              << "ip interrupt id "                                     //
-              << ((ip_layout_->m_ip_data[i].properties & 0x000000FE) >> 1)
-              << "\n"  //
-              << "ip interrupt ctrl "
-              << ((ip_layout_->m_ip_data[i].properties & 0x0000FF00) >> 16)
-              << "\n"  //
-              << "cu base addr: " << std::hex << "0x"
-              << ip_layout_->m_ip_data[i].m_base_address << "\n"  //
-              << "properties : 0x" << ip_layout_->m_ip_data[i].properties
-              << "\n"  //
-        ;
+    ///LOG(INFO) << "TYPE: " << ip_layout_->m_ip_data[i].m_type << "\n"
+    //          << "cu[" << i << "] = " << ip_layout_->m_ip_data[i].m_name
+    //          << "\n"                                                   //
+    //          << "ip type " << ip_layout_->m_ip_data[i].m_type << "\n"  //
+    //          << "ip interrupt enabled "                                //
+    //          << (ip_layout_->m_ip_data[i].properties & 0x1) << "\n"    //
+    //          << "ip interrupt id "                                     //
+    //          << ((ip_layout_->m_ip_data[i].properties & 0x000000FE) >> 1)
+    //          << "\n"  //
+    //          << "ip interrupt ctrl "
+    //          << ((ip_layout_->m_ip_data[i].properties & 0x0000FF00) >> 16)
+    //          << "\n"  //
+    //          << "cu base addr: " << std::hex << "0x"
+    //          << ip_layout_->m_ip_data[i].m_base_address << "\n"  //
+    //          << "properties : 0x" << ip_layout_->m_ip_data[i].properties
+    //          << "\n"  //
+    //    ;
   }
 }
 
@@ -130,7 +130,7 @@ void XrtBinStream::dump_mem_topology() const {
       str << (((int)topology_->m_mem_data[i].m_used) ? "o" : "*");
     }
   }
-  LOG(INFO) << "MEM TOPOLOGY: [" << str.str() << "]";
+  //LOG(INFO) << "MEM TOPOLOGY: [" << str.str() << "]";
 }
 
 void XrtBinStream::burn(int device_id) {
@@ -140,8 +140,8 @@ void XrtBinStream::burn(int device_id) {
 }
 void XrtBinStream::burn(xclDeviceHandle handle) {
   const xclBin* blob = (const xclBin*)data_;
-  CHECK_EQ(xclLockDevice(handle), 0) << "Cannot lock device";
-  CHECK_EQ(xclLoadXclBin(handle, blob), 0) << "Bitstream download failed !";
+  if (xclLockDevice(handle)) throw std::runtime_error("Cannot lock device");
+  if (xclLoadXclBin(handle, blob)) throw std::runtime_error("Bitstream download failed !");
 }
 std::array<unsigned char, sizeof(xuid_t)> XrtBinStream::get_uuid() const {
   auto ret = std::array<unsigned char, sizeof(xuid_t)>();
@@ -150,7 +150,7 @@ std::array<unsigned char, sizeof(xuid_t)> XrtBinStream::get_uuid() const {
 }
 size_t XrtBinStream::get_num_of_cu() const { return cu_names_.size(); }
 std::string XrtBinStream::get_cu(size_t idx) const {
-  CHECK_LT(idx, indices_.size());
+  if (idx >= indices_.size()) throw std::runtime_error("invalid cu idx");
   return cu_names_[indices_[idx]];
 }
 uint64_t XrtBinStream::get_cu_base_addr(size_t idx) const {
