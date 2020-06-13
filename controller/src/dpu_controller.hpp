@@ -40,7 +40,7 @@ class XclDpuController : public DpuController {
  protected:
   virtual std::vector<xir::vart::TensorBuffer*> 
     create_tensor_buffers(const std::vector<const xir::vart::Tensor*> &tensors);
-  TDbuf *alloc(xir::vart::TensorBuffer *tb, cl_mem_flags flags);
+  TDbuf *get_device_buffer(xir::vart::TensorBuffer *tb);
 
   std::unique_ptr<TDhandle> handle_;
   std::vector<std::unique_ptr<xir::vart::TensorBuffer>> tbufs_;
@@ -56,7 +56,5 @@ class SampleDpuController : public XclDpuController<XclDeviceHandle, XclDeviceBu
       const std::vector<xir::vart::TensorBuffer*> &outputs) override;
 
  private:
-  virtual void upload(XclDeviceBuffer*) const;
-  virtual void download(XclDeviceBuffer*) const;
   virtual void execute(XclDeviceBuffer *in, XclDeviceBuffer *out) const;
 };

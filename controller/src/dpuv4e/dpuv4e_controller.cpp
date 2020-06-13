@@ -23,8 +23,10 @@ DpuV4eController::~DpuV4eController() {
 
 void DpuV4eController::run(const std::vector<xir::vart::TensorBuffer*> &inputs, 
     const std::vector<xir::vart::TensorBuffer*> &outputs) {
-  (void)inputs; // TODO
-  (void)outputs;
+  XrtDeviceBuffer *inbuf = get_device_buffer(inputs[0]);
+  XrtDeviceBuffer *outbuf = get_device_buffer(outputs[0]);
+  (void)inbuf; // TODO
+  (void)outbuf; // TODO
 
   auto xcl_handle = handle_->get_dev_handle();
   auto bo_handle = xclAllocBO(xcl_handle, 4096, DOMAIN, XCL_BO_FLAGS_EXECBUF);
