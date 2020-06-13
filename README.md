@@ -13,6 +13,7 @@ runner/src
 
 device/src
   device_handle.cpp              Acquire FPGA DeviceHandle, store metadata
+  device_memory.cpp              DeviceBuffer manages FPGA memory for TensorBuffer
 
 controller/src
   dpu_controller.cpp             XRT programming for IP, holds one DeviceHandle
