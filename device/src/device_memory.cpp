@@ -45,15 +45,17 @@ XclDeviceBuffer::XclDeviceBuffer(const XclDeviceHandle &handle, xir::vart::Tenso
   if (mem_ == 0)
     throw std::runtime_error("Error: failed to allocate device buffer");
 
-  if (flags == CL_MEM_WRITE_ONLY || flags == CL_MEM_READ_WRITE) {
-    // initialize memory
-    cl_event event;
-    int err = clEnqueueMigrateMemObjects(handle.get_command_queue(), 1, &mem_,
-      CL_MIGRATE_MEM_OBJECT_CONTENT_UNDEFINED, 0, NULL, &event);
-    if (err != CL_SUCCESS)
-      throw std::runtime_error("Error: failed to initialize device buffer");
-    clWaitForEvents(1, &event);
-  }
+  // initialize memory
+  cl_event events[2];
+  int err = clEnqueueMigrateMemObjects(handle.get_command_queue(), 1, &mem_,
+    CL_MIGRATE_MEM_OBJECT_CONTENT_UNDEFINED, 0, NULL, &events[0]);
+  if (err != CL_SUCCESS)
+    throw std::runtime_error("Error: failed to reset device buffer");
+  err = clEnqueueWriteBuffer(handle.get_command_queue(), mem_, CL_TRUE,
+      0, size_, cfg.obj, 0, NULL, &events[1]);
+  if (err != CL_SUCCESS)
+    throw std::runtime_error("Error: failed to init device buffer");
+  clWaitForEvents(2, &events[0]);
 
   xclGetMemObjDeviceAddress(
     mem_, handle.get_device_info().device_id, sizeof(phys_addr_), &phys_addr_);
