@@ -7,19 +7,19 @@
 #include "tensor_buffer.hpp"
 #include "device_handle.hpp"
 
-template <class Dhandle>
 class DeviceBuffer {
  public:
-  DeviceBuffer(const Dhandle &handle, const xir::vart::TensorBuffer *tbuf, unsigned bank);
+  DeviceBuffer(const DeviceHandle &handle, const xir::vart::TensorBuffer *tbuf, unsigned bank);
   virtual ~DeviceBuffer() {};
-  xir::vart::TensorBuffer *get_tensor_buffer() const { return tbuf_; }
+  const xir::vart::TensorBuffer *get_tensor_buffer() const { return tbuf_; }
   size_t get_size() const { return size_; }
   uint64_t get_phys_addr() const { return phys_addr_; }
+  unsigned get_bank() const { return bank_; }
   virtual void upload() const = 0;
   virtual void download() const = 0;
 
  protected: 
-  const Dhandle &handle_;
+  const DeviceHandle &handle_;
   const xir::vart::TensorBuffer *tbuf_;
   unsigned bank_;
   size_t size_;
@@ -29,7 +29,7 @@ class DeviceBuffer {
   DeviceBuffer() = delete;
 };
 
-class XclDeviceBuffer : public DeviceBuffer<XclDeviceHandle> {
+class XclDeviceBuffer : public DeviceBuffer {
  public:
   XclDeviceBuffer(const XclDeviceHandle &handle, xir::vart::TensorBuffer *tbuf, unsigned bank);
   ~XclDeviceBuffer();
@@ -40,7 +40,7 @@ class XclDeviceBuffer : public DeviceBuffer<XclDeviceHandle> {
   cl_mem mem_;
 };
 
-class XrtDeviceBuffer : public DeviceBuffer<XrtDeviceHandle> {
+class XrtDeviceBuffer : public DeviceBuffer {
  public:
   XrtDeviceBuffer(const XrtDeviceHandle &handle, xir::vart::TensorBuffer *tbuf, unsigned bank);
   ~XrtDeviceBuffer();

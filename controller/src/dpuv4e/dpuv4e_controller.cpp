@@ -15,7 +15,7 @@
 #define XDPU_CONTROL_HP 0x20 
 
 DpuV4eController::DpuV4eController(std::string meta) 
-  : XclDpuController<XrtDeviceHandle, XrtDeviceBuffer>(meta) {
+  : XclDpuController<XrtDeviceHandle, XrtDeviceBuffer, XrtDeviceBuffer>(meta) {
 }
 
 DpuV4eController::~DpuV4eController() {
@@ -23,8 +23,8 @@ DpuV4eController::~DpuV4eController() {
 
 void DpuV4eController::run(const std::vector<xir::vart::TensorBuffer*> &inputs, 
     const std::vector<xir::vart::TensorBuffer*> &outputs) {
-  XrtDeviceBuffer *inbuf = get_device_buffer(inputs[0]);
-  XrtDeviceBuffer *outbuf = get_device_buffer(outputs[0]);
+  XrtDeviceBuffer *inbuf = dynamic_cast<XrtDeviceBuffer*>(get_device_buffer(inputs[0]));
+  XrtDeviceBuffer *outbuf = dynamic_cast<XrtDeviceBuffer*>(get_device_buffer(outputs[0]));
   (void)inbuf; // TODO
   (void)outbuf; // TODO
 
