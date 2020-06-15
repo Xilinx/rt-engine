@@ -3,22 +3,11 @@
 DeviceBuffer::DeviceBuffer(const DeviceHandle &handle, const xir::vart::TensorBuffer *tbuf, unsigned bank) 
  : handle_(handle), tbuf_(tbuf), bank_(bank), size_(0), phys_addr_(0)
 {
-  static const std::unordered_map<xir::vart::Tensor::DataType, size_t> dataSizeMap = {
-    { xir::vart::Tensor::DataType::INT8, sizeof(int8_t) },
-    { xir::vart::Tensor::DataType::UINT8, sizeof(uint8_t) },
-    { xir::vart::Tensor::DataType::INT16, sizeof(int16_t) },
-    { xir::vart::Tensor::DataType::UINT16, sizeof(uint16_t) },
-    { xir::vart::Tensor::DataType::INT32, sizeof(int32_t) },
-    { xir::vart::Tensor::DataType::UINT32, sizeof(uint32_t) },
-    { xir::vart::Tensor::DataType::FLOAT, sizeof(float) },
-    { xir::vart::Tensor::DataType::DOUBLE, sizeof(double) }
-  };
-
-  if (dataSizeMap.find(tbuf->get_tensor()->get_data_type()) == dataSizeMap.end())
+  static const size_t dataSize = xir::vart::size_of(tbuf->get_tensor()->get_data_type());
+  if (dataSize == 0)
     throw std::runtime_error("Error: cannot alloc device buffer -- unknown datatype");
 
-  size_ = tbuf->get_tensor()->get_element_num() 
-    * dataSizeMap.at(tbuf->get_tensor()->get_data_type());
+  size_ = tbuf->get_tensor()->get_element_num() * dataSize;
 }
 
 /*

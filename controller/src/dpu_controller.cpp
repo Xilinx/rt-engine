@@ -93,8 +93,9 @@ XclDpuController<Dhandle, DbufIn, DbufOut>::create_tensor_buffers(
   std::vector<xir::vart::TensorBuffer*> tbufs;
   for (unsigned ti=0; ti < tensors.size(); ti++)
   {
+    static const size_t dataSize = xir::vart::size_of(tensors[ti]->get_data_type());
+    size_t size = tensors[ti]->get_element_num() * dataSize;
     void *data;
-    size_t size = tensors[ti]->get_element_num() * sizeof(int8_t);
     if (posix_memalign(&data, getpagesize(), size))
       throw std::bad_alloc();
 
