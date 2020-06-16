@@ -93,24 +93,32 @@ XclDpuController<Dhandle, DbufIn, DbufOut>::create_tensor_buffers(
   std::vector<xir::vart::TensorBuffer*> tbufs;
   for (unsigned ti=0; ti < tensors.size(); ti++)
   {
+    // allocate aligned host memory
     static const size_t dataSize = xir::vart::size_of(tensors[ti]->get_data_type());
     size_t size = tensors[ti]->get_element_num() * dataSize;
     void *data;
     if (posix_memalign(&data, getpagesize(), size))
       throw std::bad_alloc();
 
-    auto bufptr = new xir::vart::CpuFlatTensorBuffer(data, tensors[ti]);
-    tbufs.emplace_back(bufptr);
-    DeviceBuffer *dbufptr = nullptr;
-    if (isInput)
-      dbufptr = new DbufIn(handle_.get(), bufptr, handle_->get_device_info().ddr_bank);
-    else
-      dbufptr = new DbufOut(handle_.get(), bufptr, handle_->get_device_info().ddr_bank);
+    // make TensorBuffer to hold host memory
+    std::unique_ptr<xir::vart::CpuFlatTensorBuffer> tbuf(
+      new xir::vart::CpuFlatTensorBuffer(data, tensors[ti]));
+    tbufs.emplace_back(tbuf.get());
 
+    // make corresponding DeviceBuffer for the TensorBuffer
+    std::unique_ptr<DeviceBuffer> dbuf;
+    if (isInput)
+      dbuf.reset(
+        new DbufIn(handle_.get(), tbuf.get(), handle_->get_device_info().ddr_bank));
+    else
+      dbuf.reset(
+        new DbufOut(handle_.get(), tbuf.get(), handle_->get_device_info().ddr_bank));
+
+    // register this TensorBuffer->DeviceBuffer pair
     {
       std::unique_lock<std::mutex> lock(tbuf_mtx_);
-      tbufs_.emplace_back(std::unique_ptr<xir::vart::CpuFlatTensorBuffer>(bufptr));
-      tbuf2dbuf_.emplace(bufptr, std::unique_ptr<DeviceBuffer>(dbufptr));
+      tbuf2dbuf_.emplace(tbuf.get(), std::move(dbuf));
+      tbufs_.emplace_back(std::move(tbuf));
     }
   }
   return tbufs;
