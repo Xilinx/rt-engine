@@ -103,9 +103,9 @@ XclDpuController<Dhandle, DbufIn, DbufOut>::create_tensor_buffers(
     tbufs.emplace_back(bufptr);
     DeviceBuffer *dbufptr = nullptr;
     if (isInput)
-      dbufptr = new DbufIn(*handle_, bufptr, handle_->get_device_info().ddr_bank);
+      dbufptr = new DbufIn(handle_.get(), bufptr, handle_->get_device_info().ddr_bank);
     else
-      dbufptr = new DbufOut(*handle_, bufptr, handle_->get_device_info().ddr_bank);
+      dbufptr = new DbufOut(handle_.get(), bufptr, handle_->get_device_info().ddr_bank);
 
     {
       std::unique_lock<std::mutex> lock(tbuf_mtx_);

@@ -9,7 +9,7 @@
 
 class DeviceBuffer {
  public:
-  DeviceBuffer(const DeviceHandle &handle, const xir::vart::TensorBuffer *tbuf, unsigned bank);
+  DeviceBuffer(const DeviceHandle *handle, const xir::vart::TensorBuffer *tbuf, unsigned bank);
   virtual ~DeviceBuffer() {};
   const xir::vart::TensorBuffer *get_tensor_buffer() const { return tbuf_; }
   size_t get_size() const { return size_; }
@@ -19,7 +19,7 @@ class DeviceBuffer {
   virtual void download() const = 0;
 
  protected: 
-  const DeviceHandle &handle_;
+  const DeviceHandle *handle_;
   const xir::vart::TensorBuffer *tbuf_;
   unsigned bank_;
   size_t size_;
@@ -31,7 +31,7 @@ class DeviceBuffer {
 
 class XclDeviceBuffer : public DeviceBuffer {
  public:
-  XclDeviceBuffer(const XclDeviceHandle &handle, xir::vart::TensorBuffer *tbuf, unsigned bank);
+  XclDeviceBuffer(const XclDeviceHandle *handle, xir::vart::TensorBuffer *tbuf, unsigned bank);
   ~XclDeviceBuffer();
   void upload() const override;
   void download() const override;
@@ -42,7 +42,7 @@ class XclDeviceBuffer : public DeviceBuffer {
 
 class XrtDeviceBuffer : public DeviceBuffer {
  public:
-  XrtDeviceBuffer(const XrtDeviceHandle &handle, xir::vart::TensorBuffer *tbuf, unsigned bank);
+  XrtDeviceBuffer(const XrtDeviceHandle *handle, xir::vart::TensorBuffer *tbuf, unsigned bank);
   ~XrtDeviceBuffer();
   void upload() const override;
   void download() const override;
