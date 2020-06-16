@@ -27,9 +27,8 @@ XclDeviceBuffer::XclDeviceBuffer(const XclDeviceHandle *handle, xir::vart::Tenso
   cfg.obj = (void*)tbuf->data().first;
   cfg.param = 0;
 
-  const auto flags = CL_MEM_READ_WRITE;
-  cl_mem_flags memFlags = flags | CL_MEM_EXT_PTR_XILINX | CL_MEM_USE_HOST_PTR;
-  mem_ = clCreateBuffer(handle->get_context(), memFlags, size_, &cfg, NULL);
+  cl_mem_flags flags = CL_MEM_READ_WRITE | CL_MEM_EXT_PTR_XILINX | CL_MEM_USE_HOST_PTR;
+  mem_ = clCreateBuffer(handle->get_context(), flags, size_, &cfg, NULL);
   if (mem_ == 0)
     throw std::runtime_error("Error: failed to allocate device buffer");
 
