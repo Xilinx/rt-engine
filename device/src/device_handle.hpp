@@ -33,6 +33,7 @@ class DeviceHandle {
   const DeviceInfo& get_device_info() const { return *info_; }
 
  private:
+  void raw_acquire(std::string kernelName, std::string xclbin);
   std::unique_ptr<DeviceInfo> info_;
   std::unique_ptr<butler::handle> handle_;
   std::unique_ptr<butler::ButlerClient> client_;

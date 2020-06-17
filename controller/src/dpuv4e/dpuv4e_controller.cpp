@@ -23,6 +23,7 @@ DpuV4eController::~DpuV4eController() {
 
 void DpuV4eController::run(const std::vector<xir::vart::TensorBuffer*> &inputs, 
     const std::vector<xir::vart::TensorBuffer*> &outputs) {
+  std::cout << "DpuV4eController::run start" << std::endl;
   XrtDeviceBuffer *inbuf = dynamic_cast<XrtDeviceBuffer*>(get_device_buffer(inputs[0]));
   XrtDeviceBuffer *outbuf = dynamic_cast<XrtDeviceBuffer*>(get_device_buffer(outputs[0]));
   (void)inbuf; // TODO
@@ -33,6 +34,7 @@ void DpuV4eController::run(const std::vector<xir::vart::TensorBuffer*> &inputs,
   auto bo_addr = xclMapBO(xcl_handle, bo_handle, true);
   auto ecmd = reinterpret_cast<ert_start_kernel_cmd*>(bo_addr);
 
+#if 0
   ecmd->cu_mask = handle_->get_device_info().cu_mask;
   ecmd->stat_enabled = 1;
 
@@ -90,4 +92,6 @@ void DpuV4eController::run(const std::vector<xir::vart::TensorBuffer*> &inputs,
   }
 
   //state = ecmd->state;
+#endif
+  std::cout << "DpuV4eController::run end" << std::endl;
 }

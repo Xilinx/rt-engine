@@ -1,3 +1,4 @@
+#include "butler_cu_selection_algo.h"
 #include "device_handle.hpp"
 #include "xrt_bin_stream.hpp"
 #include <fstream>
@@ -15,6 +16,12 @@ static uint64_t getDDRBankFromButlerBitmask(unsigned bitmask)
 
 DeviceHandle::DeviceHandle(std::string kernelName, std::string xclbin) {
   client_.reset(new butler::ButlerClient()); 
+  if (std::getenv("RTE_FORCE_ACQUIRE_NO_CHECKS"))
+  {
+    raw_acquire(kernelName, xclbin);
+    return;
+  }
+
   if (client_->Ping() != butler::errCode::SUCCESS)
     throw std::runtime_error("Error: cannot ping butler server");
 
@@ -24,10 +31,10 @@ DeviceHandle::DeviceHandle(std::string kernelName, std::string xclbin) {
   auto alloc = acquireResult.first;
   if (alloc.myErrCode != butler::errCode::SUCCESS)
   {
-    //std::cerr << alloc << std::endl;
+    std::cerr << alloc << std::endl;
     throw std::runtime_error("Error: could not acquire device handle");
   }
-  //std::cout << "Device acquired" << std::endl << alloc << std::endl;
+  std::cout << "Device acquired" << std::endl << alloc << std::endl;
 
   auto xcu = acquireResult.second[0];
   auto cu_full_name = xcu.getKernelName() + ":" + xcu.getName() + ":" +
@@ -47,6 +54,32 @@ DeviceHandle::DeviceHandle(std::string kernelName, std::string xclbin) {
   });
 
   handle_.reset(new butler::handle(alloc.myHandle));
+}
+
+void DeviceHandle::raw_acquire(std::string kernelName, std::string xclbin) {
+  auto num_devices = xclProbe();
+  if (num_devices == 0)
+    throw std::runtime_error("Error: no devices available");
+
+  auto handle = xclOpen(0, NULL, XCL_INFO);
+  xclDeviceInfo2 deviceInfo;
+  xclGetDeviceInfo2(handle, &deviceInfo);
+  xclClose(handle);
+
+  xir::XrtBinStream binstream(xclbin); 
+  auto cu_full_name = kernelName + ":0:0";
+  info_.reset(new DeviceInfo{
+    .cu_base_addr = binstream.get_cu_base_addr(0),
+    .ddr_bank = 0,
+    .device_index = 0,
+    .cu_index = 0,
+    .cu_mask = (1u << 0),
+    .xclbin_path = xclbin,
+    .full_name = cu_full_name,
+    .device_id = 0,
+    .xdev = nullptr,
+    .fingerprint = 0,
+  });
 }
 
 DeviceHandle::~DeviceHandle() {
@@ -128,3 +161,110 @@ XrtDeviceHandle::~XrtDeviceHandle() {
   xclCloseContext(xhandle_, &uuid_[0], get_device_info().cu_index);
   xclClose(xhandle_);
 }
+
+#if 0
+class ForceFirstCUSelection : public butler::CUSelectionAlgo {
+public:
+  ForceFirstCUSelection() {};
+  virtual ~ForceFirstCUSelection() = default;
+
+private:
+  butler::UDFResult execute(butler::CUSelectionAlgoParam_t param) const {
+    const std::vector<butler::XCLBIN>* xclbins_ptr = param.xclbins;
+    const std::vector<butler::XCLBIN>& xclbins = *xclbins_ptr;
+    const butler::System* system = param.system;
+    butler::UDFResult rtn;
+    rtn.valid = true;
+    rtn.myErrCode = butler::errCode::ASSIGNMENT_UNFEASIBLE;
+
+    std::cout << "# fpgas: " << system->getNumFPGAs() << std::endl;
+    std::cout << "# xclbins: " << xclbins.size() << std::endl;
+    if (system->getNumFPGAs() == 1 && xclbins.size() == 1)
+    {
+      // return first FPGA without any checks
+      std::cout << "returning 1st FPGA without any checks" << std::endl;
+      const butler::xFPGA* fpgaResource = system->getFPGAAtIdx(0);
+      rtn.myErrCode = butler::errCode::SUCCESS;
+      rtn.FPGAidx = fpgaResource->getIdx();
+      rtn.CUidx = 0;
+      rtn.XCLBINidx = 0;
+    }
+
+    return rtn;
+  }
+};
+#endif
+
+#if 0
+class CUSelection : public butler::CUSelectionAlgo {
+public:
+  CUSelection() {};
+  virtual ~CUSelection() = default;
+
+private:
+  butler::UDFResult execute(butler::CUSelectionAlgoParam_t param) const {
+    const std::vector<butler::XCLBIN>* xclbins_ptr = param.xclbins;
+    const std::vector<butler::XCLBIN>& xclbins = *xclbins_ptr;
+    const butler::System* system = param.system;
+    const std::string* kernelName = param.kernelName;
+    int FPGAindex = -1;
+    int CUindex = -1;
+    butler::XCLBIN *xclbinPtr = nullptr;
+    butler::UDFResult rtn;
+    rtn.valid = true;
+    rtn.myErrCode = butler::errCode::ASSIGNMENT_UNFEASIBLE;
+
+    // find first free CU with kernel name
+    for (int i = 0; (i < system->getNumFPGAs()) && (FPGAindex == -1); i++){
+      const butler::xFPGA* fpga = system->getFPGAAtIdx(i);
+      for (int j = 0; j < fpga->getNumCUs() && (FPGAindex == -1); j++){
+        const xCU* cu = fpga->getCUAtIdx(j);
+        if (cu->getKernelName().compare(*kernelName) == 0){
+          if (!cu->getUsed()){
+            FPGAindex = i;
+            CUindex = j;
+          }
+        }
+      }
+    }
+    if (0 > FPGAindex){
+      for (int i = 0; (i < system->getNumFPGAs()) && (FPGAindex == -1); i++){
+        const butler::xFPGA* fpga = system->getFPGAAtIdx(i);
+        const std::string& FPGADSAName = fpga->getDSAName();
+        // if fpga not free, continue
+        if (fpga->AreCUsUsed()) continue;
+        // allocate
+        for (int j = 0; j < xclbins.size() && (FPGAindex == -1); j++){
+          const std::string& xclbinDSAName = xclbins[j].getDSAName();
+          if (FPGADSAName.compare(xclbinDSAName) == 0){
+            for(int k = 0 ; k < xclbins[j].getNumCUs() && (FPGAindex == -1); k++){
+              if (xclbins[j].getCUAtIdx(k)->getKernelName().compare(*kernelName) == 0){
+                FPGAindex = i;
+                CUindex = k;
+                xclbinPtr = const_cast<XCLBIN *>(&(*(xclbins.begin() + j)));
+              }
+            }
+          }
+        }
+      }
+    }
+    if (0 <= FPGAindex){
+      const xFPGA* fpgaResource = system->getFPGAAtIdx(FPGAindex);
+      rtn.myErrCode = butler::errCode::SUCCESS;
+      rtn.FPGAidx = fpgaResource->getIdx();
+      // CU in XCLBIN
+      if (xclbinPtr != nullptr){
+        rtn.CUidx = CUindex;
+        rtn.XCLBINidx = xclbinPtr->getIdx();
+      }
+      // CU on FPGA
+      else{
+        const xCU* cuResource = fpgaResource->getCUAtIdx(CUindex);
+        rtn.CUidx = cuResource->getCUIdx();
+      }
+    }
+    return rtn;
+  }
+};
+#endif
+

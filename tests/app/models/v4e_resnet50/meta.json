@@ -1,0 +1,8 @@
+{ 
+  "target": "v4e", 
+  "filename": "", 
+  "kernel": "dpu_top", 
+  "config_file": "", 
+  "lib": "", 
+  "xclbin": "/home/demo/XCLBINs/2pe_batch5_0612_300MHz/binary_container_1_final.xclbin"
+}
