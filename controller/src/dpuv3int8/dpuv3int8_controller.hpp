@@ -133,7 +133,12 @@ class Dpuv3Int8Controller : public XclDpuController<XclDeviceHandle, XclDeviceBu
            const std::vector<xir::vart::TensorBuffer*> &outputs) override;
   std::vector<int32_t, aligned_allocator<int32_t>> load(std::string filename);
   static void run_Kernel(xrtcpp::exec::exec_write_command cmd, uint64_t* buf_addr, uint32_t* buf_size, uint32_t* reg_val);
-  
+  virtual std::vector<xir::vart::TensorBuffer*> get_inputs() override;
+  virtual std::vector<xir::vart::TensorBuffer*> get_outputs() override;
+
+
+ private:    
+
   void init();
   void initializeTaskFUVariables();
   void initAllocateHostMemory();
@@ -147,7 +152,6 @@ class Dpuv3Int8Controller : public XclDpuController<XclDeviceHandle, XclDeviceBu
   void execute();
   void checkFpgaOutput();
 
- private:    
   std::vector<int,aligned_allocator<int>> instr;
   std::vector<int,aligned_allocator<int>> params;
   std::vector<int,aligned_allocator<int>> swap;

@@ -504,6 +504,45 @@ void Dpuv3Int8Controller::checkFpgaOutput()
 
 }
 
+std::vector<xir::vart::TensorBuffer*> 
+Dpuv3Int8Controller::get_inputs() {
+     const std::vector<std::int32_t> dummyInputDims = { 1 };
+    xir::vart::Tensor dummyInputTensor("dummyInput", dummyInputDims, xir::vart::Tensor::DataType::UINT32);
+    static const size_t dummyInputDataSize = xir::vart::size_of(dummyInputTensor.get_data_type());
+    size_t dummyInputSize = dummyInputTensor.get_element_num() * dummyInputDataSize;
+    void *dummyInputData;
+    if (posix_memalign(&dummyInputData, getpagesize(), dummyInputSize))
+      throw std::bad_alloc();
+
+    std::unique_ptr<xir::vart::CpuFlatTensorBuffer> dummyInputTbuf(new xir::vart::CpuFlatTensorBuffer(dummyInputData, &dummyInputTensor));
+
+    std::vector<xir::vart::TensorBuffer*> tbufs;
+    tbufs.emplace_back(dummyInputTbuf.get());
+
+    return tbufs;
+
+}
+
+std::vector<xir::vart::TensorBuffer*> 
+Dpuv3Int8Controller::get_outputs() {
+
+    const std::vector<std::int32_t> dummyOutputDims = { 1 };
+    xir::vart::Tensor dummyOutputTensor("dummyOutput", dummyOutputDims, xir::vart::Tensor::DataType::UINT32);
+    static const size_t dummyOutputDataSize = xir::vart::size_of(dummyOutputTensor.get_data_type());
+    size_t dummyOutputSize = dummyOutputTensor.get_element_num() * dummyOutputDataSize;
+    void *dummyOutputData;
+    if (posix_memalign(&dummyOutputData, getpagesize(), dummyOutputSize))
+      throw std::bad_alloc();
+
+    std::unique_ptr<xir::vart::CpuFlatTensorBuffer> dummyOutputTbuf(new xir::vart::CpuFlatTensorBuffer(dummyOutputData, &dummyOutputTensor));
+
+    std::vector<xir::vart::TensorBuffer*> tbufs;
+    tbufs.emplace_back(dummyOutputTbuf.get());
+
+    return tbufs;
+}
+
+
 void Dpuv3Int8Controller::run(const std::vector<xir::vart::TensorBuffer*> &inputs, 
                         const std::vector<xir::vart::TensorBuffer*> &outputs) {
     runAllocateHostMemory();
