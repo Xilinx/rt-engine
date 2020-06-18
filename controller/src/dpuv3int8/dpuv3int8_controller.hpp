@@ -105,6 +105,7 @@
 #define REG_IDX_DONE_CNT                30 
 
 #include "dpu_controller.hpp"
+#include "experimental/xrtexec.hpp"
 
 template <typename T>
 struct aligned_allocator
@@ -124,7 +125,7 @@ struct aligned_allocator
 };
 
 
-class Dpuv3Int8Controller : public XclDpuController {
+class Dpuv3Int8Controller : public XclDpuController<XclDeviceHandle, XclDeviceBuffer, XclDeviceBuffer> {
  public:
   Dpuv3Int8Controller(std::string meta);
   virtual ~Dpuv3Int8Controller() override;
