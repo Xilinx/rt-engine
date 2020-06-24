@@ -233,45 +233,28 @@ void Dpuv3Int8Controller::initializeTaskFUVariables()
     std::cout<<"-----------------------------------------------"<<std::endl;
     std::cout << "Program begins: "<< std::endl;
 
-    uint32_t task_fu_addr_strd = 0x24c00;
-    uint32_t task_fu_kw = 0x6;
-    uint32_t task_fu_sw = 0x1;
-    uint32_t task_fu_ic = 0x2;
-    uint32_t task_fu_ow = 0xe4;
-    uint32_t task_fu_oh = 0xdf;
-    uint32_t task_fu_src_ntrans = 0x931;
-    uint32_t task_fu_dst_ntrans = 0xc400;
-    uint32_t task_fu_pl_corr = 0x9;
-    uint32_t task_fu_pr_corr = 0x2a9;
-    uint32_t task_fu_iw_corr = 224*3;   //need update
-    uint32_t task_fu_sw_corr = 6;   //need update
-    uint32_t task_fu_wcg_corr = 0xe0;
-    uint32_t task_fu_read_mode = 0x2;
     task_mode = 0x0;
-    uint32_t reg_axcache_axos = 0x01012020;
-    uint32_t reg_dpu_prof_enable = 0x1;
-    
     uint32_t zero = 0;
 
     //Initialize register value
-    reg_val[REG_IDX_TASK_FU_ADDR_STRD]      = task_fu_addr_strd;
-    reg_val[REG_IDX_TASK_FU_KW]             = task_fu_kw;
-    reg_val[REG_IDX_TASK_FU_SW]             = task_fu_sw;
-    reg_val[REG_IDX_TASK_FU_IC]             = task_fu_ic;
-    reg_val[REG_IDX_TASK_FU_OW]             = task_fu_ow;
-    reg_val[REG_IDX_TASK_FU_OH]             = task_fu_oh;
-    reg_val[REG_IDX_TASK_FU_SRC_NTRANS]     = task_fu_src_ntrans;
-    reg_val[REG_IDX_TASK_FU_DST_NTRANS]     = task_fu_dst_ntrans;
-    reg_val[REG_IDX_TASK_FU_PL_CORR]        = task_fu_pl_corr;
-    reg_val[REG_IDX_TASK_FU_PR_CORR]        = task_fu_pr_corr;
-    reg_val[REG_IDX_TASK_FU_IW_CORR]        = task_fu_iw_corr;
-    reg_val[REG_IDX_TASK_FU_SW_CORR]        = task_fu_sw_corr;
-    reg_val[REG_IDX_TASK_FU_WCG_CORR]       = task_fu_wcg_corr;
-    reg_val[REG_IDX_TASK_FU_READ_MODE]      = task_fu_read_mode;
+    reg_val[REG_IDX_TASK_FU_ADDR_STRD]      = 0x24c00;
+    reg_val[REG_IDX_TASK_FU_KW]             = 0x6;
+    reg_val[REG_IDX_TASK_FU_SW]             = 0x1;
+    reg_val[REG_IDX_TASK_FU_IC]             = 0x2;
+    reg_val[REG_IDX_TASK_FU_OW]             = 0xe4;
+    reg_val[REG_IDX_TASK_FU_OH]             = 0xdf;
+    reg_val[REG_IDX_TASK_FU_SRC_NTRANS]     = 0x931;
+    reg_val[REG_IDX_TASK_FU_DST_NTRANS]     = 0xc400;
+    reg_val[REG_IDX_TASK_FU_PL_CORR]        = 0x9;
+    reg_val[REG_IDX_TASK_FU_PR_CORR]        = 0x2a9;
+    reg_val[REG_IDX_TASK_FU_IW_CORR]        = 224*3;
+    reg_val[REG_IDX_TASK_FU_SW_CORR]        = 6;
+    reg_val[REG_IDX_TASK_FU_WCG_CORR]       = 0xe0;
+    reg_val[REG_IDX_TASK_FU_READ_MODE]      = 0x2;
     reg_val[REG_IDX_TASK_MODE]              = task_mode;
     reg_val[REG_IDX_REG_VERSION]            = zero;
-    reg_val[REG_IDX_REG_AXCACHE_AXOS]       = reg_axcache_axos;
-    reg_val[REG_IDX_REG_DPU_PROF_ENABLE]    = reg_dpu_prof_enable;
+    reg_val[REG_IDX_REG_AXCACHE_AXOS]       = 0x01012020;
+    reg_val[REG_IDX_REG_DPU_PROF_ENABLE]    = 0x1;
     reg_val[REG_IDX_REG_DPU_PROF_FLAG]      = zero;
     reg_val[REG_IDX_REG_DPU_PROF_TSTAMP]    = zero;
     reg_val[REG_IDX_REG_DPU_PROF_LSNUM]     = zero;
@@ -328,8 +311,6 @@ void Dpuv3Int8Controller::initCreateBuffers()
     buf_addr[BUF_IDX_FUDST] = fuDst_buf->get_phys_addr();
 
 }
-
-
 
 void Dpuv3Int8Controller::runCreateBuffers()
 {

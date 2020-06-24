@@ -73,8 +73,8 @@ class Dpuv3Int8Controller : public XclDpuController<XclDeviceHandle, XclDeviceBu
   std::unique_ptr<XclDeviceBuffer> fuSrc_buf;
   std::unique_ptr<XclDeviceBuffer> fuDst_buf;
   
-  std::string modelName;
 
+  std::string modelName;
   std::string instr_filename;
   std::string din_filename;
   std::string dout_filename;
