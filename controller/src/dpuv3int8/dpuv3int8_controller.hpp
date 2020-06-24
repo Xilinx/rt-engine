@@ -8,7 +8,6 @@
 #define CONTROL_ADDR_BLOCK_RSLT                         0x28
 #define CONTROL_ADDR_BLOCK_SRC                          0x30
 #define CONTROL_ADDR_BLOCK_DST                          0x38
-#define CONTROL_ADDR_BLOCK_PROF                         0x88
 #define CONTROL_ADDR_TASK_FU_ADDR_STRD                  0x40 
 #define CONTROL_ADDR_TASK_FU_KW                         0x44
 #define CONTROL_ADDR_TASK_FU_SW                         0x48
@@ -66,7 +65,6 @@
 #define BUF_IDX_RESULT                  5
 #define BUF_IDX_FUSRC                   6
 #define BUF_IDX_FUDST                   7
-#define BUF_IDX_PROF                    8
 #define BUF_IDX_SRC                     9
 #define BUF_IDX_DST                     10
 #define BUF_IDX_NULL                    11
@@ -160,7 +158,6 @@ class Dpuv3Int8Controller : public XclDpuController<XclDeviceHandle, XclDeviceBu
   std::vector<int,aligned_allocator<int>> result;
   std::vector<int,aligned_allocator<int>> fuSrc;
   std::vector<int,aligned_allocator<int>> fuDst;       	    
-  std::vector<int,aligned_allocator<int>> prof;
 
   uint32_t task_fu_addr_strd;
   uint32_t task_fu_kw;
@@ -191,7 +188,6 @@ class Dpuv3Int8Controller : public XclDpuController<XclDeviceHandle, XclDeviceBu
   XclDeviceBuffer* result_buf;
   XclDeviceBuffer* fuSrc_buf;
   XclDeviceBuffer* fuDst_buf;
-  XclDeviceBuffer* prof_buf;
   
   std::string modelName;
 

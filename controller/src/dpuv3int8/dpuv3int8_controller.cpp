@@ -103,8 +103,6 @@ void Dpuv3Int8Controller::run_Kernel(xrtcpp::exec::exec_write_command cmd, uint6
     cmd.add(CONTROL_ADDR_BLOCK_SWAP + 0x4       ,((buf_addr[BUF_IDX_SWAP]   ) >> 32) & 0xFFFFFFFF);
     cmd.add(CONTROL_ADDR_BLOCK_RSLT             ,( buf_addr[BUF_IDX_RESULT] ) & 0xFFFFFFFF);
     cmd.add(CONTROL_ADDR_BLOCK_RSLT + 0x4       ,((buf_addr[BUF_IDX_RESULT] ) >> 32) & 0xFFFFFFFF);
-    cmd.add(CONTROL_ADDR_BLOCK_PROF             ,( buf_addr[BUF_IDX_PROF]   ) & 0xFFFFFFFF);
-    cmd.add(CONTROL_ADDR_BLOCK_PROF + 0x4       ,((buf_addr[BUF_IDX_PROF]   ) >> 32) & 0xFFFFFFFF);
     cmd.add(CONTROL_ADDR_BLOCK_SRC              ,( buf_addr[BUF_IDX_SRC]    ) & 0xFFFFFFFF);
     cmd.add(CONTROL_ADDR_BLOCK_SRC + 0x4        ,((buf_addr[BUF_IDX_SRC]    ) >> 32) & 0xFFFFFFFF);
     cmd.add(CONTROL_ADDR_BLOCK_DST              ,( buf_addr[BUF_IDX_DST]    ) & 0xFFFFFFFF);
@@ -241,7 +239,6 @@ void Dpuv3Int8Controller::initAllocateHostMemory()
     swap.resize(BLK_SIZE/sizeof(int32_t));
     fuSrc.resize(BLK_SIZE/sizeof(int32_t));
     fuDst.resize(BLK_SIZE/sizeof(int32_t));       	    
-    prof.resize(BLK_SIZE/sizeof(int32_t));
     
     std::cout<<"One time initialzation"<<std::endl;
 }
@@ -330,17 +327,6 @@ void Dpuv3Int8Controller::initCreateBuffers()
     std::unique_ptr<xir::vart::CpuFlatTensorBuffer> fuDsttbuf(new xir::vart::CpuFlatTensorBuffer(fuDsthost_ptr, &fuDsttensor));
     fuDst_buf = new XclDeviceBuffer(handle_.get(), fuDsttbuf.get(), handle_->get_device_info().ddr_bank);
 
-
-    void *profhost_ptr = (void*)prof.data();
-//    size_t profsize = prof.size()*sizeof(uint32_t);
-//    prof_buf = new XclDeviceBuffer(handle_, profhost_ptr, profsize, ddrBankMap[handle_.get_device_info().ddr_bank], flags);
-
-    const std::vector<std::int32_t> profdims = { prof.size() };
-    xir::vart::Tensor proftensor("prof", profdims, xir::vart::Tensor::DataType::UINT32);
-    std::unique_ptr<xir::vart::CpuFlatTensorBuffer> proftbuf(new xir::vart::CpuFlatTensorBuffer(profhost_ptr, &proftensor));
-    prof_buf = new XclDeviceBuffer(handle_.get(), proftbuf.get(), handle_->get_device_info().ddr_bank);
-
-
 }
 
 
@@ -395,7 +381,6 @@ void Dpuv3Int8Controller::initGetDevBufrAddr()
 
     buf_addr[BUF_IDX_FUSRC] = fuSrc_buf->get_phys_addr();
     buf_addr[BUF_IDX_FUDST] = fuDst_buf->get_phys_addr();
-    buf_addr[BUF_IDX_PROF] = prof_buf->get_phys_addr();
 
 }
 
@@ -418,7 +403,6 @@ void Dpuv3Int8Controller::initBufrSize()
     buf_size[BUF_IDX_SWAP]      = swap.size()*sizeof(uint32_t);
     buf_size[BUF_IDX_FUSRC]     = fuSrc.size()*sizeof(uint32_t);
     buf_size[BUF_IDX_FUDST]     = fuDst.size()*sizeof(uint32_t);
-    buf_size[BUF_IDX_PROF]      = prof.size()*sizeof(uint32_t);
     buf_size[BUF_IDX_SRC]       = 0;
     buf_size[BUF_IDX_DST]       = 0;
     buf_size[BUF_IDX_NULL]      = 0;

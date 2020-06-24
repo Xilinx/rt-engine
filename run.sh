@@ -6,4 +6,4 @@ export XILINX_XRT=/opt/xilinx/xrt
 #build/tests/app.exe tests/app/models/xdnn_resnet50/meta.json
 
 #dpuv3int8 command
-build/tests/app.exe -r tests/app/models/dpuv3int8_resnet50/meta.json
+build/tests/app.exe -r tests/app/models/dpuv3int8_resnet50/meta.json -t st
