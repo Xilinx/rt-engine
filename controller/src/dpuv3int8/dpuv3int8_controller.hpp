@@ -1,5 +1,6 @@
 #define BUF_IDX_NUM                     12
 #define REG_NUM                         31
+#include "json-c/json.h"
 
 #include "dpu_controller.hpp"
 #include "experimental/xrtexec.hpp"
@@ -44,7 +45,10 @@ class Dpuv3Int8Controller : public XclDpuController<XclDeviceHandle, XclDeviceBu
   
   void execute();
   void checkFpgaOutput();
+  
   std::unique_ptr<XclDeviceBuffer> createBuffer(void* hostPtr, size_t size);
+  std::string getFileNameIfExists(std::string name, json_object* jobj);
+
 
   std::vector<int,aligned_allocator<int>> instr;
   std::vector<int,aligned_allocator<int>> params;

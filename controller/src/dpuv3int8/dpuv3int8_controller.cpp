@@ -134,7 +134,6 @@
 #include "CL/cl_ext_xilinx.h"
 #pragma GCC diagnostic pop 
 #include "dpu_controller.hpp"
-#include "json-c/json.h"
 
 #include "device_handle.hpp"
 
@@ -150,45 +149,32 @@ Dpuv3Int8Controller::Dpuv3Int8Controller(std::string meta) : XclDpuController<Xc
   metabuf << f.rdbuf();
   json_object *jobj = json_tokener_parse(metabuf.str().c_str());     
 
-  // get kernel name
-  json_object *modelNameObj = NULL;
-  if (!json_object_object_get_ex(jobj, "model", &modelNameObj))
-    throw std::runtime_error("Error: missing 'model' field in meta.json");
-  modelName = json_object_get_string(modelNameObj);
-
-  json_object *instrNameObj = NULL;
-  if (!json_object_object_get_ex(jobj, "instrFile", &instrNameObj))
-    throw std::runtime_error("Error: missing 'instrFile' field in meta.json");
-  instr_filename = json_object_get_string(instrNameObj);
-
-  json_object *dInNameObj = NULL;
-  if (!json_object_object_get_ex(jobj, "dInFile", &dInNameObj))
-    throw std::runtime_error("Error: missing 'dInFile' field in meta.json");
-  din_filename = json_object_get_string(dInNameObj);
-
-  json_object *dOutNameObj = NULL;
-  if (!json_object_object_get_ex(jobj, "dOutFile", &dOutNameObj))
-    throw std::runtime_error("Error: missing 'dOutFile' field in meta.json");
-  dout_filename = json_object_get_string(dOutNameObj);
-
-  json_object *resultNameObj = NULL;
-  if (!json_object_object_get_ex(jobj, "resultFile", &resultNameObj))
-    throw std::runtime_error("Error: missing 'resultFile' field in meta.json");
-  result_filename = json_object_get_string(resultNameObj);
-
-  json_object *paramsNameObj = NULL;
-  if (!json_object_object_get_ex(jobj, "paramsFile", &paramsNameObj))
-    throw std::runtime_error("Error: missing 'paramsFile' field in meta.json");
-  params_filename = json_object_get_string(paramsNameObj);
+  modelName = getFileNameIfExists("model", jobj);
+  instr_filename = getFileNameIfExists("instrFile", jobj);
+  din_filename = getFileNameIfExists("dInFile", jobj);
+  dout_filename = getFileNameIfExists("dOutFile", jobj);
+  result_filename = getFileNameIfExists("resultFile", jobj);
+  params_filename = getFileNameIfExists("paramsFile", jobj);
 
   initializeTaskFUVariables();
   initCreateBuffers();
   initBufrSize();
 }
 
+std::string Dpuv3Int8Controller::getFileNameIfExists(std::string name, json_object* jobj)
+{
+  json_object *obj = NULL;
+  if (!json_object_object_get_ex(jobj, name.c_str(), &obj))
+    throw std::runtime_error("Error: missing "+name+" field in meta.json");
+  return json_object_get_string(obj);
+
+}
+
 
 Dpuv3Int8Controller::~Dpuv3Int8Controller() {
 }
+
+
 void Dpuv3Int8Controller::run_Kernel(xrtcpp::exec::exec_write_command cmd, uint64_t* buf_addr, uint32_t* buf_size, uint32_t* reg_val)
 {
 
