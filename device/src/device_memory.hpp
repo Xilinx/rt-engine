@@ -9,9 +9,9 @@
 
 class DeviceBuffer {
  public:
-  DeviceBuffer(const DeviceHandle *handle, const xir::vart::TensorBuffer *tbuf, unsigned bank);
+  DeviceBuffer(const DeviceHandle *handle, xir::vart::TensorBuffer *tbuf, unsigned bank);
   virtual ~DeviceBuffer() {};
-  const xir::vart::TensorBuffer *get_tensor_buffer() const { return tbuf_; }
+  xir::vart::TensorBuffer *get_tensor_buffer() const { return tbuf_; }
   size_t get_size() const { return size_; }
   uint64_t get_phys_addr() const { return phys_addr_; }
   unsigned get_bank() const { return bank_; }
@@ -20,7 +20,7 @@ class DeviceBuffer {
 
  protected: 
   const DeviceHandle *handle_;
-  const xir::vart::TensorBuffer *tbuf_;
+  xir::vart::TensorBuffer *tbuf_;
   unsigned bank_;
   size_t size_;
   uint64_t phys_addr_;

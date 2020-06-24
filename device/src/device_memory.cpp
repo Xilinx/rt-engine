@@ -1,6 +1,6 @@
 #include "device_memory.hpp"
 
-DeviceBuffer::DeviceBuffer(const DeviceHandle *handle, const xir::vart::TensorBuffer *tbuf, unsigned bank) 
+DeviceBuffer::DeviceBuffer(const DeviceHandle *handle, xir::vart::TensorBuffer *tbuf, unsigned bank) 
  : handle_(handle), tbuf_(tbuf), bank_(bank), size_(0), phys_addr_(0)
 {
   static const size_t dataSize = xir::vart::size_of(tbuf->get_tensor()->get_data_type());

@@ -1,3 +1,5 @@
+#define BUF_IDX_NUM                     12
+
 #define CONTROL_ADDR_AP_CTRL                            0x00
 #define CONTROL_ADDR_GIE                                0x04
 #define CONTROL_ADDR_IER                                0x08
@@ -155,10 +157,20 @@ Dpuv3Int8Controller::Dpuv3Int8Controller(std::string meta) : XclDpuController<Xc
   dout_filename = getFileNameIfExists("dOutFile", jobj);
   result_filename = getFileNameIfExists("resultFile", jobj);
   params_filename = getFileNameIfExists("paramsFile", jobj);
+ 
+  { // TODO init input/output tensor from compiler
+    auto din = load(din_filename);
+    dout = load(dout_filename);
+    const std::vector<std::int32_t> indims = { int32_t(din.size()) };
+    const std::vector<std::int32_t> outdims = { int32_t(dout.size()) };
+    in_tensor_.reset(
+      new xir::vart::Tensor("input", indims, xir::vart::Tensor::DataType::INT32));
+    out_tensor_.reset(
+      new xir::vart::Tensor("output", outdims, xir::vart::Tensor::DataType::INT32));
+  }
 
   initializeTaskFUVariables();
   initCreateBuffers();
-  initBufrSize();
 }
 
 std::string Dpuv3Int8Controller::getFileNameIfExists(std::string name, json_object* jobj)
@@ -274,8 +286,8 @@ void Dpuv3Int8Controller::initializeTaskFUVariables()
 
 std::unique_ptr<XclDeviceBuffer> Dpuv3Int8Controller::createBuffer(void* hostPtr, size_t size)
 {
-    
-    const std::vector<std::int32_t> dims = { size };
+    // FIXME: `tbuf` will be freed when this function returns
+    const std::vector<std::int32_t> dims = { int32_t(size) };
     xir::vart::Tensor tensor("name", dims, xir::vart::Tensor::DataType::UINT32);
     std::unique_ptr<xir::vart::CpuFlatTensorBuffer> tbuf(new xir::vart::CpuFlatTensorBuffer(hostPtr, &tensor));
     std::unique_ptr<XclDeviceBuffer> buf;
@@ -302,7 +314,10 @@ void Dpuv3Int8Controller::initCreateBuffers()
     swap_buf=createBuffer((void*)swap.data(), swap.size());
     fuSrc_buf=createBuffer((void*)fuSrc.data(), fuSrc.size());
     fuDst_buf=createBuffer((void*)fuDst.data(), fuDst.size());
-    
+}
+
+void Dpuv3Int8Controller::initRunBufs(uint64_t *buf_addr, uint32_t *buf_size)
+{
     buf_addr[BUF_IDX_INSTR] = instr_buf->get_phys_addr();
     buf_addr[BUF_IDX_PARAMS] = params_buf->get_phys_addr();
     buf_addr[BUF_IDX_SWAP] = swap_buf->get_phys_addr();
@@ -310,46 +325,6 @@ void Dpuv3Int8Controller::initCreateBuffers()
     buf_addr[BUF_IDX_FUSRC] = fuSrc_buf->get_phys_addr();
     buf_addr[BUF_IDX_FUDST] = fuDst_buf->get_phys_addr();
 
-}
-
-void Dpuv3Int8Controller::runCreateBuffers()
-{
-
-    //Allocate Memory in Host Memory
-    std::cout<<"Run time initialzation for each query"<<std::endl;
-
-    din=load(din_filename);
-    dout=load(dout_filename);
-    result.resize(dout.size());
-    
-
-    din_buf=createBuffer((void*)din.data(), din.size());
-    result_buf=createBuffer((void*)result.data(), result.size());
-
-    buf_addr[BUF_IDX_DIN] = din_buf->get_phys_addr();
-    buf_addr[BUF_IDX_RESULT] = result_buf->get_phys_addr();
-
-    buf_size[BUF_IDX_DIN]       = din.size()*sizeof(uint32_t);
-    buf_size[BUF_IDX_DOUT]      = dout.size()*sizeof(uint32_t);
-    buf_size[BUF_IDX_RESULT]    = result.size()*sizeof(uint32_t);
-
-    if(task_mode == 0) // If FU is used 
-    {
-        buf_addr[BUF_IDX_SRC] = buf_addr[BUF_IDX_DIN];
-        buf_size[BUF_IDX_SRC] = buf_size[BUF_IDX_DIN];
-    }                                                                 
-    else            // If FU is NOT used                                                      
-    {                                                                 
-        buf_addr[BUF_IDX_DST] = buf_addr[BUF_IDX_DIN];
-        buf_size[BUF_IDX_DST] = buf_size[BUF_IDX_DIN];
-    }
-
-
-}
-
-void Dpuv3Int8Controller::initBufrSize()
-{
-    //Initialize buf_size
     buf_size[BUF_IDX_INSTR]     = instr.size()*sizeof(uint32_t);
     buf_size[BUF_IDX_PARAMS]    = params.size()*sizeof(uint32_t);
     buf_size[BUF_IDX_SWAP]      = swap.size()*sizeof(uint32_t);
@@ -364,7 +339,7 @@ void Dpuv3Int8Controller::initBufrSize()
         buf_addr[BUF_IDX_DST] = buf_addr[BUF_IDX_FUDST];
         buf_size[BUF_IDX_DST] = buf_size[BUF_IDX_FUDST];
     }                                                                 
-    else            // If FU is NOT used                                                      
+    else            // If FU is NOT used
     {                                                                 
         buf_addr[BUF_IDX_SRC] = buf_addr[BUF_IDX_NULL];
         buf_size[BUF_IDX_SRC] = buf_size[BUF_IDX_NULL];
@@ -373,7 +348,7 @@ void Dpuv3Int8Controller::initBufrSize()
 }
 
 
-void Dpuv3Int8Controller::execute()
+void Dpuv3Int8Controller::execute(uint64_t *buf_addr, uint32_t *buf_size)
 {
     xrt_device* xdev = handle_->get_device_info().xdev;
     xrtcpp::acquire_cu_context(xdev,0);
@@ -388,30 +363,32 @@ void Dpuv3Int8Controller::execute()
 
 }
 
-void Dpuv3Int8Controller::checkFpgaOutput()
+void Dpuv3Int8Controller::checkFpgaOutput(XclDeviceBuffer *outbuf)
 {
+    xir::vart::TensorBuffer* tbuf = outbuf->get_tensor_buffer();
     std::ofstream outputfile;
     std::string log_filename="";
     for (unsigned i = 0 ; i < dout.size(); i++)
     {
 
-        if(i%(result.size())==0)
+        if(i%(dout.size())==0)
         {
             log_filename = "result" + std::to_string(25 + ( std::rand() % ( 63 - 25 + 1 ) )) + ".txt";
 //           log_filename = "result" + std::to_string(i/(result.size())) + ".txt";
-            outputfile.open (log_filename);
+            outputfile.open(log_filename);
         }
 
-        if ((uint32_t)dout[i] != (uint32_t)result.data()[i])
+        uint32_t *resultData = (uint32_t*)tbuf->data().first;
+        if ((uint32_t)dout[i] != resultData[i])
         {
-            outputfile << "Error: Result mismatch.  " << "dout: " << std::hex << std::setw(8) << std::setfill('0') << (uint32_t)dout[i] << " | result: " << std::hex << std::setw(8) << (uint32_t)result.data()[i] << std::endl;
+            outputfile << "Error: Result mismatch.  " << "dout: " << std::hex << std::setw(8) << std::setfill('0') << (uint32_t)dout[i] << " | result: " << std::hex << std::setw(8) << resultData[i] << std::endl;
         }
         else 
         {
-            outputfile << std::hex << std::setw(8) << std::setfill('0') << (uint32_t)result.data()[i] << std::endl;
+            outputfile << std::hex << std::setw(8) << std::setfill('0') << (uint32_t)resultData[i] << std::endl;
         }
 
-        if((i%(result.size()))==((result.size())-1))
+        if((i%(dout.size()))==((dout.size())-1))
         {
             outputfile.close();
         }
@@ -419,52 +396,56 @@ void Dpuv3Int8Controller::checkFpgaOutput()
 
 }
 
+std::vector<const xir::vart::Tensor*> 
+Dpuv3Int8Controller::get_input_tensors() const  {
+  return std::vector<const xir::vart::Tensor*>{ in_tensor_.get() };
+}
+
+std::vector<const xir::vart::Tensor*> 
+Dpuv3Int8Controller::get_output_tensors() const {
+  return std::vector<const xir::vart::Tensor*>{ out_tensor_.get() };
+}
+
 std::vector<xir::vart::TensorBuffer*> 
 Dpuv3Int8Controller::get_inputs() {
-     const std::vector<std::int32_t> dummyInputDims = { 1 };
-    xir::vart::Tensor dummyInputTensor("dummyInput", dummyInputDims, xir::vart::Tensor::DataType::UINT32);
-    static const size_t dummyInputDataSize = xir::vart::size_of(dummyInputTensor.get_data_type());
-    size_t dummyInputSize = dummyInputTensor.get_element_num() * dummyInputDataSize;
-    void *dummyInputData;
-    if (posix_memalign(&dummyInputData, getpagesize(), dummyInputSize))
-      throw std::bad_alloc();
-
-    std::unique_ptr<xir::vart::CpuFlatTensorBuffer> dummyInputTbuf(new xir::vart::CpuFlatTensorBuffer(dummyInputData, &dummyInputTensor));
-
-    std::vector<xir::vart::TensorBuffer*> tbufs;
-    tbufs.emplace_back(dummyInputTbuf.get());
-
-    return tbufs;
-
+  return create_tensor_buffers(get_input_tensors(), /*isInput*/true);
 }
 
 std::vector<xir::vart::TensorBuffer*> 
 Dpuv3Int8Controller::get_outputs() {
-
-    const std::vector<std::int32_t> dummyOutputDims = { 1 };
-    xir::vart::Tensor dummyOutputTensor("dummyOutput", dummyOutputDims, xir::vart::Tensor::DataType::UINT32);
-    static const size_t dummyOutputDataSize = xir::vart::size_of(dummyOutputTensor.get_data_type());
-    size_t dummyOutputSize = dummyOutputTensor.get_element_num() * dummyOutputDataSize;
-    void *dummyOutputData;
-    if (posix_memalign(&dummyOutputData, getpagesize(), dummyOutputSize))
-      throw std::bad_alloc();
-
-    std::unique_ptr<xir::vart::CpuFlatTensorBuffer> dummyOutputTbuf(new xir::vart::CpuFlatTensorBuffer(dummyOutputData, &dummyOutputTensor));
-
-    std::vector<xir::vart::TensorBuffer*> tbufs;
-    tbufs.emplace_back(dummyOutputTbuf.get());
-
-    return tbufs;
+  return create_tensor_buffers(get_output_tensors(), /*isInput*/false);
 }
 
 
 void Dpuv3Int8Controller::run(const std::vector<xir::vart::TensorBuffer*> &inputs, 
                         const std::vector<xir::vart::TensorBuffer*> &outputs) {
-    runCreateBuffers();
-    execute();
-    result_buf->download();
-    checkFpgaOutput();
+  XclDeviceBuffer* inbuf = dynamic_cast<XclDeviceBuffer*>(get_device_buffer(inputs[0]));
+  XclDeviceBuffer* outbuf = dynamic_cast<XclDeviceBuffer*>(get_device_buffer(outputs[0]));
 
+  uint64_t buf_addr[BUF_IDX_NUM];
+  uint32_t buf_size[BUF_IDX_NUM];
+
+  initRunBufs(buf_addr, buf_size);
+    
+  buf_size[BUF_IDX_DIN] = inbuf->get_size();
+  buf_size[BUF_IDX_DOUT] = 0;
+  buf_size[BUF_IDX_RESULT] = outbuf->get_size();
+
+  if(task_mode == 0) // If FU is used 
+  {
+      buf_addr[BUF_IDX_SRC] = buf_addr[BUF_IDX_DIN];
+      buf_size[BUF_IDX_SRC] = buf_size[BUF_IDX_DIN];
+  }
+  else            // If FU is NOT used
+  {                                                                 
+      buf_addr[BUF_IDX_DST] = buf_addr[BUF_IDX_DIN];
+      buf_size[BUF_IDX_DST] = buf_size[BUF_IDX_DIN];
+  }
+
+  inbuf->upload();
+  execute(buf_addr, buf_size);
+  outbuf->download();
+  checkFpgaOutput(outbuf);
 }
 
 std::vector<int32_t, aligned_allocator<int32_t>> Dpuv3Int8Controller::load(std::string filename)
