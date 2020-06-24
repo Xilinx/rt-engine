@@ -66,8 +66,6 @@ class Dpuv3Int8Controller : public XclDpuController<XclDeviceHandle, XclDeviceBu
   std::unique_ptr<XclDeviceBuffer> instr_buf;
   std::unique_ptr<XclDeviceBuffer> params_buf;
   std::unique_ptr<XclDeviceBuffer> swap_buf;
-  std::unique_ptr<XclDeviceBuffer> din_buf;
-  std::unique_ptr<XclDeviceBuffer> result_buf;
   std::unique_ptr<XclDeviceBuffer> fuSrc_buf;
   std::unique_ptr<XclDeviceBuffer> fuDst_buf;
   
