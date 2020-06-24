@@ -4,6 +4,7 @@
 #include "dpu_runner.hpp"
 #include "engine.hpp"
 #include "json-c/json.h"
+#include "dpuv3int8_controller.hpp"
 
 DpuRunner::DpuRunner(std::string meta) : exec_core_idx_(0) {
   // default: 1 core per runner (set -1 to acquire all FPGAs on host)
