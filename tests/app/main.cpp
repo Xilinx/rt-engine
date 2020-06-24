@@ -20,7 +20,7 @@ int main(int argc, char** argv) {
 
   if (std::find(tests.begin(), tests.end(), "st") != tests.end())
   {
-    const unsigned numQueries = 4;
+    const unsigned numQueries = 10000;
     std::cout << std::endl << "Testing single thread..." << std::endl;
     SingleThreadTest singleThreadTest(runnerMeta, numQueries);
     auto t1 = std::chrono::high_resolution_clock::now();
