@@ -36,18 +36,15 @@ class Dpuv3Int8Controller : public XclDpuController<XclDeviceHandle, XclDeviceBu
 
  private:    
 
-  void init();
   void initializeTaskFUVariables();
-  void initAllocateHostMemory();
-  void runAllocateHostMemory();
   void initCreateBuffers();
-  void runCreateBuffers();
-  void initGetDevBufrAddr();
-  void runGetDevBufrAddr();
   void initBufrSize();
-  void runInitBufrSize();
+  
+  void runCreateBuffers();
+  
   void execute();
   void checkFpgaOutput();
+  std::unique_ptr<XclDeviceBuffer> createBuffer(void* hostPtr, size_t size);
 
   std::vector<int,aligned_allocator<int>> instr;
   std::vector<int,aligned_allocator<int>> params;
@@ -57,36 +54,20 @@ class Dpuv3Int8Controller : public XclDpuController<XclDeviceHandle, XclDeviceBu
   std::vector<int,aligned_allocator<int>> result;
   std::vector<int,aligned_allocator<int>> fuSrc;
   std::vector<int,aligned_allocator<int>> fuDst;       	    
-
-  uint32_t task_fu_addr_strd;
-  uint32_t task_fu_kw;
-  uint32_t task_fu_sw;
-  uint32_t task_fu_ic;
-  uint32_t task_fu_ow;
-  uint32_t task_fu_oh;
-  uint32_t task_fu_src_ntrans;
-  uint32_t task_fu_dst_ntrans;
-  uint32_t task_fu_pl_corr;
-  uint32_t task_fu_pr_corr;
-  uint32_t task_fu_iw_corr;
-  uint32_t task_fu_sw_corr;
-  uint32_t task_fu_wcg_corr;
-  uint32_t task_fu_read_mode;
+  
   uint32_t task_mode;
-  uint32_t reg_axcache_axos;
-  uint32_t reg_dpu_prof_enable;
 
   uint64_t buf_addr[BUF_IDX_NUM];
   uint32_t buf_size[BUF_IDX_NUM];
   uint32_t reg_val[REG_NUM];
 
-  XclDeviceBuffer* instr_buf;
-  XclDeviceBuffer* params_buf;
-  XclDeviceBuffer* swap_buf;
-  XclDeviceBuffer* din_buf;
-  XclDeviceBuffer* result_buf;
-  XclDeviceBuffer* fuSrc_buf;
-  XclDeviceBuffer* fuDst_buf;
+  std::unique_ptr<XclDeviceBuffer> instr_buf;
+  std::unique_ptr<XclDeviceBuffer> params_buf;
+  std::unique_ptr<XclDeviceBuffer> swap_buf;
+  std::unique_ptr<XclDeviceBuffer> din_buf;
+  std::unique_ptr<XclDeviceBuffer> result_buf;
+  std::unique_ptr<XclDeviceBuffer> fuSrc_buf;
+  std::unique_ptr<XclDeviceBuffer> fuDst_buf;
   
   std::string modelName;
 

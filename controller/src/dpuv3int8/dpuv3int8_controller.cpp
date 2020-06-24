@@ -181,15 +181,8 @@ Dpuv3Int8Controller::Dpuv3Int8Controller(std::string meta) : XclDpuController<Xc
     throw std::runtime_error("Error: missing 'paramsFile' field in meta.json");
   params_filename = json_object_get_string(paramsNameObj);
 
-  init();
-}
-
-void Dpuv3Int8Controller::init()
-{
   initializeTaskFUVariables();
-  initAllocateHostMemory();
   initCreateBuffers();
-  initGetDevBufrAddr();
   initBufrSize();
 }
 
@@ -254,46 +247,23 @@ void Dpuv3Int8Controller::initializeTaskFUVariables()
     std::cout<<"-----------------------------------------------"<<std::endl;
     std::cout << "Program begins: "<< std::endl;
 
-    if(modelName=="res50")
-    {
-        task_fu_addr_strd = 0x24c00;
-        task_fu_kw = 0x6;
-        task_fu_sw = 0x1;
-        task_fu_ic = 0x2;
-        task_fu_ow = 0xe4;
-        task_fu_oh = 0xdf;
-        task_fu_src_ntrans = 0x931;
-        task_fu_dst_ntrans = 0xc400;
-        task_fu_pl_corr = 0x9;
-        task_fu_pr_corr = 0x2a9;
-        task_fu_iw_corr = 224*3;   //need update
-        task_fu_sw_corr = 6;   //need update
-        task_fu_wcg_corr = 0xe0;
-        task_fu_read_mode = 0x2;
-        task_mode = 0x0;
-        reg_axcache_axos = 0x01012020;
-        reg_dpu_prof_enable = 0x1;
-    }
-    else if(modelName=="res34")
-    {
-        task_fu_addr_strd = 0x24c00;
-        task_fu_kw = 0x6;
-        task_fu_sw = 0x1;
-        task_fu_ic = 0x2;
-        task_fu_ow = 0xe4;
-        task_fu_oh = 0xdf;
-        task_fu_src_ntrans = 0x931;
-        task_fu_dst_ntrans = 0xc400;
-        task_fu_pl_corr = 0x9;
-        task_fu_pr_corr = 0x2a9;
-        task_fu_iw_corr = 224*3;
-        task_fu_sw_corr = 6;
-        task_fu_wcg_corr = 0xe0;
-        task_fu_read_mode = 0x2;
-        task_mode = 0x1;
-        reg_axcache_axos = 0x01012020;
-        reg_dpu_prof_enable = 0x1;
-    }
+    uint32_t task_fu_addr_strd = 0x24c00;
+    uint32_t task_fu_kw = 0x6;
+    uint32_t task_fu_sw = 0x1;
+    uint32_t task_fu_ic = 0x2;
+    uint32_t task_fu_ow = 0xe4;
+    uint32_t task_fu_oh = 0xdf;
+    uint32_t task_fu_src_ntrans = 0x931;
+    uint32_t task_fu_dst_ntrans = 0xc400;
+    uint32_t task_fu_pl_corr = 0x9;
+    uint32_t task_fu_pr_corr = 0x2a9;
+    uint32_t task_fu_iw_corr = 224*3;   //need update
+    uint32_t task_fu_sw_corr = 6;   //need update
+    uint32_t task_fu_wcg_corr = 0xe0;
+    uint32_t task_fu_read_mode = 0x2;
+    task_mode = 0x0;
+    uint32_t reg_axcache_axos = 0x01012020;
+    uint32_t reg_dpu_prof_enable = 0x1;
     
     uint32_t zero = 0;
 
@@ -333,7 +303,19 @@ void Dpuv3Int8Controller::initializeTaskFUVariables()
 
 }
 
-void Dpuv3Int8Controller::initAllocateHostMemory()
+std::unique_ptr<XclDeviceBuffer> Dpuv3Int8Controller::createBuffer(void* hostPtr, size_t size)
+{
+    
+    const std::vector<std::int32_t> dims = { size };
+    xir::vart::Tensor tensor("name", dims, xir::vart::Tensor::DataType::UINT32);
+    std::unique_ptr<xir::vart::CpuFlatTensorBuffer> tbuf(new xir::vart::CpuFlatTensorBuffer(hostPtr, &tensor));
+    std::unique_ptr<XclDeviceBuffer> buf;
+    buf.reset(new XclDeviceBuffer(handle_.get(), tbuf.get(), handle_->get_device_info().ddr_bank));
+    return buf;
+}
+
+
+void Dpuv3Int8Controller::initCreateBuffers()
 {
     //Allocate Memory in Host Memory
     uint32_t BLK_SIZE = 16*1024*1024;
@@ -345,139 +327,12 @@ void Dpuv3Int8Controller::initAllocateHostMemory()
     fuDst.resize(BLK_SIZE/sizeof(int32_t));       	    
     
     std::cout<<"One time initialzation"<<std::endl;
-}
 
-
-void Dpuv3Int8Controller::runAllocateHostMemory()
-{
-    //Allocate Memory in Host Memory
-    uint32_t BLK_SIZE = 16*1024*1024;
-
-    din=load(din_filename);
-    dout=load(dout_filename);
-    result.resize(dout.size());
-    
-    std::cout<<"Run time initialzation for each query"<<std::endl;
-
-}
-
-void Dpuv3Int8Controller::initCreateBuffers()
-{
-    std::cout << "Create Program and Kernel" << std::endl;
-    //OPENCL HOST CODE AREA START
-    // Use the first Xilinx device found in the system
-    cl_context context = handle_->get_context();
-    cl_int err = CL_SUCCESS;
-    static const std::vector<unsigned> ddrBankMap = {
-     XCL_MEM_DDR_BANK0,
-     XCL_MEM_DDR_BANK1,
-     XCL_MEM_DDR_BANK2,
-     XCL_MEM_DDR_BANK3
-    };
-    cl_mem_flags flags = CL_MEM_USE_HOST_PTR | CL_MEM_READ_WRITE;
-    
-
-    void *instrhost_ptr = (void*)instr.data();
-//    size_t instrsize = instr.size()*sizeof(uint32_t);
-//    instr_buf = new XclDeviceBuffer(handle_, instrhost_ptr, instrsize, ddrBankMap[handle_.get_device_info().ddr_bank], flags);
-
-    const std::vector<std::int32_t> instrdims = { instr.size() };
-    xir::vart::Tensor instrtensor("instr", instrdims, xir::vart::Tensor::DataType::UINT32);
-    std::unique_ptr<xir::vart::CpuFlatTensorBuffer> instrtbuf(new xir::vart::CpuFlatTensorBuffer(instrhost_ptr, &instrtensor));
-    instr_buf = new XclDeviceBuffer(handle_.get(), instrtbuf.get(), handle_->get_device_info().ddr_bank);
-
-
-
-    void *paramshost_ptr = (void*)params.data();
-//    size_t paramssize = params.size()*sizeof(uint32_t);
-//    params_buf = new XclDeviceBuffer(handle_, paramshost_ptr, paramssize, ddrBankMap[handle_.get_device_info().ddr_bank], flags);
-
-    const std::vector<std::int32_t> paramsdims = { params.size() };
-    xir::vart::Tensor paramstensor("params", paramsdims, xir::vart::Tensor::DataType::UINT32);
-    std::unique_ptr<xir::vart::CpuFlatTensorBuffer> paramstbuf(new xir::vart::CpuFlatTensorBuffer(paramshost_ptr, &paramstensor));
-    params_buf = new XclDeviceBuffer(handle_.get(), paramstbuf.get(), handle_->get_device_info().ddr_bank);
-
-
-
-    void *swaphost_ptr = (void*)swap.data();
-//    size_t swapsize = swap.size()*sizeof(uint32_t);
-//    swap_buf = new XclDeviceBuffer(handle_, swaphost_ptr, swapsize, ddrBankMap[handle_.get_device_info().ddr_bank], flags);
-
-    const std::vector<std::int32_t> swapdims = { swap.size() };
-    xir::vart::Tensor swaptensor("swap", swapdims, xir::vart::Tensor::DataType::UINT32);
-    std::unique_ptr<xir::vart::CpuFlatTensorBuffer> swaptbuf(new xir::vart::CpuFlatTensorBuffer(swaphost_ptr, &swaptensor));
-    swap_buf = new XclDeviceBuffer(handle_.get(), swaptbuf.get(), handle_->get_device_info().ddr_bank);
-
-
-
-    void *fuSrchost_ptr = (void*)fuSrc.data();
-//    size_t fuSrcsize = fuSrc.size()*sizeof(uint32_t);
-//    fuSrc_buf = new XclDeviceBuffer(handle_, fuSrchost_ptr, fuSrcsize, ddrBankMap[handle_.get_device_info().ddr_bank], flags);
-
-
-    const std::vector<std::int32_t> fuSrcdims = { fuSrc.size() };
-    xir::vart::Tensor fuSrctensor("fuSrc", fuSrcdims, xir::vart::Tensor::DataType::UINT32);
-    std::unique_ptr<xir::vart::CpuFlatTensorBuffer> fuSrctbuf(new xir::vart::CpuFlatTensorBuffer(fuSrchost_ptr, &fuSrctensor));
-    fuSrc_buf = new XclDeviceBuffer(handle_.get(), fuSrctbuf.get(), handle_->get_device_info().ddr_bank);
-
-
-    void *fuDsthost_ptr = (void*)fuDst.data();
-//    size_t fuDstsize = fuDst.size()*sizeof(uint32_t);
-//    fuDst_buf = new XclDeviceBuffer(handle_, fuDsthost_ptr, fuDstsize, ddrBankMap[handle_.get_device_info().ddr_bank], flags);
-
-
-    const std::vector<std::int32_t> fuDstdims = { fuDst.size() };
-    xir::vart::Tensor fuDsttensor("fuDst", fuDstdims, xir::vart::Tensor::DataType::UINT32);
-    std::unique_ptr<xir::vart::CpuFlatTensorBuffer> fuDsttbuf(new xir::vart::CpuFlatTensorBuffer(fuDsthost_ptr, &fuDsttensor));
-    fuDst_buf = new XclDeviceBuffer(handle_.get(), fuDsttbuf.get(), handle_->get_device_info().ddr_bank);
-
-}
-
-
-
-void Dpuv3Int8Controller::runCreateBuffers()
-{
-    std::cout << "Create Program and Kernel" << std::endl;
-    //OPENCL HOST CODE AREA START
-    // Use the first Xilinx device found in the system
-    cl_context context = handle_->get_context();
-    cl_int err = CL_SUCCESS;
-    static const std::vector<unsigned> ddrBankMap = {
-     XCL_MEM_DDR_BANK0,
-     XCL_MEM_DDR_BANK1,
-     XCL_MEM_DDR_BANK2,
-     XCL_MEM_DDR_BANK3
-    };
-    cl_mem_flags flags = CL_MEM_USE_HOST_PTR | CL_MEM_READ_WRITE;
-    
-
-    void *host_ptr = (void*)din.data();
-//    size_t size = din.size()*sizeof(uint32_t);
-//    din_buf = new XclDeviceBuffer(handle_, host_ptr, size, ddrBankMap[handle_.get_device_info().ddr_bank], flags);
-
-    const std::vector<std::int32_t> dindims = { din.size() };
-    xir::vart::Tensor dintensor("din", dindims, xir::vart::Tensor::DataType::UINT32);
-    std::unique_ptr<xir::vart::CpuFlatTensorBuffer> dintbuf(new xir::vart::CpuFlatTensorBuffer(host_ptr, &dintensor));
-    din_buf = new XclDeviceBuffer(handle_.get(), dintbuf.get(), handle_->get_device_info().ddr_bank);
-
-
-
-    void *resulthost_ptr = (void*)result.data();
-//    size_t resultsize = result.size()*sizeof(uint32_t);
-//    result_buf = new XclDeviceBuffer(handle_, resulthost_ptr, resultsize, ddrBankMap[handle_.get_device_info().ddr_bank], flags);
-
-    const std::vector<std::int32_t> resultdims = { result.size() };
-    xir::vart::Tensor resulttensor("result", resultdims, xir::vart::Tensor::DataType::UINT32);
-    std::unique_ptr<xir::vart::CpuFlatTensorBuffer> resulttbuf(new xir::vart::CpuFlatTensorBuffer(resulthost_ptr, &resulttensor));
-    result_buf = new XclDeviceBuffer(handle_.get(), resulttbuf.get(), handle_->get_device_info().ddr_bank);
-
-
-
-}
-
-void Dpuv3Int8Controller::initGetDevBufrAddr()
-{
-    //Get device buffer address 
+    instr_buf=createBuffer((void*)instr.data(), instr.size());
+    params_buf=createBuffer((void*)params.data(), params.size());
+    swap_buf=createBuffer((void*)swap.data(), swap.size());
+    fuSrc_buf=createBuffer((void*)fuSrc.data(), fuSrc.size());
+    fuDst_buf=createBuffer((void*)fuDst.data(), fuDst.size());
     
     buf_addr[BUF_IDX_INSTR] = instr_buf->get_phys_addr();
     buf_addr[BUF_IDX_PARAMS] = params_buf->get_phys_addr();
@@ -488,16 +343,42 @@ void Dpuv3Int8Controller::initGetDevBufrAddr()
 
 }
 
-void Dpuv3Int8Controller::runGetDevBufrAddr()
+
+
+void Dpuv3Int8Controller::runCreateBuffers()
 {
-    //Get device buffer address 
+
+    //Allocate Memory in Host Memory
+    std::cout<<"Run time initialzation for each query"<<std::endl;
+
+    din=load(din_filename);
+    dout=load(dout_filename);
+    result.resize(dout.size());
     
+
+    din_buf=createBuffer((void*)din.data(), din.size());
+    result_buf=createBuffer((void*)result.data(), result.size());
+
     buf_addr[BUF_IDX_DIN] = din_buf->get_phys_addr();
     buf_addr[BUF_IDX_RESULT] = result_buf->get_phys_addr();
 
+    buf_size[BUF_IDX_DIN]       = din.size()*sizeof(uint32_t);
+    buf_size[BUF_IDX_DOUT]      = dout.size()*sizeof(uint32_t);
+    buf_size[BUF_IDX_RESULT]    = result.size()*sizeof(uint32_t);
+
+    if(task_mode == 0) // If FU is used 
+    {
+        buf_addr[BUF_IDX_SRC] = buf_addr[BUF_IDX_DIN];
+        buf_size[BUF_IDX_SRC] = buf_size[BUF_IDX_DIN];
+    }                                                                 
+    else            // If FU is NOT used                                                      
+    {                                                                 
+        buf_addr[BUF_IDX_DST] = buf_addr[BUF_IDX_DIN];
+        buf_size[BUF_IDX_DST] = buf_size[BUF_IDX_DIN];
+    }
+
+
 }
-
-
 
 void Dpuv3Int8Controller::initBufrSize()
 {
@@ -523,27 +404,6 @@ void Dpuv3Int8Controller::initBufrSize()
     }
 
 }
-
-void Dpuv3Int8Controller::runInitBufrSize()
-{
-    //Initialize buf_size
-    buf_size[BUF_IDX_DIN]       = din.size()*sizeof(uint32_t);
-    buf_size[BUF_IDX_DOUT]      = dout.size()*sizeof(uint32_t);
-    buf_size[BUF_IDX_RESULT]    = result.size()*sizeof(uint32_t);
-
-    if(task_mode == 0) // If FU is used 
-    {
-        buf_addr[BUF_IDX_SRC] = buf_addr[BUF_IDX_DIN];
-        buf_size[BUF_IDX_SRC] = buf_size[BUF_IDX_DIN];
-    }                                                                 
-    else            // If FU is NOT used                                                      
-    {                                                                 
-        buf_addr[BUF_IDX_DST] = buf_addr[BUF_IDX_DIN];
-        buf_size[BUF_IDX_DST] = buf_size[BUF_IDX_DIN];
-    }
-}
-
-
 
 
 void Dpuv3Int8Controller::execute()
@@ -633,10 +493,7 @@ Dpuv3Int8Controller::get_outputs() {
 
 void Dpuv3Int8Controller::run(const std::vector<xir::vart::TensorBuffer*> &inputs, 
                         const std::vector<xir::vart::TensorBuffer*> &outputs) {
-    runAllocateHostMemory();
     runCreateBuffers();
-    runGetDevBufrAddr();
-    runInitBufrSize();
     execute();
     result_buf->download();
     checkFpgaOutput();
