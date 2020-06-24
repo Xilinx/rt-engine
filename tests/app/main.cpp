@@ -20,7 +20,7 @@ int main(int argc, char** argv) {
 
   if (std::find(tests.begin(), tests.end(), "st") != tests.end())
   {
-    const unsigned numQueries = 10000;
+    const unsigned numQueries = 4;
     std::cout << std::endl << "Testing single thread..." << std::endl;
     SingleThreadTest singleThreadTest(runnerMeta, numQueries);
     auto t1 = std::chrono::high_resolution_clock::now();
@@ -59,6 +59,21 @@ int main(int argc, char** argv) {
     std::cout << "Elapsed: " << elapsed.count() << std::endl;
     std::cout << "QPS: " << numQueries/elapsed.count() << std::endl;
   }
+
+  if (std::find(tests.begin(), tests.end(), "tc") != tests.end())
+  {
+    const unsigned numQueries = 4;
+    std::cout << std::endl << "Test CLassify..." << std::endl;
+    TestClassify testClassify(runnerMeta, numQueries);
+    auto t1 = std::chrono::high_resolution_clock::now();
+    testClassify.run();
+    auto t2 = std::chrono::high_resolution_clock::now();
+    std::chrono::duration<double> elapsed = t2-t1;
+    std::cout << "Elapsed: " << elapsed.count() << std::endl;
+    std::cout << "QPS: " << numQueries/elapsed.count() << std::endl;
+  }
+
+
 
   return 0;
 }

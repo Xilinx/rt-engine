@@ -32,3 +32,15 @@ class MultiThreadTest : public Test {
     std::string runner_dir_;
     std::vector<std::unique_ptr<DpuRunner>> runners_;
 };
+
+class TestClassify : public Test {
+  public:
+    TestClassify(std::string runner_dir, unsigned num_queries);
+    virtual void run();
+
+  private:
+    unsigned num_queries_;
+    std::unique_ptr<DpuRunner> runner_;
+};
+
+
