@@ -3,7 +3,7 @@ export XILINX_XRT=/opt/xilinx/xrt
 
 #Sample commands
 #build/tests/engine.exe
-build/tests/app.exe -r tests/app/models/xdnn_resnet50/meta.json
+build/tests/app.exe -r tests/app/models/sample_resnet50/meta.json
 
 #dpuv3int8 command
 #build/tests/app.exe -r tests/app/models/dpuv3int8_resnet50/meta.json -t tc
