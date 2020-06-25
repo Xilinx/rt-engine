@@ -426,7 +426,10 @@ void Dpuv3Int8Controller::run(const std::vector<xir::vart::TensorBuffer*> &input
   uint32_t buf_size[BUF_IDX_NUM];
 
   initRunBufs(buf_addr, buf_size);
-    
+  
+  buf_addr[BUF_IDX_DIN] = inbuf->get_phys_addr();
+  buf_addr[BUF_IDX_RESULT] = outbuf->get_phys_addr();
+
   buf_size[BUF_IDX_DIN] = inbuf->get_size();
   buf_size[BUF_IDX_DOUT] = 0;
   buf_size[BUF_IDX_RESULT] = outbuf->get_size();
