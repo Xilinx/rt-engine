@@ -294,18 +294,6 @@ void Dpuv3Int8Controller::initializeTaskFUVariables()
 
 }
 
-std::unique_ptr<XclDeviceBuffer> Dpuv3Int8Controller::createBuffer(void* hostPtr, size_t size)
-{
-    // FIXME: `tbuf` will be freed when this function returns
-    const std::vector<std::int32_t> dims = { int32_t(size) };
-    xir::vart::Tensor tensor("name", dims, xir::vart::Tensor::DataType::UINT32);
-    std::unique_ptr<xir::vart::CpuFlatTensorBuffer> tbuf(new xir::vart::CpuFlatTensorBuffer(hostPtr, &tensor));
-    std::unique_ptr<XclDeviceBuffer> buf;
-    buf.reset(new XclDeviceBuffer(handle_.get(), tbuf.get(), handle_->get_device_info().ddr_bank));
-    return buf;
-}
-
-
 void Dpuv3Int8Controller::initCreateBuffers()
 {
     //Allocate Memory in Host Memory
@@ -319,11 +307,37 @@ void Dpuv3Int8Controller::initCreateBuffers()
     
     std::cout<<"One time initialzation"<<std::endl;
 
-    instr_buf=createBuffer((void*)instr.data(), instr.size());
-    params_buf=createBuffer((void*)params.data(), params.size());
-    swap_buf=createBuffer((void*)swap.data(), swap.size());
-    fuSrc_buf=createBuffer((void*)fuSrc.data(), fuSrc.size());
-    fuDst_buf=createBuffer((void*)fuDst.data(), fuDst.size());
+    const std::vector<std::int32_t> instrdims = { int32_t(instr.size()) };
+    const std::vector<std::int32_t> paramsdims = { int32_t(params.size()) };
+    const std::vector<std::int32_t> swapdims = { int32_t(swap.size()) };
+    const std::vector<std::int32_t> fuSrcdims = { int32_t(fuSrc.size()) };
+    const std::vector<std::int32_t> fuDstdims = { int32_t(fuDst.size()) };
+
+    instr_tensor_.reset(
+      new xir::vart::Tensor("instr", instrdims, xir::vart::Tensor::DataType::UINT32));
+    params_tensor_.reset(
+      new xir::vart::Tensor("params", paramsdims, xir::vart::Tensor::DataType::UINT32));
+    swap_tensor_.reset(
+      new xir::vart::Tensor("swap", swapdims, xir::vart::Tensor::DataType::UINT32));
+    fuSrc_tensor_.reset(
+      new xir::vart::Tensor("fuSrc", fuSrcdims, xir::vart::Tensor::DataType::UINT32));
+    fuDst_tensor_.reset(
+      new xir::vart::Tensor("fuDst", fuDstdims, xir::vart::Tensor::DataType::UINT32));
+
+    
+    instrTbuf.reset(new xir::vart::CpuFlatTensorBuffer((void*)instr.data(),&(*instr_tensor_)));
+    paramsTbuf.reset(new xir::vart::CpuFlatTensorBuffer((void*)params.data(),&(*params_tensor_)));
+    swapTbuf.reset(new xir::vart::CpuFlatTensorBuffer((void*)swap.data(),&(*swap_tensor_)));
+    fuSrcTbuf.reset(new xir::vart::CpuFlatTensorBuffer((void*)fuSrc.data(),&(*fuSrc_tensor_)));
+    fuDstTbuf.reset(new xir::vart::CpuFlatTensorBuffer((void*)fuDst.data(),&(*fuDst_tensor_)));
+
+
+    instr_buf.reset(new XclDeviceBuffer(handle_.get(), instrTbuf.get(), handle_->get_device_info().ddr_bank));
+    params_buf.reset(new XclDeviceBuffer(handle_.get(), paramsTbuf.get(), handle_->get_device_info().ddr_bank));
+    swap_buf.reset(new XclDeviceBuffer(handle_.get(), swapTbuf.get(), handle_->get_device_info().ddr_bank));
+    fuSrc_buf.reset(new XclDeviceBuffer(handle_.get(), fuSrcTbuf.get(), handle_->get_device_info().ddr_bank));
+    fuDst_buf.reset(new XclDeviceBuffer(handle_.get(), fuDstTbuf.get(), handle_->get_device_info().ddr_bank));
+
 }
 
 void Dpuv3Int8Controller::initRunBufs(uint64_t *buf_addr, uint32_t *buf_size)
@@ -484,7 +498,8 @@ void Dpuv3Int8Controller::postprocess(xir::vart::TensorBuffer* stdbuf, xir::vart
 
   if(DPUV3INT8_DEBUG_MODE)
   {
-     memcpy(stdbuf->data().first, hwbuf->data().first, dout.size()*sizeof(uint32_t));
+//get size from meta.json
+    memcpy(stdbuf->data().first, hwbuf->data().first, dout.size()*sizeof(uint32_t));
    
   }
  

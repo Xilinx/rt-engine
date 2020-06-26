@@ -59,6 +59,11 @@ class Dpuv3Int8Controller : public XclDpuController<XclDeviceHandle, XclDeviceBu
   std::unique_ptr<xir::vart::Tensor> out_tensor_;
   std::unique_ptr<xir::vart::Tensor> in_hw_tensor_;
   std::unique_ptr<xir::vart::Tensor> out_hw_tensor_;
+  std::unique_ptr<xir::vart::Tensor> instr_tensor_;
+  std::unique_ptr<xir::vart::Tensor> params_tensor_;
+  std::unique_ptr<xir::vart::Tensor> swap_tensor_;
+  std::unique_ptr<xir::vart::Tensor> fuSrc_tensor_;
+  std::unique_ptr<xir::vart::Tensor> fuDst_tensor_;
 
   std::vector<int,aligned_allocator<int>> instr;
   std::vector<int,aligned_allocator<int>> params;
@@ -76,7 +81,13 @@ class Dpuv3Int8Controller : public XclDpuController<XclDeviceHandle, XclDeviceBu
   std::unique_ptr<XclDeviceBuffer> swap_buf;
   std::unique_ptr<XclDeviceBuffer> fuSrc_buf;
   std::unique_ptr<XclDeviceBuffer> fuDst_buf;
-  
+
+  std::unique_ptr<xir::vart::CpuFlatTensorBuffer> instrTbuf;
+  std::unique_ptr<xir::vart::CpuFlatTensorBuffer> paramsTbuf;
+  std::unique_ptr<xir::vart::CpuFlatTensorBuffer> swapTbuf;
+  std::unique_ptr<xir::vart::CpuFlatTensorBuffer> fuSrcTbuf;
+  std::unique_ptr<xir::vart::CpuFlatTensorBuffer> fuDstTbuf;
+
 
   std::string modelName;
   std::string instr_filename;
