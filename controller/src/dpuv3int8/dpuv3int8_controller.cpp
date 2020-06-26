@@ -456,18 +456,24 @@ xir::vart::TensorBuffer* Dpuv3Int8Controller::get_hw_buffer(xir::vart::TensorBuf
 
 void Dpuv3Int8Controller::preprocess(xir::vart::TensorBuffer* stdbuf, xir::vart::TensorBuffer* hwbuf)
 {
-  std::pair<void*, size_t> test;
-  void* hostptr;
 
-  std::vector<int,aligned_allocator<int>> instrVector;
-  std::string fileName = "/proj/xsjhdstaff2/manasab/rt-engine/rt-engine/controller/src/dpuv3int8/din.txt";
-  test = hwbuf->data();
-  hostptr = test.first; 
+  const bool DPUV3INT8_DEBUG_MODE =
+    std::getenv("DPUV3INT8_DEBUG_MODE") ?
+            atoi(std::getenv("DPUV3INT8_DEBUG_MODE")) == 1 : false;
 
-  instrVector = load(fileName); 
+  if(DPUV3INT8_DEBUG_MODE)
+  {
+    std::pair<void*, size_t> hwbufPair;
+    void* hwBufptr;
+
+    std::vector<int,aligned_allocator<int>> hwDinVector;
+    hwbufPair = hwbuf->data();
+    hwBufptr = hwbufPair.first; 
+
+    hwDinVector = load(din_filename); 
     
-  memcpy(hostptr, (void*)instrVector.data(), instrVector.size()*sizeof(uint32_t));
-
+    memcpy(hwBufptr, (void*)hwDinVector.data(), hwDinVector.size()*sizeof(uint32_t));
+  }
 }
 
 
