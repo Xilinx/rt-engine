@@ -26,17 +26,51 @@ struct DeviceInfo {
   uint32_t fingerprint;
 };
 
+/* 
+ * DeviceResource acquires/releases resource & populates DeviceInfo
+ */
+class DeviceResource {
+ public:
+  DeviceResource(std::string kernelName, std::string xclbin);
+  DeviceResource() {}
+  virtual ~DeviceResource() {}
+  const DeviceInfo& get_device_info() const { return *info_; }
+
+ protected:
+  std::unique_ptr<DeviceInfo> info_;
+};
+
+class ButlerResource : public DeviceResource {
+ public:
+  ButlerResource(std::string kernelName, std::string xclbin);
+  ~ButlerResource();
+
+ private:
+  std::unique_ptr<butler::handle> handle_;
+  std::unique_ptr<butler::ButlerClient> client_;
+};
+
+class XrmResource : public DeviceResource {
+ public:
+  XrmResource(std::string kernelName, std::string xclbin);
+  ~XrmResource();
+};
+
+/* 
+ * DeviceHandle holds a DeviceResource
+ * Derived classes add convenience functions for XRT API layer
+ */
+
 class DeviceHandle {
  public:
   DeviceHandle(std::string kernelName, std::string xclbin);
-  virtual ~DeviceHandle();
-  const DeviceInfo& get_device_info() const { return *info_; }
+  virtual ~DeviceHandle() {}
+  const DeviceInfo& get_device_info() const { return resource_->get_device_info(); }
 
  private:
   void raw_acquire(std::string kernelName, std::string xclbin);
-  std::unique_ptr<DeviceInfo> info_;
-  std::unique_ptr<butler::handle> handle_;
-  std::unique_ptr<butler::ButlerClient> client_;
+  std::unique_ptr<DeviceResource> resource_;
+  DeviceHandle() = delete;
 };
 
 class XclDeviceHandle : public DeviceHandle {
