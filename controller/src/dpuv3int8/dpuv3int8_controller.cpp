@@ -476,6 +476,19 @@ void Dpuv3Int8Controller::preprocess(xir::vart::TensorBuffer* stdbuf, xir::vart:
   }
 }
 
+void Dpuv3Int8Controller::postprocess(xir::vart::TensorBuffer* stdbuf, xir::vart::TensorBuffer* hwbuf)
+{
+  const bool DPUV3INT8_DEBUG_MODE =
+    std::getenv("DPUV3INT8_DEBUG_MODE") ?
+            atoi(std::getenv("DPUV3INT8_DEBUG_MODE")) == 1 : false;
+
+  if(DPUV3INT8_DEBUG_MODE)
+  {
+     memcpy(stdbuf->data().first, hwbuf->data().first, dout.size()*sizeof(uint32_t));
+   
+  }
+ 
+}
 
 void Dpuv3Int8Controller::run(const std::vector<xir::vart::TensorBuffer*> &inputs, 
                         const std::vector<xir::vart::TensorBuffer*> &outputs) {
@@ -517,7 +530,10 @@ void Dpuv3Int8Controller::run(const std::vector<xir::vart::TensorBuffer*> &input
   inHwBuf->upload();
   execute(buf_addr, buf_size);
   outHwBuf->download();
-  checkFpgaOutput(outHwBuf);
+
+  postprocess(outputs[0], outHwTbuf);
+
+  checkFpgaOutput(outbuf);
 }
 
 std::vector<int32_t, aligned_allocator<int32_t>> Dpuv3Int8Controller::load(std::string filename)

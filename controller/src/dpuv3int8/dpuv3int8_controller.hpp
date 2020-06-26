@@ -41,6 +41,7 @@ class Dpuv3Int8Controller : public XclDpuController<XclDeviceHandle, XclDeviceBu
  private:    
 
   void preprocess(xir::vart::TensorBuffer*, xir::vart::TensorBuffer*);
+  void postprocess(xir::vart::TensorBuffer*, xir::vart::TensorBuffer*);
   std::unordered_map<xir::vart::TensorBuffer*, xir::vart::TensorBuffer*> stdbuf2hwbuf_;
 
   void initializeTaskFUVariables();
