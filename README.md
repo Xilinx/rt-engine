@@ -51,7 +51,7 @@ tests/
 
 ### Requirements
 
-* Xilinx Butler (http://xcdl190260/vitis/XIP)
+* Xilinx Butler (http://xcdl190260/vitis/MLsuite/tree/master/packages, http://xcdl190260/vitis/XIP)
 * XRT (https://github.com/Xilinx/XRT)
 * json-c (https://github.com/json-c/json-c)
 
