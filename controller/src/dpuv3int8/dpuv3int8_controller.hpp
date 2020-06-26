@@ -34,9 +34,14 @@ class Dpuv3Int8Controller : public XclDpuController<XclDeviceHandle, XclDeviceBu
   virtual std::vector<const xir::vart::Tensor*> get_output_tensors() const override; 
   virtual std::vector<xir::vart::TensorBuffer*> get_inputs() override;
   virtual std::vector<xir::vart::TensorBuffer*> get_outputs() override;
+  std::vector<xir::vart::TensorBuffer*> create_hw_buffers(std::vector<xir::vart::TensorBuffer*> stdBuf, bool isInput=true);
+  xir::vart::TensorBuffer* get_hw_buffer(xir::vart::TensorBuffer *tb);
 
 
  private:    
+
+  void preprocess(xir::vart::TensorBuffer*, xir::vart::TensorBuffer*);
+  std::unordered_map<xir::vart::TensorBuffer*, xir::vart::TensorBuffer*> stdbuf2hwbuf_;
 
   void initializeTaskFUVariables();
   void initCreateBuffers();
@@ -51,6 +56,8 @@ class Dpuv3Int8Controller : public XclDpuController<XclDeviceHandle, XclDeviceBu
 
   std::unique_ptr<xir::vart::Tensor> in_tensor_;
   std::unique_ptr<xir::vart::Tensor> out_tensor_;
+  std::unique_ptr<xir::vart::Tensor> in_hw_tensor_;
+  std::unique_ptr<xir::vart::Tensor> out_hw_tensor_;
 
   std::vector<int,aligned_allocator<int>> instr;
   std::vector<int,aligned_allocator<int>> params;
