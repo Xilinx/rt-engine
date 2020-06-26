@@ -1,5 +1,6 @@
 #pragma once
 
+#include <unordered_map>
 #include <mutex>
 #include <vector>
 #include "tensor_buffer.hpp"

@@ -7,11 +7,11 @@
 #include <string>
 #include <memory>
 #include <xrt.h>
-#pragma GCC diagnostic push 
-#pragma GCC diagnostic ignored "-Wignored-qualifiers"
-#include "butler_client.h"
-#include "butler_dev.h"
-#pragma GCC diagnostic pop 
+#include <CL/opencl.h>
+
+namespace butler {
+  class ButlerClient;
+}
 
 struct DeviceInfo {
   uint64_t cu_base_addr;
@@ -46,7 +46,7 @@ class ButlerResource : public DeviceResource {
   ~ButlerResource();
 
  private:
-  std::unique_ptr<butler::handle> handle_;
+  unsigned int handle_;
   std::unique_ptr<butler::ButlerClient> client_;
 };
 

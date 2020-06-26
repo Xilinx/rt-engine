@@ -1,3 +1,39 @@
+#include "dpuv3int8_controller.hpp"
+
+#include "utils.hpp"
+
+#include "experimental/xrt++.hpp"
+
+#include <typeinfo>
+
+#include <cstring>
+#include <thread>
+#include <vector>
+#include <algorithm>
+#include <list>
+#include <iostream>
+#include <unistd.h>
+#include <sys/time.h>
+#include <ctime>
+#include <iomanip>
+#include <math.h>
+#include <cstdio>
+#include <mutex>
+
+
+#include <fstream>
+#include <sstream>
+#include <unistd.h>
+#include <unordered_map>
+
+#pragma GCC diagnostic push 
+#pragma GCC diagnostic ignored "-Wignored-qualifiers"
+#include "CL/cl_ext_xilinx.h"
+#pragma GCC diagnostic pop 
+#include "dpu_controller.hpp"
+
+#include "device_handle.hpp"
+
 #define BUF_IDX_NUM                     12
 
 #define CONTROL_ADDR_AP_CTRL                            0x00
@@ -103,41 +139,6 @@
 #define REG_IDX_DONE_CNT                30 
 
 
-
-#include "dpuv3int8_controller.hpp"
-
-#include "utils.hpp"
-
-#include "experimental/xrt++.hpp"
-
-#include <typeinfo>
-
-#include <thread>
-#include <vector>
-#include <algorithm>
-#include <list>
-#include <iostream>
-#include <unistd.h>
-#include <sys/time.h>
-#include <ctime>
-#include <iomanip>
-#include <math.h>
-#include <cstdio>
-#include <mutex>
-
-
-#include <fstream>
-#include <sstream>
-#include <unistd.h>
-#include <unordered_map>
-
-#pragma GCC diagnostic push 
-#pragma GCC diagnostic ignored "-Wignored-qualifiers"
-#include "CL/cl_ext_xilinx.h"
-#pragma GCC diagnostic pop 
-#include "dpu_controller.hpp"
-
-#include "device_handle.hpp"
 
 #define BATCH_SIZE  4
 #define SLR_NUM     4

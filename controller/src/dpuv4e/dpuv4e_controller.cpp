@@ -1,3 +1,4 @@
+#include <iostream>
 #include <ert.h>
 #include "dpuv4e_controller.hpp"
 

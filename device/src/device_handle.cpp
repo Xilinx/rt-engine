@@ -1,4 +1,9 @@
+#pragma GCC diagnostic push 
+#pragma GCC diagnostic ignored "-Wignored-qualifiers"
+#include "butler_client.h"
+#include "butler_dev.h"
 #include "butler_cu_selection_algo.h"
+#pragma GCC diagnostic pop 
 #include "device_handle.hpp"
 #include "xrt_bin_stream.hpp"
 #include <fstream>
@@ -74,12 +79,12 @@ ButlerResource::ButlerResource(std::string kernelName, std::string xclbin) {
     .fingerprint = 0,
   });
 
-  handle_.reset(new butler::handle(alloc.myHandle));
+  handle_ = alloc.myHandle;
 }
 
 ButlerResource::~ButlerResource() {
-  if (client_.get() && handle_.get())
-    client_->releaseResources(*handle_);
+  if (client_.get())
+    client_->releaseResources(handle_);
 }
 
 DeviceHandle::DeviceHandle(std::string kernelName, std::string xclbin) {
