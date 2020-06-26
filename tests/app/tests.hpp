@@ -37,9 +37,11 @@ class TestClassify : public Test {
   public:
     TestClassify(std::string runner_dir, unsigned num_queries);
     virtual void run();
-
+    void loadImages(); //TO-DO MNDBG
+    void copy(std::vector<float>, std::vector<xir::vart::TensorBuffer*>); //TO-DO MNDBG
   private:
     unsigned num_queries_;
+    std::vector<std::vector<float>>images_; //TO-DO MNDBG
     std::unique_ptr<DpuRunner> runner_;
 };
 

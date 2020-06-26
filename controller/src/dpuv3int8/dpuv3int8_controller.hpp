@@ -34,9 +34,15 @@ class Dpuv3Int8Controller : public XclDpuController<XclDeviceHandle, XclDeviceBu
   virtual std::vector<const xir::vart::Tensor*> get_output_tensors() const override; 
   virtual std::vector<xir::vart::TensorBuffer*> get_inputs() override;
   virtual std::vector<xir::vart::TensorBuffer*> get_outputs() override;
+  std::vector<xir::vart::TensorBuffer*> create_hw_buffers(std::vector<xir::vart::TensorBuffer*> stdBuf, bool isInput=true);
+  xir::vart::TensorBuffer* get_hw_buffer(xir::vart::TensorBuffer *tb);
 
 
  private:    
+
+  void preprocess(xir::vart::TensorBuffer*, xir::vart::TensorBuffer*);
+  void postprocess(xir::vart::TensorBuffer*, xir::vart::TensorBuffer*);
+  std::unordered_map<xir::vart::TensorBuffer*, xir::vart::TensorBuffer*> stdbuf2hwbuf_;
 
   void initializeTaskFUVariables();
   void initCreateBuffers();
@@ -51,30 +57,43 @@ class Dpuv3Int8Controller : public XclDpuController<XclDeviceHandle, XclDeviceBu
 
   std::unique_ptr<xir::vart::Tensor> in_tensor_;
   std::unique_ptr<xir::vart::Tensor> out_tensor_;
+  std::unique_ptr<xir::vart::Tensor> in_hw_tensor_;
+  std::unique_ptr<xir::vart::Tensor> out_hw_tensor_;
+  std::unique_ptr<xir::vart::Tensor> instr_tensor_;
+  std::unique_ptr<xir::vart::Tensor> params_tensor_;
+  std::unique_ptr<xir::vart::Tensor> swap_tensor_;
+  std::unique_ptr<xir::vart::Tensor> fuSrc_tensor_;
+  std::unique_ptr<xir::vart::Tensor> fuDst_tensor_;
 
-  std::vector<int,aligned_allocator<int>> instr;
-  std::vector<int,aligned_allocator<int>> params;
-  std::vector<int,aligned_allocator<int>> swap;
-  std::vector<int,aligned_allocator<int>> dout;
-  std::vector<int,aligned_allocator<int>> fuSrc;
-  std::vector<int,aligned_allocator<int>> fuDst;       	    
+  std::vector<int,aligned_allocator<int>> instr_;
+  std::vector<int,aligned_allocator<int>> params_;
+  std::vector<int,aligned_allocator<int>> swap_;
+  std::vector<int,aligned_allocator<int>> dout_;
+  std::vector<int,aligned_allocator<int>> fuSrc_;
+  std::vector<int,aligned_allocator<int>> fuDst_;       	    
   
-  uint32_t task_mode;
+  uint32_t task_mode_;
 
   uint32_t reg_val[REG_NUM];
 
-  std::unique_ptr<XclDeviceBuffer> instr_buf;
-  std::unique_ptr<XclDeviceBuffer> params_buf;
-  std::unique_ptr<XclDeviceBuffer> swap_buf;
-  std::unique_ptr<XclDeviceBuffer> fuSrc_buf;
-  std::unique_ptr<XclDeviceBuffer> fuDst_buf;
-  
+  std::unique_ptr<XclDeviceBuffer> instr_buf_;
+  std::unique_ptr<XclDeviceBuffer> params_buf_;
+  std::unique_ptr<XclDeviceBuffer> swap_buf_;
+  std::unique_ptr<XclDeviceBuffer> fuSrc_buf_;
+  std::unique_ptr<XclDeviceBuffer> fuDst_buf_;
 
-  std::string modelName;
-  std::string instr_filename;
-  std::string din_filename;
-  std::string dout_filename;
-  std::string result_filename;
-  std::string params_filename;
+  std::unique_ptr<xir::vart::CpuFlatTensorBuffer> instrTbuf_;
+  std::unique_ptr<xir::vart::CpuFlatTensorBuffer> paramsTbuf_;
+  std::unique_ptr<xir::vart::CpuFlatTensorBuffer> swapTbuf_;
+  std::unique_ptr<xir::vart::CpuFlatTensorBuffer> fuSrcTbuf_;
+  std::unique_ptr<xir::vart::CpuFlatTensorBuffer> fuDstTbuf_;
+
+
+  std::string modelName_;
+  std::string instr_filename_;
+  std::string din_filename_;
+  std::string dout_filename_;
+  std::string result_filename_;
+  std::string params_filename_;
 
 };
