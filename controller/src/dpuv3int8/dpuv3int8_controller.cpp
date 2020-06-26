@@ -197,7 +197,7 @@ Dpuv3Int8Controller::~Dpuv3Int8Controller() {
 }
 
 
-void Dpuv3Int8Controller::run_Kernel(xrtcpp::exec::exec_write_command cmd, uint64_t* buf_addr, uint32_t* buf_size, uint32_t* reg_val)
+void Dpuv3Int8Controller::runKernel(xrtcpp::exec::exec_write_command cmd, uint64_t* buf_addr, uint32_t* buf_size, uint32_t* reg_val)
 {
 
     cmd.add(CONTROL_ADDR_BLOCK_INSTR            ,( buf_addr[BUF_IDX_INSTR]  ) & 0xFFFFFFFF);
@@ -389,7 +389,7 @@ void Dpuv3Int8Controller::execute(uint64_t *buf_addr, uint32_t *buf_size)
     cmd.add_cu(0);
     auto start = utils::time_ns();
     std::cout << "Launch the kernel" << std::endl;
-    run_Kernel( cmd, buf_addr, buf_size, reg_val);
+    runKernel( cmd, buf_addr, buf_size, reg_val);
     auto end = utils::time_ns();
     std::cout << "All Done !" <<  " | time (ms): " << (end-start)*1e-6 << "| fps: " << float(1.0*1e9/(end-start))*BATCH_SIZE*SLR_NUM << std::endl;
     xrtcpp::release_cu_context(xdev,0);
@@ -444,7 +444,6 @@ Dpuv3Int8Controller::get_inputs() {
   auto stdBufs = create_tensor_buffers(get_input_tensors(), /*isInput*/true);
   auto hwBufs = create_hw_buffers(stdBufs, /*isInput*/true);
   return stdBufs;
-// return create_tensor_buffers(get_input_tensors(), /*isInput*/true);
 }
 
 std::vector<xir::vart::TensorBuffer*> 
@@ -453,7 +452,6 @@ Dpuv3Int8Controller::get_outputs() {
   auto hwBufs = create_hw_buffers(stdBufs, /*isInput*/false);
   return stdBufs;
 
-//  return create_tensor_buffers(get_output_tensors(), /*isInput*/false);
 }
 
 std::vector<xir::vart::TensorBuffer*>
