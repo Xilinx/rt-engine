@@ -14,14 +14,35 @@ static uint64_t getDDRBankFromButlerBitmask(unsigned bitmask)
   throw std::runtime_error("Error: unknown ddr_bank config");
 }
 
-DeviceHandle::DeviceHandle(std::string kernelName, std::string xclbin) {
-  client_.reset(new butler::ButlerClient()); 
-  if (std::getenv("RTE_FORCE_ACQUIRE_NO_CHECKS"))
-  {
-    raw_acquire(kernelName, xclbin);
-    return;
-  }
+DeviceResource::DeviceResource(std::string kernelName, std::string xclbin) {
+  auto num_devices = xclProbe();
+  if (num_devices == 0)
+    throw std::runtime_error("Error: no devices available");
 
+  auto handle = xclOpen(0, NULL, XCL_INFO);
+  xclDeviceInfo2 deviceInfo;
+  xclGetDeviceInfo2(handle, &deviceInfo);
+  xclClose(handle);
+
+  xir::XrtBinStream binstream(xclbin); 
+  auto cu_full_name = kernelName + ":0:0";
+
+  info_.reset(new DeviceInfo{
+    .cu_base_addr = binstream.get_cu_base_addr(0),
+    .ddr_bank = 0,
+    .device_index = 0,
+    .cu_index = 0,
+    .cu_mask = (1u << 0),
+    .xclbin_path = xclbin,
+    .full_name = cu_full_name,
+    .device_id = 0,
+    .xdev = nullptr,
+    .fingerprint = 0,
+  });
+}
+
+ButlerResource::ButlerResource(std::string kernelName, std::string xclbin) {
+  client_.reset(new butler::ButlerClient()); 
   if (client_->Ping() != butler::errCode::SUCCESS)
     throw std::runtime_error("Error: cannot ping butler server");
 
@@ -56,35 +77,19 @@ DeviceHandle::DeviceHandle(std::string kernelName, std::string xclbin) {
   handle_.reset(new butler::handle(alloc.myHandle));
 }
 
-void DeviceHandle::raw_acquire(std::string kernelName, std::string xclbin) {
-  auto num_devices = xclProbe();
-  if (num_devices == 0)
-    throw std::runtime_error("Error: no devices available");
-
-  auto handle = xclOpen(0, NULL, XCL_INFO);
-  xclDeviceInfo2 deviceInfo;
-  xclGetDeviceInfo2(handle, &deviceInfo);
-  xclClose(handle);
-
-  xir::XrtBinStream binstream(xclbin); 
-  auto cu_full_name = kernelName + ":0:0";
-  info_.reset(new DeviceInfo{
-    .cu_base_addr = binstream.get_cu_base_addr(0),
-    .ddr_bank = 0,
-    .device_index = 0,
-    .cu_index = 0,
-    .cu_mask = (1u << 0),
-    .xclbin_path = xclbin,
-    .full_name = cu_full_name,
-    .device_id = 0,
-    .xdev = nullptr,
-    .fingerprint = 0,
-  });
-}
-
-DeviceHandle::~DeviceHandle() {
+ButlerResource::~ButlerResource() {
   if (client_.get() && handle_.get())
     client_->releaseResources(*handle_);
+}
+
+DeviceHandle::DeviceHandle(std::string kernelName, std::string xclbin) {
+  if (std::getenv("RTE_ACQUIRE_DEVICE_UNMANAGED"))
+  {
+    resource_.reset(new DeviceResource(kernelName, xclbin));
+    return;
+  }
+
+  resource_.reset(new ButlerResource(kernelName, xclbin));
 }
 
 /* 
@@ -267,4 +272,3 @@ private:
   }
 };
 #endif
-
