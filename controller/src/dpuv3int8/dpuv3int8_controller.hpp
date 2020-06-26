@@ -65,35 +65,35 @@ class Dpuv3Int8Controller : public XclDpuController<XclDeviceHandle, XclDeviceBu
   std::unique_ptr<xir::vart::Tensor> fuSrc_tensor_;
   std::unique_ptr<xir::vart::Tensor> fuDst_tensor_;
 
-  std::vector<int,aligned_allocator<int>> instr;
-  std::vector<int,aligned_allocator<int>> params;
-  std::vector<int,aligned_allocator<int>> swap;
-  std::vector<int,aligned_allocator<int>> dout;
-  std::vector<int,aligned_allocator<int>> fuSrc;
-  std::vector<int,aligned_allocator<int>> fuDst;       	    
+  std::vector<int,aligned_allocator<int>> instr_;
+  std::vector<int,aligned_allocator<int>> params_;
+  std::vector<int,aligned_allocator<int>> swap_;
+  std::vector<int,aligned_allocator<int>> dout_;
+  std::vector<int,aligned_allocator<int>> fuSrc_;
+  std::vector<int,aligned_allocator<int>> fuDst_;       	    
   
-  uint32_t task_mode;
+  uint32_t task_mode_;
 
   uint32_t reg_val[REG_NUM];
 
-  std::unique_ptr<XclDeviceBuffer> instr_buf;
-  std::unique_ptr<XclDeviceBuffer> params_buf;
-  std::unique_ptr<XclDeviceBuffer> swap_buf;
-  std::unique_ptr<XclDeviceBuffer> fuSrc_buf;
-  std::unique_ptr<XclDeviceBuffer> fuDst_buf;
+  std::unique_ptr<XclDeviceBuffer> instr_buf_;
+  std::unique_ptr<XclDeviceBuffer> params_buf_;
+  std::unique_ptr<XclDeviceBuffer> swap_buf_;
+  std::unique_ptr<XclDeviceBuffer> fuSrc_buf_;
+  std::unique_ptr<XclDeviceBuffer> fuDst_buf_;
 
-  std::unique_ptr<xir::vart::CpuFlatTensorBuffer> instrTbuf;
-  std::unique_ptr<xir::vart::CpuFlatTensorBuffer> paramsTbuf;
-  std::unique_ptr<xir::vart::CpuFlatTensorBuffer> swapTbuf;
-  std::unique_ptr<xir::vart::CpuFlatTensorBuffer> fuSrcTbuf;
-  std::unique_ptr<xir::vart::CpuFlatTensorBuffer> fuDstTbuf;
+  std::unique_ptr<xir::vart::CpuFlatTensorBuffer> instrTbuf_;
+  std::unique_ptr<xir::vart::CpuFlatTensorBuffer> paramsTbuf_;
+  std::unique_ptr<xir::vart::CpuFlatTensorBuffer> swapTbuf_;
+  std::unique_ptr<xir::vart::CpuFlatTensorBuffer> fuSrcTbuf_;
+  std::unique_ptr<xir::vart::CpuFlatTensorBuffer> fuDstTbuf_;
 
 
-  std::string modelName;
-  std::string instr_filename;
-  std::string din_filename;
-  std::string dout_filename;
-  std::string result_filename;
-  std::string params_filename;
+  std::string modelName_;
+  std::string instr_filename_;
+  std::string din_filename_;
+  std::string dout_filename_;
+  std::string result_filename_;
+  std::string params_filename_;
 
 };
