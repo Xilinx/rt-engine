@@ -161,7 +161,6 @@ Dpuv3Int8Controller::Dpuv3Int8Controller(std::string meta) : XclDpuController<Xc
   { // TODO init input/output tensor from compiler
     auto din = load(din_filename_);
     dout_ = load(dout_filename_);
-    std::cout<<din.size()<<" din.size()"<<std::endl;
     const std::vector<std::int32_t> indims = { int32_t(din.size()) };
     const std::vector<std::int32_t> outdims = { int32_t(dout_.size()) };
     in_tensor_.reset(
@@ -315,7 +314,6 @@ void Dpuv3Int8Controller::initCreateBuffers()
     std::vector<int,aligned_allocator<int>> fuSrc_(BLK_SIZE/sizeof(int32_t));
 
     std::vector<int,aligned_allocator<int>> fuDst_(BLK_SIZE/sizeof(int32_t));       	    
-       	    
     const std::vector<std::int32_t> instrdims = { int32_t(instr_.size()) };
     const std::vector<std::int32_t> paramsdims = { int32_t(params_.size()) };
     const std::vector<std::int32_t> swapdims = { int32_t(swap_.size()) };
@@ -456,7 +454,6 @@ Dpuv3Int8Controller::get_outputs() {
 
 std::vector<xir::vart::TensorBuffer*>
 Dpuv3Int8Controller::create_hw_buffers(std::vector<xir::vart::TensorBuffer*> stdBuf, bool isInput) {
-  // TODO: add an unordered_map<TensorBuffer*, TensorBuffer*> ubuf2hwbuf_ to class
   std::vector<xir::vart::TensorBuffer*> hwBuf;
   if(isInput)
     {
@@ -475,6 +472,14 @@ xir::vart::TensorBuffer* Dpuv3Int8Controller::get_hw_buffer(xir::vart::TensorBuf
   return stdbuf2hwbuf_[stdBuffer];
 }
 
+bool isDebugMode()
+{
+  const bool DPUV3INT8_DEBUG_MODE =
+    std::getenv("DPUV3INT8_DEBUG_MODE") ?
+            atoi(std::getenv("DPUV3INT8_DEBUG_MODE")) == 1 : false;
+  return DPUV3INT8_DEBUG_MODE;
+}
+
 void Dpuv3Int8Controller::preprocess(xir::vart::TensorBuffer* stdbuf, xir::vart::TensorBuffer* hwbuf)
 {
   
@@ -484,11 +489,8 @@ void Dpuv3Int8Controller::preprocess(xir::vart::TensorBuffer* stdbuf, xir::vart:
 
   //This function cna also be used to load any intermediate tenosr buffer data, for debug purposes if we wish to test any particular layer we can extend this function to handle the intermidate buffer case too.
 
-  const bool DPUV3INT8_DEBUG_MODE =
-    std::getenv("DPUV3INT8_DEBUG_MODE") ?
-            atoi(std::getenv("DPUV3INT8_DEBUG_MODE")) == 1 : false;
-
-  if(DPUV3INT8_DEBUG_MODE)
+  bool debugMode = isDebugMode();
+  if(debugMode)
   {
     std::pair<void*, size_t> hwbufPair;
     void* hwBufptr;
@@ -506,13 +508,8 @@ void Dpuv3Int8Controller::preprocess(xir::vart::TensorBuffer* stdbuf, xir::vart:
 void Dpuv3Int8Controller::postprocess(xir::vart::TensorBuffer* stdbuf, xir::vart::TensorBuffer* hwbuf)
 {
   //TO-DO MNDBG: This function's purpose is to take in fpga outputs and convert 8bit to float, also convert from ddr space 32bit continuous style to standard format. This standard format can be sent to softmax, then later to get prediction labels. The function can be extended to intrgrate softmax, label prdictions.
-
-
-  const bool DPUV3INT8_DEBUG_MODE =
-    std::getenv("DPUV3INT8_DEBUG_MODE") ?
-            atoi(std::getenv("DPUV3INT8_DEBUG_MODE")) == 1 : false;
-
-  if(DPUV3INT8_DEBUG_MODE)
+  bool debugMode = isDebugMode();
+  if(debugMode)
   {
 //get size from meta.json
     memcpy(stdbuf->data().first, hwbuf->data().first, dout_.size()*sizeof(uint32_t));
