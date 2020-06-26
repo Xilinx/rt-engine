@@ -255,6 +255,8 @@ void Dpuv3Int8Controller::initializeTaskFUVariables()
     std::cout<<"-----------------------------------------------"<<std::endl;
     std::cout << "Program begins: "<< std::endl;
 
+    //TO-DO MNDBG: This function's purpose is to fill in register values required for execution. Currently, these values are static. This has to be updated to dynamically calculate register values based on input/model information.
+
     task_mode_ = 0x0;
     uint32_t zero = 0;
 
@@ -296,17 +298,24 @@ void Dpuv3Int8Controller::initializeTaskFUVariables()
 
 void Dpuv3Int8Controller::initCreateBuffers()
 {
+    //TO-DO MNDBG1: This function's purpose is to load instr, params data and allocate tensorbuffers, devicebuffers for instr, params, swap, fuSrc, fuDst. Currently buffer size for swap, fuSrc, fuDst is static, this shoudl be updated to be dynamic - the size would come from meta.json populated by compiler. 
+
+    //TO-DO MNDBG2: This function also loads instr.txt and params.txt. If compiler provides instr.asm, function has to integrate a sub function which can convert instr.asm to instr.txt and then load the instr.txt. If compiler provides  abinary file, then the function has to integrate a subfunction which can load binary files and populate required data.
+
+
     //Allocate Memory in Host Memory
     uint32_t BLK_SIZE = 16*1024*1024;
-
-    instr_=load(instr_filename_);
-    params_=load(params_filename_);
-    swap_.resize(BLK_SIZE/sizeof(int32_t));
-    fuSrc_.resize(BLK_SIZE/sizeof(int32_t));
-    fuDst_.resize(BLK_SIZE/sizeof(int32_t));       	    
     
-    std::cout<<"One time initialzation"<<std::endl;
+    std::vector<int,aligned_allocator<int>> instr_=load(instr_filename_);
 
+    std::vector<int,aligned_allocator<int>> params_=load(params_filename_);
+
+    std::vector<int,aligned_allocator<int>> swap_(BLK_SIZE/sizeof(int32_t));
+
+    std::vector<int,aligned_allocator<int>> fuSrc_(BLK_SIZE/sizeof(int32_t));
+
+    std::vector<int,aligned_allocator<int>> fuDst_(BLK_SIZE/sizeof(int32_t));       	    
+       	    
     const std::vector<std::int32_t> instrdims = { int32_t(instr_.size()) };
     const std::vector<std::int32_t> paramsdims = { int32_t(params_.size()) };
     const std::vector<std::int32_t> swapdims = { int32_t(swap_.size()) };
@@ -349,11 +358,11 @@ void Dpuv3Int8Controller::initRunBufs(uint64_t *buf_addr, uint32_t *buf_size)
     buf_addr[BUF_IDX_FUSRC] = fuSrc_buf_->get_phys_addr();
     buf_addr[BUF_IDX_FUDST] = fuDst_buf_->get_phys_addr();
 
-    buf_size[BUF_IDX_INSTR]     = instr_.size()*sizeof(uint32_t);
-    buf_size[BUF_IDX_PARAMS]    = params_.size()*sizeof(uint32_t);
-    buf_size[BUF_IDX_SWAP]      = swap_.size()*sizeof(uint32_t);
-    buf_size[BUF_IDX_FUSRC]     = fuSrc_.size()*sizeof(uint32_t);
-    buf_size[BUF_IDX_FUDST]     = fuDst_.size()*sizeof(uint32_t);
+    buf_size[BUF_IDX_INSTR]     = instr_buf_->get_size();
+    buf_size[BUF_IDX_PARAMS]    = params_buf_->get_size();
+    buf_size[BUF_IDX_SWAP]      = swap_buf_->get_size();
+    buf_size[BUF_IDX_FUSRC]     = fuSrc_buf_->get_size();
+    buf_size[BUF_IDX_FUDST]     = fuDst_buf_->get_size();
     buf_size[BUF_IDX_SRC]       = 0;
     buf_size[BUF_IDX_DST]       = 0;
     buf_size[BUF_IDX_NULL]      = 0;
@@ -470,6 +479,12 @@ xir::vart::TensorBuffer* Dpuv3Int8Controller::get_hw_buffer(xir::vart::TensorBuf
 
 void Dpuv3Int8Controller::preprocess(xir::vart::TensorBuffer* stdbuf, xir::vart::TensorBuffer* hwbuf)
 {
+  
+  //TO-DO MNDBG: this function's purpose is to take in input rgb tensor float tensor data and convert it to data format of the corresponding DDR space in a 32bit continuous style.
+
+  //right now, if the functions detects debug mode, it loads up the pre-populated txt file containing data format as required - in a 32bit continuous style
+
+  //This function cna also be used to load any intermediate tenosr buffer data, for debug purposes if we wish to test any particular layer we can extend this function to handle the intermidate buffer case too.
 
   const bool DPUV3INT8_DEBUG_MODE =
     std::getenv("DPUV3INT8_DEBUG_MODE") ?
@@ -492,6 +507,9 @@ void Dpuv3Int8Controller::preprocess(xir::vart::TensorBuffer* stdbuf, xir::vart:
 
 void Dpuv3Int8Controller::postprocess(xir::vart::TensorBuffer* stdbuf, xir::vart::TensorBuffer* hwbuf)
 {
+  //TO-DO MNDBG: This function's purpose is to take in fpga outputs and convert 8bit to float, also convert from ddr space 32bit continuous style to standard format. This standard format can be sent to softmax, then later to get prediction labels. The function can be extended to intrgrate softmax, label prdictions.
+
+
   const bool DPUV3INT8_DEBUG_MODE =
     std::getenv("DPUV3INT8_DEBUG_MODE") ?
             atoi(std::getenv("DPUV3INT8_DEBUG_MODE")) == 1 : false;

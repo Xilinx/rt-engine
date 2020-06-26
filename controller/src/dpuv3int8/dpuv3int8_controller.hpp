@@ -40,12 +40,12 @@ class Dpuv3Int8Controller : public XclDpuController<XclDeviceHandle, XclDeviceBu
 
  private:    
 
-  void preprocess(xir::vart::TensorBuffer*, xir::vart::TensorBuffer*);
-  void postprocess(xir::vart::TensorBuffer*, xir::vart::TensorBuffer*);
+  void preprocess(xir::vart::TensorBuffer*, xir::vart::TensorBuffer*);//TO-DO MNDBG
+  void postprocess(xir::vart::TensorBuffer*, xir::vart::TensorBuffer*);//TO_DO MNDBG
   std::unordered_map<xir::vart::TensorBuffer*, xir::vart::TensorBuffer*> stdbuf2hwbuf_;
 
-  void initializeTaskFUVariables();
-  void initCreateBuffers();
+  void initializeTaskFUVariables();//TO-DO MNDBG 
+  void initCreateBuffers();//TO-DO MNDBG
   void initRunBufs(uint64_t *buf_addr, uint32_t *buf_size);
   
   void execute(uint64_t *buf_addr, uint32_t *buf_size);
@@ -65,13 +65,8 @@ class Dpuv3Int8Controller : public XclDpuController<XclDeviceHandle, XclDeviceBu
   std::unique_ptr<xir::vart::Tensor> fuSrc_tensor_;
   std::unique_ptr<xir::vart::Tensor> fuDst_tensor_;
 
-  std::vector<int,aligned_allocator<int>> instr_;
-  std::vector<int,aligned_allocator<int>> params_;
-  std::vector<int,aligned_allocator<int>> swap_;
   std::vector<int,aligned_allocator<int>> dout_;
-  std::vector<int,aligned_allocator<int>> fuSrc_;
-  std::vector<int,aligned_allocator<int>> fuDst_;       	    
-  
+ 
   uint32_t task_mode_;
 
   uint32_t reg_val[REG_NUM];
