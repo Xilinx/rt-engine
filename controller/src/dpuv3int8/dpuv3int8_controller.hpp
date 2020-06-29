@@ -28,15 +28,14 @@ class Dpuv3Int8Controller : public XclDpuController<XclDeviceHandle, XclDeviceBu
   virtual ~Dpuv3Int8Controller() override;
   virtual void run(const std::vector<xir::vart::TensorBuffer*> &inputs, 
            const std::vector<xir::vart::TensorBuffer*> &outputs) override;
-
-  virtual std::vector<const xir::vart::Tensor*> get_input_tensors() const override; 
-  virtual std::vector<const xir::vart::Tensor*> get_output_tensors() const override; 
   virtual std::vector<xir::vart::TensorBuffer*> get_inputs() override;
   virtual std::vector<xir::vart::TensorBuffer*> get_outputs() override;
+  virtual std::vector<const xir::vart::Tensor*> get_input_tensors() const override;
+  virtual std::vector<const xir::vart::Tensor*> get_output_tensors() const override; 
 
 
  private:    
-  
+ 
   void initializeTaskFUVariables();//TO-DO MNDBG 
   void initCreateBuffers();//TO-DO MNDBG
   void preprocess(xir::vart::TensorBuffer*, xir::vart::TensorBuffer*);//TO-DO MNDBG
@@ -44,7 +43,7 @@ class Dpuv3Int8Controller : public XclDpuController<XclDeviceHandle, XclDeviceBu
   std::vector<xir::vart::TensorBuffer*> create_hw_buffers(std::vector<xir::vart::TensorBuffer*> stdBuf, bool isInput=true);
   std::vector<int32_t, aligned_allocator<int32_t>> load(std::string filename);
   xir::vart::TensorBuffer* get_hw_buffer(xir::vart::TensorBuffer *tb);
-  void initRunBufs(uint64_t *buf_addr, uint32_t *buf_size);
+  void initRunBufs(uint64_t *buf_addr, uint32_t *buf_size, XclDeviceBuffer* swap_buf, XclDeviceBuffer* fuSrc_buf, XclDeviceBuffer* fuDst_buf);
   void execute(uint64_t *buf_addr, uint32_t *buf_size);
   void runKernel(xrtcpp::exec::exec_write_command cmd, uint64_t* buf_addr, uint32_t* buf_size, uint32_t* reg_val);
   void checkFpgaOutput(XclDeviceBuffer *outbuf);
