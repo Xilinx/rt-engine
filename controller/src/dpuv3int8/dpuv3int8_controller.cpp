@@ -139,13 +139,12 @@
 #define REG_IDX_DONE_CNT                30 
 
 
+
 #define BATCH_SIZE  4
 #define SLR_NUM     4
 
 
 Dpuv3Int8Controller::Dpuv3Int8Controller(std::string meta) : XclDpuController<XclDeviceHandle, XclDeviceBuffer, XclDeviceBuffer>(meta) {
-  //TO_DO: Add comments
-
 
   // load meta file
   std::ifstream f(meta);
@@ -160,7 +159,7 @@ Dpuv3Int8Controller::Dpuv3Int8Controller(std::string meta) : XclDpuController<Xc
   result_filename_ = getFileNameIfExists("resultFile", jobj);
   params_filename_ = getFileNameIfExists("paramsFile", jobj);
  
-  { // TODO init input/output tensor from compiler, for now using it from input files, but in the end we want it from meta.json compiler file 
+  { // TODO init input/output tensor from compiler
     auto din = load(din_filename_);
     dout_ = load(dout_filename_);
     const std::vector<std::int32_t> indims = { int32_t(din.size()) };
@@ -180,7 +179,7 @@ Dpuv3Int8Controller::Dpuv3Int8Controller(std::string meta) : XclDpuController<Xc
   }
 
 
-  initializeTaskFUVariables();//add comments, function's purpose
+  initializeTaskFUVariables();
   initCreateBuffers();
 }
 
@@ -194,8 +193,7 @@ std::string Dpuv3Int8Controller::getFileNameIfExists(std::string name, json_obje
 }
 
 
-Dpuv3Int8Controller::~Dpuv3Int8Controller()
-{
+Dpuv3Int8Controller::~Dpuv3Int8Controller() {
 }
 
 
@@ -312,12 +310,16 @@ void Dpuv3Int8Controller::initCreateBuffers()
 
     std::vector<int,aligned_allocator<int>> params_=load(params_filename_);
 
-      	    
+    std::vector<int,aligned_allocator<int>> swap_(BLK_SIZE/sizeof(int32_t));
+
+    std::vector<int,aligned_allocator<int>> fuSrc_(BLK_SIZE/sizeof(int32_t));
+
+    std::vector<int,aligned_allocator<int>> fuDst_(BLK_SIZE/sizeof(int32_t));       	    
     const std::vector<std::int32_t> instrdims = { int32_t(instr_.size()) };
     const std::vector<std::int32_t> paramsdims = { int32_t(params_.size()) };
-    const std::vector<std::int32_t> swapdims = { int32_t(BLK_SIZE/sizeof(int32_t)) };
-    const std::vector<std::int32_t> fuSrcdims = swapdims;
-    const std::vector<std::int32_t> fuDstdims = swapdims;
+    const std::vector<std::int32_t> swapdims = { int32_t(swap_.size()) };
+    const std::vector<std::int32_t> fuSrcdims = { int32_t(fuSrc_.size()) };
+    const std::vector<std::int32_t> fuDstdims = { int32_t(fuDst_.size()) };
 
     instr_tensor_.reset(
       new xir::vart::Tensor("instr", instrdims, xir::vart::Tensor::DataType::UINT32));
@@ -333,27 +335,33 @@ void Dpuv3Int8Controller::initCreateBuffers()
     
     instrTbuf_.reset(new xir::vart::CpuFlatTensorBuffer((void*)instr_.data(),&(*instr_tensor_)));
     paramsTbuf_.reset(new xir::vart::CpuFlatTensorBuffer((void*)params_.data(),&(*params_tensor_)));
+    swapTbuf_.reset(new xir::vart::CpuFlatTensorBuffer((void*)swap_.data(),&(*swap_tensor_)));
+    fuSrcTbuf_.reset(new xir::vart::CpuFlatTensorBuffer((void*)fuSrc_.data(),&(*fuSrc_tensor_)));
+    fuDstTbuf_.reset(new xir::vart::CpuFlatTensorBuffer((void*)fuDst_.data(),&(*fuDst_tensor_)));
 
 
     instr_buf_.reset(new XclDeviceBuffer(handle_.get(), instrTbuf_.get(), handle_->get_device_info().ddr_bank));
     params_buf_.reset(new XclDeviceBuffer(handle_.get(), paramsTbuf_.get(), handle_->get_device_info().ddr_bank));
+    swap_buf_.reset(new XclDeviceBuffer(handle_.get(), swapTbuf_.get(), handle_->get_device_info().ddr_bank));
+    fuSrc_buf_.reset(new XclDeviceBuffer(handle_.get(), fuSrcTbuf_.get(), handle_->get_device_info().ddr_bank));
+    fuDst_buf_.reset(new XclDeviceBuffer(handle_.get(), fuDstTbuf_.get(), handle_->get_device_info().ddr_bank));
 
 }
 
-void Dpuv3Int8Controller::initRunBufs(uint64_t *buf_addr, uint32_t *buf_size, XclDeviceBuffer* swap_buf, XclDeviceBuffer* fuSrc_buf, XclDeviceBuffer* fuDst_buf)
+void Dpuv3Int8Controller::initRunBufs(uint64_t *buf_addr, uint32_t *buf_size)
 {
     buf_addr[BUF_IDX_INSTR] = instr_buf_->get_phys_addr();
     buf_addr[BUF_IDX_PARAMS] = params_buf_->get_phys_addr();
-    buf_addr[BUF_IDX_SWAP] = swap_buf->get_phys_addr();
+    buf_addr[BUF_IDX_SWAP] = swap_buf_->get_phys_addr();
 
-    buf_addr[BUF_IDX_FUSRC] = fuSrc_buf->get_phys_addr();
-    buf_addr[BUF_IDX_FUDST] = fuDst_buf->get_phys_addr();
+    buf_addr[BUF_IDX_FUSRC] = fuSrc_buf_->get_phys_addr();
+    buf_addr[BUF_IDX_FUDST] = fuDst_buf_->get_phys_addr();
 
     buf_size[BUF_IDX_INSTR]     = instr_buf_->get_size();
     buf_size[BUF_IDX_PARAMS]    = params_buf_->get_size();
-    buf_size[BUF_IDX_SWAP]      = swap_buf->get_size();
-    buf_size[BUF_IDX_FUSRC]     = fuSrc_buf->get_size();
-    buf_size[BUF_IDX_FUDST]     = fuDst_buf->get_size();
+    buf_size[BUF_IDX_SWAP]      = swap_buf_->get_size();
+    buf_size[BUF_IDX_FUSRC]     = fuSrc_buf_->get_size();
+    buf_size[BUF_IDX_FUDST]     = fuDst_buf_->get_size();
     buf_size[BUF_IDX_SRC]       = 0;
     buf_size[BUF_IDX_DST]       = 0;
     buf_size[BUF_IDX_NULL]      = 0;
@@ -395,54 +403,50 @@ void Dpuv3Int8Controller::checkFpgaOutput(XclDeviceBuffer *outbuf)
     for (unsigned i = 0 ; i < dout_.size(); i++)
     {
 
-     if(i%(dout_.size())==0)
-     {
-         log_filename = "result" + std::to_string(25 + ( std::rand() % ( 63 - 25 + 1 ) )) + ".txt";
-          log_filename = "result" + std::to_string(i/(result.size())) + ".txt";
-         outputfile.open(log_filename);
-     }
+        if(i%(dout_.size())==0)
+        {
+            log_filename = "result" + std::to_string(25 + ( std::rand() % ( 63 - 25 + 1 ) )) + ".txt";
+//           log_filename = "result" + std::to_string(i/(result.size())) + ".txt";
+            outputfile.open(log_filename);
+        }
 
-     uint32_t *resultData = (uint32_t*)tbuf->data().first;
-     if ((uint32_t)dout_[i] != resultData[i])
-     {
-         outputfile << "Error: Result mismatch.  " << "dout: " << std::hex << std::setw(8) << std::setfill('0') << (uint32_t)dout_[i] << " | result: " << std::hex << std::setw(8) << resultData[i] << std::endl;
-     }
-     else 
-     {
-         outputfile << std::hex << std::setw(8) << std::setfill('0') << (uint32_t)resultData[i] << std::endl;
-     }
+        uint32_t *resultData = (uint32_t*)tbuf->data().first;
+        if ((uint32_t)dout_[i] != resultData[i])
+        {
+            outputfile << "Error: Result mismatch.  " << "dout: " << std::hex << std::setw(8) << std::setfill('0') << (uint32_t)dout_[i] << " | result: " << std::hex << std::setw(8) << resultData[i] << std::endl;
+        }
+        else 
+        {
+            outputfile << std::hex << std::setw(8) << std::setfill('0') << (uint32_t)resultData[i] << std::endl;
+        }
 
-     if((i%(dout_.size()))==((dout_.size())-1))
-     {
-         outputfile.close();
-     }
+        if((i%(dout_.size()))==((dout_.size())-1))
+        {
+            outputfile.close();
+        }
     }
 
 }
 
 std::vector<const xir::vart::Tensor*> 
-Dpuv3Int8Controller::get_input_tensors() const
-{
+Dpuv3Int8Controller::get_input_tensors() const  {
   return std::vector<const xir::vart::Tensor*>{ in_tensor_.get() };
 }
 
 std::vector<const xir::vart::Tensor*> 
-Dpuv3Int8Controller::get_output_tensors() const
-{
+Dpuv3Int8Controller::get_output_tensors() const {
   return std::vector<const xir::vart::Tensor*>{ out_tensor_.get() };
 }
 
 std::vector<xir::vart::TensorBuffer*> 
-Dpuv3Int8Controller::get_inputs() 
-{
+Dpuv3Int8Controller::get_inputs() {
   auto stdBufs = create_tensor_buffers(get_input_tensors(), /*isInput*/true);
   auto hwBufs = create_hw_buffers(stdBufs, /*isInput*/true);
   return stdBufs;
 }
 
 std::vector<xir::vart::TensorBuffer*> 
-Dpuv3Int8Controller::get_outputs()
-{
+Dpuv3Int8Controller::get_outputs() {
   auto stdBufs = create_tensor_buffers(get_output_tensors(), /*isInput*/false);
   auto hwBufs = create_hw_buffers(stdBufs, /*isInput*/false);
   return stdBufs;
@@ -450,8 +454,7 @@ Dpuv3Int8Controller::get_outputs()
 }
 
 std::vector<xir::vart::TensorBuffer*>
-Dpuv3Int8Controller::create_hw_buffers(std::vector<xir::vart::TensorBuffer*> stdBuf, bool isInput)
-{
+Dpuv3Int8Controller::create_hw_buffers(std::vector<xir::vart::TensorBuffer*> stdBuf, bool isInput) {
   std::vector<xir::vart::TensorBuffer*> hwBuf;
   if(isInput)
     {
@@ -466,8 +469,7 @@ Dpuv3Int8Controller::create_hw_buffers(std::vector<xir::vart::TensorBuffer*> std
   return hwBuf;
 }
 
-xir::vart::TensorBuffer* Dpuv3Int8Controller::get_hw_buffer(xir::vart::TensorBuffer* stdBuffer)
-{
+xir::vart::TensorBuffer* Dpuv3Int8Controller::get_hw_buffer(xir::vart::TensorBuffer* stdBuffer) {
   return stdbuf2hwbuf_[stdBuffer];
 }
 
@@ -498,8 +500,9 @@ void Dpuv3Int8Controller::preprocess(xir::vart::TensorBuffer* stdbuf, xir::vart:
     hwBufptr = hwbufPair.first; 
 
     hwDinVector = load(din_filename_); 
-     
+    
     memcpy(hwBufptr, (void*)hwDinVector.data(), hwDinVector.size()*xir::vart::size_of(in_tensor_->get_data_type()));
+
   }
 }
 
@@ -510,13 +513,13 @@ void Dpuv3Int8Controller::postprocess(xir::vart::TensorBuffer* stdbuf, xir::vart
   {
 //get size from meta.json
     memcpy(stdbuf->data().first, hwbuf->data().first, dout_.size()*xir::vart::size_of(out_tensor_->get_data_type()));
+  
   }
  
 }
 
 void Dpuv3Int8Controller::run(const std::vector<xir::vart::TensorBuffer*> &inputs, 
-                        const std::vector<xir::vart::TensorBuffer*> &outputs)
-{
+                        const std::vector<xir::vart::TensorBuffer*> &outputs) {
   XclDeviceBuffer* inbuf = dynamic_cast<XclDeviceBuffer*>(get_device_buffer(inputs[0]));
   XclDeviceBuffer* outbuf = dynamic_cast<XclDeviceBuffer*>(get_device_buffer(outputs[0]));
 
@@ -526,24 +529,13 @@ void Dpuv3Int8Controller::run(const std::vector<xir::vart::TensorBuffer*> &input
   XclDeviceBuffer *inHwBuf = dynamic_cast<XclDeviceBuffer*>(get_device_buffer(inHwTbuf));
   XclDeviceBuffer *outHwBuf = dynamic_cast<XclDeviceBuffer*>(get_device_buffer(outHwTbuf));
 
-  std::vector<int,aligned_allocator<int>> swap(swap_tensor_->get_element_num());
-  std::vector<int,aligned_allocator<int>> fuSrc(fuSrc_tensor_->get_element_num());
-  std::vector<int,aligned_allocator<int>> fuDst(fuDst_tensor_->get_element_num()); 
-
-  std::unique_ptr<xir::vart::CpuFlatTensorBuffer> swapTbuf(new xir::vart::CpuFlatTensorBuffer((void*)swap.data(),&(*swap_tensor_)));
-  std::unique_ptr<xir::vart::CpuFlatTensorBuffer> fuSrcTbuf(new xir::vart::CpuFlatTensorBuffer((void*)fuSrc.data(),&(*fuSrc_tensor_)));
-  std::unique_ptr<xir::vart::CpuFlatTensorBuffer> fuDstTbuf(new xir::vart::CpuFlatTensorBuffer((void*)fuDst.data(),&(*fuDst_tensor_)));
-
-  std::unique_ptr<XclDeviceBuffer> swap_buf(new XclDeviceBuffer(handle_.get(), swapTbuf.get(), handle_->get_device_info().ddr_bank));
-  std::unique_ptr<XclDeviceBuffer> fuSrc_buf(new XclDeviceBuffer(handle_.get(), fuSrcTbuf.get(), handle_->get_device_info().ddr_bank));
-  std::unique_ptr<XclDeviceBuffer> fuDst_buf(new XclDeviceBuffer(handle_.get(), fuDstTbuf.get(), handle_->get_device_info().ddr_bank));
 
   preprocess(inputs[0], inHwTbuf);
 
   uint64_t buf_addr[BUF_IDX_NUM];
   uint32_t buf_size[BUF_IDX_NUM];
 
-  initRunBufs(buf_addr, buf_size, swap_buf.get(), fuSrc_buf.get(), fuDst_buf.get());
+  initRunBufs(buf_addr, buf_size);
   
   buf_addr[BUF_IDX_DIN] = inHwBuf->get_phys_addr();
   buf_addr[BUF_IDX_RESULT] = outHwBuf->get_phys_addr();
@@ -574,7 +566,6 @@ void Dpuv3Int8Controller::run(const std::vector<xir::vart::TensorBuffer*> &input
 
 std::vector<int32_t, aligned_allocator<int32_t>> Dpuv3Int8Controller::load(std::string filename)
 {
-    //this is temp, future we shouldnt be laoding txt files, switch to binary file
     std::vector<int32_t, aligned_allocator<int32_t>> tmp;
     std::vector<int32_t, aligned_allocator<int32_t>> mem;
     std::ifstream   ifile;
