@@ -4,14 +4,16 @@
  * Reference: vart/xrt-device-handle/src/xrt_device_handle_butler.hpp
  */
 
-#include <string>
 #include <memory>
+#include <string>
 #include <xrt.h>
 #include <CL/opencl.h>
 
 namespace butler {
   class ButlerClient;
 }
+class xrmCuProperty;
+class xrmCuResource;
 
 struct DeviceInfo {
   uint64_t cu_base_addr;
@@ -54,6 +56,11 @@ class XrmResource : public DeviceResource {
  public:
   XrmResource(std::string kernelName, std::string xclbin);
   ~XrmResource();
+
+ private:
+  void *context_;
+  std::unique_ptr<xrmCuProperty> cu_prop_;
+  std::unique_ptr<xrmCuResource> cu_rsrc_;
 };
 
 /* 

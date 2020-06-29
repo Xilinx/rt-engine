@@ -27,7 +27,7 @@ void TestClassify::run() {
 void TestClassify::loadImages(){ //TO-DO MNDBG
   images_.resize(num_queries_);
   int inSize = 224*224*3;
-  for (int i = 0; i < num_queries_; i++)
+  for (unsigned i = 0; i < num_queries_; i++)
       images_[i].resize(inSize);
 }
 

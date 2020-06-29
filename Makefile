@@ -14,9 +14,18 @@ TEST_BINS := $(TESTS:%=$(BUILD_DIR)/%.exe)
 INC_DIRS := $(shell find $(SRC_DIRS) -type d)
 INC_FLAGS := $(addprefix -I,$(INC_DIRS))
 
-XILINX_XRT := /opt/xilinx/xrt/
+XILINX_XRT := /opt/xilinx/xrt
 VITIS_INCLUDES := -I $(XILINX_XRT)/include -I$(CONDA_PREFIX)/include/xip/butler -I$(CONDA_PREFIX)/include
 VITIS_LIBS := -L$(BUILD_DIR) -L$(XILINX_XRT)/lib -L$(CONDA_PREFIX)/lib
+
+XILINX_XRM := /opt/xilinx/xrm
+ifneq "$(wildcard $(XILINX_XRM))" ""
+  # XRM installed on system
+  ifeq (1, ${XRM})
+    VITIS_INCLUDES += -I $(XILINX_XRM)/include -D XRM
+  endif
+endif
+
 CPPFLAGS ?= $(INC_FLAGS) $(VITIS_INCLUDES) $(VITIS_LIBS) -Wall -std=c++11 -O3
 
 .PHONY: all

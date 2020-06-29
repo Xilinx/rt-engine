@@ -1,18 +1,25 @@
-#pragma GCC diagnostic push 
-#pragma GCC diagnostic ignored "-Wignored-qualifiers"
-#include "butler_client.h"
-#include "butler_dev.h"
-#include "butler_cu_selection_algo.h"
-#pragma GCC diagnostic pop 
-#include "device_handle.hpp"
-#include "xrt_bin_stream.hpp"
 #include <fstream>
 #include <memory>
+#include <dirent.h>
 
-static uint64_t getDDRBankFromButlerBitmask(unsigned bitmask)
-{
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wignored-qualifiers"
+#include "butler_client.h"
+#include "butler_cu_selection_algo.h"
+#include "butler_dev.h"
+#pragma GCC diagnostic pop
+ 
+#ifdef XRM  
+  #include <xrm.h>
+#endif
+
+#include "experimental/xrt++.hpp"
+#include "xrt_bin_stream.hpp"
+#include "device_handle.hpp"
+
+static uint64_t getDDRBankFromButlerBitmask(unsigned bitmask) {
   const int numBits = sizeof(bitmask) * CHAR_BIT;
-  for (int i=0; i < numBits; i++)
+  for (int i = 0; i < numBits; i++)
     if (bitmask & (1 << i))
       return i;
 
@@ -29,25 +36,25 @@ DeviceResource::DeviceResource(std::string kernelName, std::string xclbin) {
   xclGetDeviceInfo2(handle, &deviceInfo);
   xclClose(handle);
 
-  xir::XrtBinStream binstream(xclbin); 
+  xir::XrtBinStream binstream(xclbin);
   auto cu_full_name = kernelName + ":0:0";
 
   info_.reset(new DeviceInfo{
-    .cu_base_addr = binstream.get_cu_base_addr(0),
-    .ddr_bank = 0,
-    .device_index = 0,
-    .cu_index = 0,
-    .cu_mask = (1u << 0),
-    .xclbin_path = xclbin,
-    .full_name = cu_full_name,
-    .device_id = 0,
-    .xdev = nullptr,
-    .fingerprint = 0,
+      .cu_base_addr = binstream.get_cu_base_addr(0),
+      .ddr_bank = 0,
+      .device_index = 0,
+      .cu_index = 0,
+      .cu_mask = (1u << 0),
+      .xclbin_path = xclbin,
+      .full_name = cu_full_name,
+      .device_id = 0,
+      .xdev = nullptr,
+      .fingerprint = 0,
   });
 }
 
 ButlerResource::ButlerResource(std::string kernelName, std::string xclbin) {
-  client_.reset(new butler::ButlerClient()); 
+  client_.reset(new butler::ButlerClient());
   if (client_->Ping() != butler::errCode::SUCCESS)
     throw std::runtime_error("Error: cannot ping butler server");
 
@@ -55,8 +62,7 @@ ButlerResource::ButlerResource(std::string kernelName, std::string xclbin) {
   acquireResult = client_->acquireCU(kernelName, xclbin);
 
   auto alloc = acquireResult.first;
-  if (alloc.myErrCode != butler::errCode::SUCCESS)
-  {
+  if (alloc.myErrCode != butler::errCode::SUCCESS) {
     std::cerr << alloc << std::endl;
     throw std::runtime_error("Error: could not acquire device handle");
   }
@@ -64,79 +70,207 @@ ButlerResource::ButlerResource(std::string kernelName, std::string xclbin) {
 
   auto xcu = acquireResult.second[0];
   auto cu_full_name = xcu.getKernelName() + ":" + xcu.getName() + ":" +
-    std::to_string(xcu.getFPGAIdx()) + ":" + std::to_string(xcu.getCUIdx());
+                      std::to_string(xcu.getFPGAIdx()) + ":" +
+                      std::to_string(xcu.getCUIdx());
 
   info_.reset(new DeviceInfo{
-    .cu_base_addr = xcu.getBaseAddr(),
-    .ddr_bank = getDDRBankFromButlerBitmask(xcu.getKernelArgMemIdxMapAt(0)),
-    .device_index = size_t(xcu.getFPGAIdx()),
-    .cu_index = size_t(xcu.getCUIdx()),
-    .cu_mask = (1u << xcu.getCUIdx()),
-    .xclbin_path = xcu.getXCLBINPath(),
-    .full_name = cu_full_name,
-    .device_id = xcu.getOCLDev(),
-    .xdev = xcu.getXDev(),
-    .fingerprint = 0,
+      .cu_base_addr = xcu.getBaseAddr(),
+      .ddr_bank = getDDRBankFromButlerBitmask(xcu.getKernelArgMemIdxMapAt(0)),
+      .device_index = size_t(xcu.getFPGAIdx()),
+      .cu_index = size_t(xcu.getCUIdx()),
+      .cu_mask = (1u << xcu.getCUIdx()),
+      .xclbin_path = xcu.getXCLBINPath(),
+      .full_name = cu_full_name,
+      .device_id = xcu.getOCLDev(),
+      .xdev = xcu.getXDev(),
+      .fingerprint = 0,
   });
 
   handle_ = alloc.myHandle;
+  xrtcpp::acquire_cu_context(get_device_info().xdev, get_device_info().cu_index);
 }
 
 ButlerResource::~ButlerResource() {
+  if (get_device_info().xdev)
+    xrtcpp::release_cu_context(get_device_info().xdev, get_device_info().cu_index);
+
   if (client_.get())
     client_->releaseResources(handle_);
 }
 
-DeviceHandle::DeviceHandle(std::string kernelName, std::string xclbin) {
-  if (std::getenv("RTE_ACQUIRE_DEVICE_UNMANAGED"))
+#ifdef XRM
+static std::vector<std::string> get_xclbins_in_dir(std::string path) {
+  if (path.find(".xclbin") != std::string::npos)
+    return {path};
+
+  std::vector<std::string> xclbinPaths;
+
+  DIR *dir;
+  struct dirent *ent;
+  if ((dir = opendir(path.c_str())) != NULL) {
+    /* print all the files and directories within directory */
+    while ((ent = readdir(dir)) != NULL) {
+      std::string name(ent->d_name);
+      if (name.find(".xclbin") != std::string::npos)
+        xclbinPaths.push_back(path + "/" + name);
+    }
+    closedir(dir);
+  }
+
+  return xclbinPaths;
+}
+
+XrmResource::XrmResource(std::string kernelName, std::string xclbin)
+    : cu_prop_(new xrmCuProperty()), cu_rsrc_(new xrmCuResource()) {
+  context_ = xrmCreateContext(XRM_API_VERSION_1);
+  if (context_ == NULL)
+    throw std::runtime_error("Error: failed to create XRM context");
+
+  if (!xrmIsDaemonRunning(context_))
+    throw std::runtime_error("Error: failed to connect to XRM");
+
+  // prepare request
+  memset(cu_prop_.get(), 0, sizeof(xrmCuProperty));
+  memset(cu_rsrc_.get(), 0, sizeof(xrmCuResource));
+  strcpy(cu_prop_->kernelName, std::string(kernelName).c_str());
+  strcpy(cu_prop_->kernelAlias, "");
+  cu_prop_->devExcl = false;
+  cu_prop_->requestLoad = 100;
+  cu_prop_->poolId = 0;
+
+  // get available xclbins
+  auto xclbins = get_xclbins_in_dir(xclbin);
+
+  for (unsigned i = 0; i < xclbins.size(); i++) 
   {
+    // try to load xclbin
+    char xclbinPath[XRM_MAX_PATH_NAME_LEN];
+    strcpy(xclbinPath, xclbins[i].c_str()); // XRM does not take const char* :(
+    int err 
+      = xrmCuAllocWithLoad(context_, cu_prop_.get(), xclbinPath, cu_rsrc_.get());
+    if (err)
+      continue; // keep trying other xclbins
+
+    std::cout << "Device acquired " << cu_rsrc_->xclbinFileName << std::endl;
+
+    auto cu_full_name = std::string(cu_prop_->kernelName) + ":" + 
+                        std::to_string(cu_rsrc_->deviceId) + ":" +
+                        std::to_string(cu_rsrc_->cuId);
+
+    info_.reset(new DeviceInfo{
+        .cu_base_addr = cu_rsrc_->baseAddr,
+        .ddr_bank = cu_rsrc_->membankId,
+        .device_index = size_t(cu_rsrc_->deviceId),
+        .cu_index = size_t(cu_rsrc_->cuId),
+        .cu_mask = (1u << cu_rsrc_->cuId),
+        .xclbin_path = cu_rsrc_->xclbinFileName,
+        .full_name = cu_full_name,
+        .device_id = nullptr,
+        .xdev = nullptr,
+        .fingerprint = 0,
+    });
+
+    cl_platform_id platform_id;
+    char cl_platform_vendor[1001];
+    char cl_platform_name[1001];
+
+    err = clGetPlatformIDs(1, &platform_id, NULL);
+    if (err != CL_SUCCESS)
+      throw std::runtime_error("Error: XrmResource clGetPlatformIDs");
+
+    err = clGetPlatformInfo(platform_id, CL_PLATFORM_VENDOR, 1000,
+        (void *)cl_platform_vendor, NULL);
+    if (err != CL_SUCCESS) 
+      throw std::runtime_error("Error: XrmResource clGetPlatformInfo");
+
+    err = clGetPlatformInfo(platform_id, CL_PLATFORM_NAME, 1000,
+                             (void *) cl_platform_name, NULL);
+    if (err != CL_SUCCESS) 
+      throw std::runtime_error("Error: XrmResource clGetPlatformInfo");
+
+    cl_uint numDevices = 0;
+    cl_device_id devices[100];
+    err = clGetDeviceIDs(platform_id, CL_DEVICE_TYPE_ACCELERATOR,
+        99, &devices[0], &numDevices);
+    if (err != CL_SUCCESS) 
+      throw std::runtime_error("Error: XrmResource clGetDeviceIDs");
+
+    info_->device_id = devices[info_->device_index];
+    info_->xdev = xclGetXrtDevice(info_->device_id, &err);
+	  if (err)
+		  throw(std::runtime_error("Error: XrmResource failed to get xdev"));
+
+    xrtcpp::acquire_cu_context(get_device_info().xdev, get_device_info().cu_index);
+    return;
+  }
+
+  throw std::runtime_error("Error: could not acquire device handle");
+}
+
+XrmResource::~XrmResource() { 
+  if (get_device_info().xdev)
+    xrtcpp::release_cu_context(get_device_info().xdev, get_device_info().cu_index);
+  xrmCuRelease(context_, cu_rsrc_.get()); 
+}
+#endif
+
+///////////////////////////////////////////////
+
+DeviceHandle::DeviceHandle(std::string kernelName, std::string xclbin) {
+  if (std::getenv("RTE_ACQUIRE_DEVICE_UNMANAGED")) {
     resource_.reset(new DeviceResource(kernelName, xclbin));
     return;
   }
 
+#ifndef XRM
   resource_.reset(new ButlerResource(kernelName, xclbin));
+#else
+  resource_.reset(new XrmResource(kernelName, xclbin));
+#endif
 }
 
-/* 
+/*
  * XCL device handle
  */
 
-XclDeviceHandle::XclDeviceHandle(std::string kernelName, std::string xclbin) 
- : DeviceHandle(kernelName, xclbin),
-   context_(nullptr), commands_(nullptr), program_(nullptr) {
+XclDeviceHandle::XclDeviceHandle(std::string kernelName, std::string xclbin)
+    : DeviceHandle(kernelName, xclbin), context_(nullptr), commands_(nullptr),
+      program_(nullptr) {
   // create context
   int err;
-  context_ = clCreateContext(0, 1, &get_device_info().device_id, NULL, NULL, &err);
+  context_ =
+      clCreateContext(0, 1, &get_device_info().device_id, NULL, NULL, &err);
   if (!context_)
     throw std::runtime_error("Error: failed to create a compute context");
 
   const int qprop = CL_QUEUE_OUT_OF_ORDER_EXEC_MODE_ENABLE;
-  commands_ = clCreateCommandQueue(context_, get_device_info().device_id, qprop, &err);
+  commands_ =
+      clCreateCommandQueue(context_, get_device_info().device_id, qprop, &err);
   if (!commands_)
     throw std::runtime_error("Error: failed to create command queue");
- 
+
   // read xclbin and create program
   std::string fnm = std::string(get_device_info().xclbin_path);
   std::ifstream stream(fnm);
-  stream.seekg(0,stream.end);
+  stream.seekg(0, stream.end);
   size_t size = stream.tellg();
-  stream.seekg(0,stream.beg);
+  stream.seekg(0, stream.beg);
   std::vector<char> xclbinChar(size);
-  stream.read(xclbinChar.data(),size);
-  auto data = reinterpret_cast<const unsigned char*>(xclbinChar.data());
+  stream.read(xclbinChar.data(), size);
+  auto data = reinterpret_cast<const unsigned char *>(xclbinChar.data());
 
   /*
-   * Note: the clCreateProgramWithBinary below may emit an error in 2019.x 
-   * if the device is already programmed. (This is okay -- we don't want to 
-   * reprogram and we can continue using the device with is current program.) 
-   * Soren has fixed this in 2020.x to be more forgiving. I.e. allowing multiple 
-   * calls to clCreateProgramWithBinary as long as same binary is used. 
-   * https://github.com/Xilinx/XRT/pull/3379.  
+   * Note: the clCreateProgramWithBinary below may emit an error in 2019.x
+   * if the device is already programmed. (This is okay -- we don't want to
+   * reprogram and we can continue using the device with is current program.)
+   * Soren has fixed this in 2020.x to be more forgiving. I.e. allowing multiple
+   * calls to clCreateProgramWithBinary as long as same binary is used.
+   * https://github.com/Xilinx/XRT/pull/3379.
    * http://jira.xilinx.com/browse/CR-1056085.
    */
   cl_int status = CL_SUCCESS;
   program_ = clCreateProgramWithBinary(
-    context_, 1, &get_device_info().device_id, &size, &data, &status, &err);
+      context_, 1, &get_device_info().device_id, &size, &data, &status, &err);
 }
 
 XclDeviceHandle::~XclDeviceHandle() {
@@ -148,21 +282,22 @@ XclDeviceHandle::~XclDeviceHandle() {
     clReleaseContext(context_);
 }
 
-/* 
+/*
  * XRT device handle
  */
 
-XrtDeviceHandle::XrtDeviceHandle(std::string kernelName, std::string xclbin) 
-: DeviceHandle(kernelName, xclbin) {
+XrtDeviceHandle::XrtDeviceHandle(std::string kernelName, std::string xclbin)
+    : DeviceHandle(kernelName, xclbin) {
   auto handle = xclOpen(get_device_info().device_index, NULL, XCL_INFO);
   std::string fnm = std::string(get_device_info().xclbin_path);
-  xir::XrtBinStream binstream(fnm); 
+  xir::XrtBinStream binstream(fnm);
   binstream.burn(handle);
   xclClose(handle);
 
   uuid_ = binstream.get_uuid();
   xhandle_ = xclOpen(get_device_info().device_index, NULL, XCL_INFO);
-  auto ret = xclOpenContext(xhandle_, &uuid_[0], get_device_info().cu_index, true);
+  auto ret =
+      xclOpenContext(xhandle_, &uuid_[0], get_device_info().cu_index, true);
   if (ret)
     throw std::runtime_error("Error: xclOpenContext failed");
 }
@@ -263,7 +398,7 @@ private:
       rtn.myErrCode = butler::errCode::SUCCESS;
       rtn.FPGAidx = fpgaResource->getIdx();
       // CU in XCLBIN
-      if (xclbinPtr != nullptr){
+      if (xclbinPtr != nullptr) {
         rtn.CUidx = CUindex;
         rtn.XCLBINidx = xclbinPtr->getIdx();
       }
