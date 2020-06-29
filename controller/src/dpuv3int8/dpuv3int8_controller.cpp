@@ -310,16 +310,11 @@ void Dpuv3Int8Controller::initCreateBuffers()
 
     std::vector<int,aligned_allocator<int>> params_=load(params_filename_);
 
-    std::vector<int,aligned_allocator<int>> swap_(BLK_SIZE/sizeof(int32_t));
-
-    std::vector<int,aligned_allocator<int>> fuSrc_(BLK_SIZE/sizeof(int32_t));
-
-    std::vector<int,aligned_allocator<int>> fuDst_(BLK_SIZE/sizeof(int32_t));       	    
     const std::vector<std::int32_t> instrdims = { int32_t(instr_.size()) };
     const std::vector<std::int32_t> paramsdims = { int32_t(params_.size()) };
-    const std::vector<std::int32_t> swapdims = { int32_t(swap_.size()) };
-    const std::vector<std::int32_t> fuSrcdims = { int32_t(fuSrc_.size()) };
-    const std::vector<std::int32_t> fuDstdims = { int32_t(fuDst_.size()) };
+    const std::vector<std::int32_t> swapdims = { int32_t(BLK_SIZE/sizeof(int32_t)) };
+    const std::vector<std::int32_t> fuSrcdims = swapdims;
+    const std::vector<std::int32_t> fuDstdims = swapdims;
 
     instr_tensor_.reset(
       new xir::vart::Tensor("instr", instrdims, xir::vart::Tensor::DataType::UINT32));
@@ -335,33 +330,27 @@ void Dpuv3Int8Controller::initCreateBuffers()
     
     instrTbuf_.reset(new xir::vart::CpuFlatTensorBuffer((void*)instr_.data(),&(*instr_tensor_)));
     paramsTbuf_.reset(new xir::vart::CpuFlatTensorBuffer((void*)params_.data(),&(*params_tensor_)));
-    swapTbuf_.reset(new xir::vart::CpuFlatTensorBuffer((void*)swap_.data(),&(*swap_tensor_)));
-    fuSrcTbuf_.reset(new xir::vart::CpuFlatTensorBuffer((void*)fuSrc_.data(),&(*fuSrc_tensor_)));
-    fuDstTbuf_.reset(new xir::vart::CpuFlatTensorBuffer((void*)fuDst_.data(),&(*fuDst_tensor_)));
 
 
     instr_buf_.reset(new XclDeviceBuffer(handle_.get(), instrTbuf_.get(), handle_->get_device_info().ddr_bank));
     params_buf_.reset(new XclDeviceBuffer(handle_.get(), paramsTbuf_.get(), handle_->get_device_info().ddr_bank));
-    swap_buf_.reset(new XclDeviceBuffer(handle_.get(), swapTbuf_.get(), handle_->get_device_info().ddr_bank));
-    fuSrc_buf_.reset(new XclDeviceBuffer(handle_.get(), fuSrcTbuf_.get(), handle_->get_device_info().ddr_bank));
-    fuDst_buf_.reset(new XclDeviceBuffer(handle_.get(), fuDstTbuf_.get(), handle_->get_device_info().ddr_bank));
 
 }
 
-void Dpuv3Int8Controller::initRunBufs(uint64_t *buf_addr, uint32_t *buf_size)
+void Dpuv3Int8Controller::initRunBufs(uint64_t *buf_addr, uint32_t *buf_size, XclDeviceBuffer* swap_buf, XclDeviceBuffer* fuSrc_buf, XclDeviceBuffer* fuDst_buf)
 {
     buf_addr[BUF_IDX_INSTR] = instr_buf_->get_phys_addr();
     buf_addr[BUF_IDX_PARAMS] = params_buf_->get_phys_addr();
-    buf_addr[BUF_IDX_SWAP] = swap_buf_->get_phys_addr();
+    buf_addr[BUF_IDX_SWAP] = swap_buf->get_phys_addr();
 
-    buf_addr[BUF_IDX_FUSRC] = fuSrc_buf_->get_phys_addr();
-    buf_addr[BUF_IDX_FUDST] = fuDst_buf_->get_phys_addr();
+    buf_addr[BUF_IDX_FUSRC] = fuSrc_buf->get_phys_addr();
+    buf_addr[BUF_IDX_FUDST] = fuDst_buf->get_phys_addr();
 
     buf_size[BUF_IDX_INSTR]     = instr_buf_->get_size();
     buf_size[BUF_IDX_PARAMS]    = params_buf_->get_size();
-    buf_size[BUF_IDX_SWAP]      = swap_buf_->get_size();
-    buf_size[BUF_IDX_FUSRC]     = fuSrc_buf_->get_size();
-    buf_size[BUF_IDX_FUDST]     = fuDst_buf_->get_size();
+    buf_size[BUF_IDX_SWAP]      = swap_buf->get_size();
+    buf_size[BUF_IDX_FUSRC]     = fuSrc_buf->get_size();
+    buf_size[BUF_IDX_FUDST]     = fuDst_buf->get_size();
     buf_size[BUF_IDX_SRC]       = 0;
     buf_size[BUF_IDX_DST]       = 0;
     buf_size[BUF_IDX_NULL]      = 0;
@@ -529,13 +518,25 @@ void Dpuv3Int8Controller::run(const std::vector<xir::vart::TensorBuffer*> &input
   XclDeviceBuffer *inHwBuf = dynamic_cast<XclDeviceBuffer*>(get_device_buffer(inHwTbuf));
   XclDeviceBuffer *outHwBuf = dynamic_cast<XclDeviceBuffer*>(get_device_buffer(outHwTbuf));
 
+  std::vector<int,aligned_allocator<int>> swap(swap_tensor_->get_element_num());
+  std::vector<int,aligned_allocator<int>> fuSrc(fuSrc_tensor_->get_element_num());
+  std::vector<int,aligned_allocator<int>> fuDst(fuDst_tensor_->get_element_num()); 
+
+  std::unique_ptr<xir::vart::CpuFlatTensorBuffer> swapTbuf(new xir::vart::CpuFlatTensorBuffer((void*)swap.data(),&(*swap_tensor_)));
+  std::unique_ptr<xir::vart::CpuFlatTensorBuffer> fuSrcTbuf(new xir::vart::CpuFlatTensorBuffer((void*)fuSrc.data(),&(*fuSrc_tensor_)));
+  std::unique_ptr<xir::vart::CpuFlatTensorBuffer> fuDstTbuf(new xir::vart::CpuFlatTensorBuffer((void*)fuDst.data(),&(*fuDst_tensor_)));
+
+  std::unique_ptr<XclDeviceBuffer> swap_buf(new XclDeviceBuffer(handle_.get(), swapTbuf.get(), handle_->get_device_info().ddr_bank));
+  std::unique_ptr<XclDeviceBuffer> fuSrc_buf(new XclDeviceBuffer(handle_.get(), fuSrcTbuf.get(), handle_->get_device_info().ddr_bank));
+  std::unique_ptr<XclDeviceBuffer> fuDst_buf(new XclDeviceBuffer(handle_.get(), fuDstTbuf.get(), handle_->get_device_info().ddr_bank));
+
 
   preprocess(inputs[0], inHwTbuf);
 
   uint64_t buf_addr[BUF_IDX_NUM];
   uint32_t buf_size[BUF_IDX_NUM];
 
-  initRunBufs(buf_addr, buf_size);
+  initRunBufs(buf_addr, buf_size, swap_buf.get(), fuSrc_buf.get(), fuDst_buf.get());
   
   buf_addr[BUF_IDX_DIN] = inHwBuf->get_phys_addr();
   buf_addr[BUF_IDX_RESULT] = outHwBuf->get_phys_addr();
