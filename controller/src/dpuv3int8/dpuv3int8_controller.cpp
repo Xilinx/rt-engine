@@ -490,8 +490,7 @@ void Dpuv3Int8Controller::preprocess(xir::vart::TensorBuffer* stdbuf, xir::vart:
 
   //This function cna also be used to load any intermediate tenosr buffer data, for debug purposes if we wish to test any particular layer we can extend this function to handle the intermidate buffer case too.
 
-  bool debugMode = isDebugMode();
-  if(debugMode)
+  if(isDebugMode())
   {
     std::pair<void*, size_t> hwbufPair;
     void* hwBufptr;
@@ -502,19 +501,19 @@ void Dpuv3Int8Controller::preprocess(xir::vart::TensorBuffer* stdbuf, xir::vart:
 
     hwDinVector = load(din_filename_); 
     
-    memcpy(hwBufptr, (void*)hwDinVector.data(), hwDinVector.size()*sizeof(uint32_t));
+    memcpy(hwBufptr, (void*)hwDinVector.data(), hwDinVector.size()*xir::vart::size_of(in_tensor_->get_data_type()));
+
   }
 }
 
 void Dpuv3Int8Controller::postprocess(xir::vart::TensorBuffer* stdbuf, xir::vart::TensorBuffer* hwbuf)
 {
   //TO-DO MNDBG: This function's purpose is to take in fpga outputs and convert 8bit to float, also convert from ddr space 32bit continuous style to standard format. This standard format can be sent to softmax, then later to get prediction labels. The function can be extended to intrgrate softmax, label prdictions.
-  bool debugMode = isDebugMode();
-  if(debugMode)
+  if(isDebugMode())
   {
 //get size from meta.json
-    memcpy(stdbuf->data().first, hwbuf->data().first, dout_.size()*sizeof(uint32_t));
-   
+    memcpy(stdbuf->data().first, hwbuf->data().first, dout_.size()*xir::vart::size_of(out_tensor_->get_data_type()));
+  
   }
  
 }
