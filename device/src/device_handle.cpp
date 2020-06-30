@@ -87,13 +87,9 @@ ButlerResource::ButlerResource(std::string kernelName, std::string xclbin) {
   });
 
   handle_ = alloc.myHandle;
-  xrtcpp::acquire_cu_context(get_device_info().xdev, get_device_info().cu_index);
 }
 
 ButlerResource::~ButlerResource() {
-  if (get_device_info().xdev)
-    xrtcpp::release_cu_context(get_device_info().xdev, get_device_info().cu_index);
-
   if (client_.get())
     client_->releaseResources(handle_);
 }
@@ -200,7 +196,6 @@ XrmResource::XrmResource(std::string kernelName, std::string xclbin)
 	  if (err)
 		  throw(std::runtime_error("Error: XrmResource failed to get xdev"));
 
-    xrtcpp::acquire_cu_context(get_device_info().xdev, get_device_info().cu_index);
     return;
   }
 
@@ -208,8 +203,6 @@ XrmResource::XrmResource(std::string kernelName, std::string xclbin)
 }
 
 XrmResource::~XrmResource() { 
-  if (get_device_info().xdev)
-    xrtcpp::release_cu_context(get_device_info().xdev, get_device_info().cu_index);
   xrmCuRelease(context_, cu_rsrc_.get()); 
 }
 #endif
@@ -271,9 +264,14 @@ XclDeviceHandle::XclDeviceHandle(std::string kernelName, std::string xclbin)
   cl_int status = CL_SUCCESS;
   program_ = clCreateProgramWithBinary(
       context_, 1, &get_device_info().device_id, &size, &data, &status, &err);
+
+  xrtcpp::acquire_cu_context(get_device_info().xdev, get_device_info().cu_index);
 }
 
 XclDeviceHandle::~XclDeviceHandle() {
+  if (get_device_info().xdev)
+    xrtcpp::release_cu_context(get_device_info().xdev, get_device_info().cu_index);
+
   if (program_)
     clReleaseProgram(program_);
   if (commands_)
