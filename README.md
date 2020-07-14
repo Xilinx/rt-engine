@@ -41,8 +41,8 @@ tests/
 
   app/
     main.cpp                     Vitis API app throughput tests, uses DpuRunner
-    single_thread.cpp            shows ~4K requests per second (limited by XRT)
-    multi_thread.cpp             shows ~13K requests per second (limited by XRT)
+    single_thread.cpp            shows ~4K requests per second (limited by DDR)
+    multi_thread.cpp             shows ~13K requests per second (limited by DDR)
  
     models/
       xdnn_resnet50/
