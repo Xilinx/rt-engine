@@ -48,7 +48,7 @@ std::pair<uint32_t, int> DpuRunner::execute_async(
   const std::vector<xir::vart::TensorBuffer*>& outputs) {
   Engine& engine = Engine::get_instance();
   auto job_id = engine.submit([this, &inputs, &outputs] {
-    auto core_idx = exec_core_idx_++ % dpu_controller_.size();
+    auto core_idx = exec_core_idx_.fetch_add(1) % dpu_controller_.size();
     dpu_controller_[core_idx]->run(inputs, outputs);
   });
   return std::pair<uint32_t, int>(job_id, 0);

@@ -27,27 +27,35 @@ static uint64_t getDDRBankFromButlerBitmask(unsigned bitmask) {
 }
 
 DeviceResource::DeviceResource(std::string kernelName, std::string xclbin) {
+  // fallback unmanaged/caveman resource manager
   auto num_devices = xclProbe();
   if (num_devices == 0)
     throw std::runtime_error("Error: no devices available");
 
-  auto handle = xclOpen(0, NULL, XCL_INFO);
+  // simulate assigning a new cuIdx each time Controller creates DeviceResource 
+  // TODO support multiple devices
+  const int deviceIdx = 0;
+  static std::atomic<int> cuIdx_(0);
+  auto cuIdx = cuIdx_.fetch_add(1);
+
+  auto handle = xclOpen(deviceIdx, NULL, XCL_INFO);
   xclDeviceInfo2 deviceInfo;
   xclGetDeviceInfo2(handle, &deviceInfo);
   xclClose(handle);
 
   xir::XrtBinStream binstream(xclbin);
-  auto cu_full_name = kernelName + ":0:0";
+  auto cu_full_name = kernelName + ":" 
+    + std::to_string(deviceIdx) + ":" + std::to_string(cuIdx);
 
   info_.reset(new DeviceInfo{
-      .cu_base_addr = binstream.get_cu_base_addr(0),
-      .ddr_bank = 0,
-      .device_index = 0,
-      .cu_index = 0,
-      .cu_mask = (1u << 0),
+      .cu_base_addr = binstream.get_cu_base_addr(cuIdx),
+      .ddr_bank = 0, // TODO get actual DDR bank
+      .device_index = deviceIdx,
+      .cu_index = cuIdx,
+      .cu_mask = (1u << cuIdx),
       .xclbin_path = xclbin,
       .full_name = cu_full_name,
-      .device_id = 0,
+      .device_id = 0, // TODO get actual OCL device_id
       .xdev = nullptr,
       .fingerprint = 0,
   });
@@ -242,28 +250,31 @@ XclDeviceHandle::XclDeviceHandle(std::string kernelName, std::string xclbin)
   if (!commands_)
     throw std::runtime_error("Error: failed to create command queue");
 
-  // read xclbin and create program
-  std::string fnm = std::string(get_device_info().xclbin_path);
-  std::ifstream stream(fnm);
-  stream.seekg(0, stream.end);
-  size_t size = stream.tellg();
-  stream.seekg(0, stream.beg);
-  std::vector<char> xclbinChar(size);
-  stream.read(xclbinChar.data(), size);
-  auto data = reinterpret_cast<const unsigned char *>(xclbinChar.data());
+  if (get_device_info().cu_index == 0)
+  {
+    // read xclbin and create program
+    std::string fnm = std::string(get_device_info().xclbin_path);
+    std::ifstream stream(fnm);
+    stream.seekg(0, stream.end);
+    size_t size = stream.tellg();
+    stream.seekg(0, stream.beg);
+    std::vector<char> xclbinChar(size);
+    stream.read(xclbinChar.data(), size);
+    auto data = reinterpret_cast<const unsigned char *>(xclbinChar.data());
 
-  /*
-   * Note: the clCreateProgramWithBinary below may emit an error in 2019.x
-   * if the device is already programmed. (This is okay -- we don't want to
-   * reprogram and we can continue using the device with is current program.)
-   * Soren has fixed this in 2020.x to be more forgiving. I.e. allowing multiple
-   * calls to clCreateProgramWithBinary as long as same binary is used.
-   * https://github.com/Xilinx/XRT/pull/3379.
-   * http://jira.xilinx.com/browse/CR-1056085.
-   */
-  cl_int status = CL_SUCCESS;
-  program_ = clCreateProgramWithBinary(
-      context_, 1, &get_device_info().device_id, &size, &data, &status, &err);
+    /*
+     * Note: the clCreateProgramWithBinary below may emit an error in 2019.x
+     * if the device is already programmed. (This is okay -- we don't want to
+     * reprogram and we can continue using the device with is current program.)
+     * Soren has fixed this in 2020.x to be more forgiving. I.e. allowing multiple
+     * calls to clCreateProgramWithBinary as long as same binary is used.
+     * https://github.com/Xilinx/XRT/pull/3379.
+     * http://jira.xilinx.com/browse/CR-1056085.
+     */
+    cl_int status = CL_SUCCESS;
+    program_ = clCreateProgramWithBinary(
+        context_, 1, &get_device_info().device_id, &size, &data, &status, &err);
+  }
 
   xrtcpp::acquire_cu_context(get_device_info().xdev, get_device_info().cu_index);
 }
@@ -289,7 +300,8 @@ XrtDeviceHandle::XrtDeviceHandle(std::string kernelName, std::string xclbin)
   auto handle = xclOpen(get_device_info().device_index, NULL, XCL_INFO);
   std::string fnm = std::string(get_device_info().xclbin_path);
   xir::XrtBinStream binstream(fnm);
-  binstream.burn(handle);
+  if (get_device_info().cu_index == 0)
+    binstream.burn(handle); // only program if you're the first CU
   xclClose(handle);
 
   uuid_ = binstream.get_uuid();
