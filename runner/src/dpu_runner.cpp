@@ -9,9 +9,7 @@ DpuRunner::DpuRunner(std::string meta) : exec_core_idx_(0) {
   // default: each DpuController controls one core,
   //          each DpuRunner has one DpuController
   // (keep it simple)
-  const int num_cores = 1; 
   dpu_controller_.emplace_back(new SampleDpuController(meta));
-
   if (dpu_controller_.empty())
     throw std::runtime_error("Error: no FPGA resources available");
 }
