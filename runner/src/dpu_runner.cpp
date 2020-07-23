@@ -4,22 +4,13 @@
 #include "dpu_runner.hpp"
 #include "engine.hpp"
 #include "json-c/json.h"
-#include "dpuv3int8_controller.hpp"
 
 DpuRunner::DpuRunner(std::string meta) : exec_core_idx_(0) {
-  // default: 1 core per runner (set -1 to acquire all FPGAs on host)
+  // default: each DpuController controls one core,
+  //          each DpuRunner has one DpuController
+  // (keep it simple)
   const int num_cores = 1; 
-
-  // make one DpuController for each core
-  while(1) {
-    try {
-      dpu_controller_.emplace_back(new SampleDpuController(meta));
-      if (num_cores > 0 && dpu_controller_.size() >= num_cores)
-        break;
-    } catch(...) {
-      break;
-    }
-  }
+  dpu_controller_.emplace_back(new SampleDpuController(meta));
 
   if (dpu_controller_.empty())
     throw std::runtime_error("Error: no FPGA resources available");
