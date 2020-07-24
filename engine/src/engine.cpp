@@ -18,7 +18,10 @@ EngineThreadPool::EngineThreadPool() : terminate_(false) {
   
   // spawn threads
   for (unsigned i=0; i < numWorkerThreads; i++)
+  {
     threads_.emplace_back(std::thread([this]{run();}));
+    thread_worker_ids_[threads_.back().get_id()] = i;
+  }
 }
 
 EngineThreadPool::~EngineThreadPool() {
@@ -57,7 +60,7 @@ void EngineThreadPool::wait(uint32_t id, int timeoutMs) {
             currTime - startTime);
 
       if (elapsedTime.count()*1000 > timeoutMs)
-        throw std::runtime_error("Task timeout: " + std::to_string(id));
+        throw std::runtime_error("Error: task timeout: " + std::to_string(id));
     }
   }
 
@@ -92,6 +95,13 @@ void EngineThreadPool::run() {
   }
 }
 
+unsigned EngineThreadPool::get_worker_id(std::thread::id id) {
+  auto it = thread_worker_ids_.find(id);
+  if (it == thread_worker_ids_.end())
+    throw std::runtime_error("Error: unknown worker thread id");
+  return it->second;
+}
+
 /*
  * Engine
  */
@@ -108,4 +118,8 @@ uint32_t Engine::submit(std::function<void()> task) {
 
 void Engine::wait(uint32_t id, int timeout_ms) {
   tpool_.wait(id, timeout_ms);
+}
+
+unsigned Engine::get_my_worker_id() {
+  return tpool_.get_worker_id(std::this_thread::get_id());
 }

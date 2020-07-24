@@ -2,6 +2,7 @@
 
 #include <condition_variable>
 #include <functional>
+#include <unordered_map>
 #include <mutex>
 #include <thread>
 #include <vector>
@@ -16,6 +17,7 @@ class EngineThreadPool {
 
     uint32_t enqueue(std::function<void()> task);
     void wait(uint32_t id, int timeout_ms=-1);
+    unsigned get_worker_id(std::thread::id); // get a thread's 0-indexed worker id
 
   private:
     void run();
@@ -26,6 +28,7 @@ class EngineThreadPool {
     std::vector<int> task_status_; // ID -> status
     std::atomic<bool> terminate_;
     std::vector<std::thread> threads_;
+    std::unordered_map<std::thread::id, unsigned> thread_worker_ids_;
 };
 
 class Engine {
@@ -37,6 +40,7 @@ class Engine {
     
     uint32_t submit(std::function<void()> task);
     void wait(uint32_t id, int timeout_ms=-1);
+    unsigned get_my_worker_id(); // for task to get its 0-indexed worker id
 
   private:
     Engine();
