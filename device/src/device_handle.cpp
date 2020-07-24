@@ -26,6 +26,9 @@ static uint64_t getDDRBankFromButlerBitmask(unsigned bitmask) {
   throw std::runtime_error("Error: unknown ddr_bank config");
 }
 
+static std::atomic<bool> naive_resource_mgr_on_(false);
+static std::atomic<unsigned> naive_resource_mgr_cu_idx_(0);
+
 DeviceResource::DeviceResource(std::string kernelName, std::string xclbin) {
   // fallback unmanaged/caveman resource manager
   auto num_devices = xclProbe();
@@ -35,8 +38,8 @@ DeviceResource::DeviceResource(std::string kernelName, std::string xclbin) {
   // simulate assigning a new cuIdx each time Controller creates DeviceResource 
   // TODO support multiple devices
   const int deviceIdx = 0;
-  static std::atomic<int> cuIdx_(0);
-  auto cuIdx = cuIdx_.fetch_add(1);
+  naive_resource_mgr_on_ = true;
+  auto cuIdx = naive_resource_mgr_cu_idx_.fetch_add(1);
 
   auto handle = xclOpen(deviceIdx, NULL, XCL_INFO);
   xclDeviceInfo2 deviceInfo;
@@ -59,6 +62,11 @@ DeviceResource::DeviceResource(std::string kernelName, std::string xclbin) {
       .xdev = nullptr,
       .fingerprint = 0,
   });
+}
+
+DeviceResource::~DeviceResource() {
+  if (naive_resource_mgr_on_)
+    naive_resource_mgr_cu_idx_--;
 }
 
 ButlerResource::ButlerResource(std::string kernelName, std::string xclbin) {

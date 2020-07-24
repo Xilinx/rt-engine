@@ -35,7 +35,7 @@ class DeviceResource {
  public:
   DeviceResource(std::string kernelName, std::string xclbin);
   DeviceResource() {}
-  virtual ~DeviceResource() {}
+  virtual ~DeviceResource();
   const DeviceInfo& get_device_info() const { return *info_; }
 
  protected:
