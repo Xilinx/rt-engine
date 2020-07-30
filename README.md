@@ -45,7 +45,7 @@ tests/
     multi_thread.cpp             shows ~13K requests per second (limited by DDR)
  
     models/
-      xdnn_resnet50/
+      sample_resnet50/
         meta.json                Describes configs/files to create this DpuRunner
 ```
 
