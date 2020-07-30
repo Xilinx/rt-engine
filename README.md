@@ -55,7 +55,6 @@ tests/
 * XRT (https://github.com/Xilinx/XRT)
 * json-c (https://github.com/json-c/json-c)
 
-
 ### Example
 
 ```
@@ -93,4 +92,23 @@ export LD_LIBRARY_PATH=build:${CONDA_PREFIX}/lib:/opt/xilinx/xrt/lib
 export XILINX_XRT=/opt/xilinx/xrt
 build/tests/engine.exe
 build/tests/app.exe -r tests/app/models/sample_resnet50/meta.json
+```
+
+### Conda environment setup (optional, to get all project dependencies)
+
+```
+wget https://repo.anaconda.com/archive/Anaconda2-5.1.0-Linux-x86_64.sh
+bash ./Anaconda2-5.1.0-Linux-x86_64.sh
+conda create -n rt-engine python=3.6 pip protobuf=3.6 json-c jsoncpp glog -c defaults -c omnia -c conda-forge/label/gcc7 -c conda-forge
+conda activate rt-engine
+git clone gits@xcdl190260:vitis/XIP.git
+cd XIP/Butler/src
+(edit Makefile to skip ENABLE_PYBIND11 and -lpython if not needed)
+make clean; make -j libbutler.so
+mkdir -p ${CONDA_PREFIX}/include/xip/butler
+cp client/butler_*.h ${CONDA_PREFIX}/include/xip/butler
+cp common/*h ${CONDA_PREFIX}/include/xip/butler
+cp butler.pb.h ${CONDA_PREFIX}/include/xip/butler
+cp lib/libbutler.so ${CONDA_PREFIX}/lib/
+
 ```
