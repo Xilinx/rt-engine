@@ -82,25 +82,28 @@ XclDeviceBuffer::~XclDeviceBuffer() {
 XrtDeviceBuffer::XrtDeviceBuffer(const XrtDeviceHandle *handle, xir::vart::TensorBuffer *tbuf, unsigned bank) 
  : DeviceBuffer(handle, tbuf, bank) {
   auto myHandle = dynamic_cast<const XrtDeviceHandle*>(handle_);
-  mem_ = xclAllocUserPtrBO(
-    myHandle->get_dev_handle(), (void*)tbuf->data().first, size_, bank_);
+  auto devHandle = myHandle->get_context().get_dev_handle();
+  mem_ = xclAllocUserPtrBO(devHandle, (void*)tbuf->data().first, size_, bank_);
 
   xclBOProperties p;
-  xclGetBOProperties(myHandle->get_dev_handle(), mem_, &p);
+  xclGetBOProperties(devHandle, mem_, &p);
   phys_addr_ = p.paddr;
 }
 
 void XrtDeviceBuffer::upload() const {
   auto myHandle = dynamic_cast<const XrtDeviceHandle*>(handle_);
-  xclSyncBO(myHandle->get_dev_handle(), mem_, XCL_BO_SYNC_BO_TO_DEVICE, size_, 0);
+  auto devHandle = myHandle->get_context().get_dev_handle();
+  xclSyncBO(devHandle, mem_, XCL_BO_SYNC_BO_TO_DEVICE, size_, 0);
 }
 
 void XrtDeviceBuffer::download() const {
   auto myHandle = dynamic_cast<const XrtDeviceHandle*>(handle_);
-  xclSyncBO(myHandle->get_dev_handle(), mem_, XCL_BO_SYNC_BO_FROM_DEVICE, size_, 0);
+  auto devHandle = myHandle->get_context().get_dev_handle();
+  xclSyncBO(devHandle, mem_, XCL_BO_SYNC_BO_FROM_DEVICE, size_, 0);
 }
 
 XrtDeviceBuffer::~XrtDeviceBuffer() {
   auto myHandle = dynamic_cast<const XrtDeviceHandle*>(handle_);
-  xclFreeBO(myHandle->get_dev_handle(), mem_);
+  auto devHandle = myHandle->get_context().get_dev_handle();
+  xclFreeBO(devHandle, mem_);
 }

@@ -94,13 +94,36 @@ class XclDeviceHandle : public DeviceHandle {
   cl_program program_;
 };
 
+class XrtContext;
 class XrtDeviceHandle : public DeviceHandle {
  public:
   XrtDeviceHandle(std::string kernelName, std::string xclbin);
   virtual ~XrtDeviceHandle();
-  const xclDeviceHandle& get_dev_handle() const { return xhandle_; }
+
+  // a convenience context for basic work 
+  // IMPORTANT: each worker thread must alloc its own context for exec()/wait()
+  const XrtContext& get_context() const { return *context_; }
+  unsigned char* get_uuid() { return &uuid_[0]; }
   
  private:
-  xclDeviceHandle xhandle_;
+  std::unique_ptr<XrtContext> context_;
   std::array<unsigned char, sizeof(xuid_t)> uuid_;
 };
+
+class XrtContext {
+ // must create a separate XrtContext for each hostcode worker thread
+ public: 
+  XrtContext(XrtDeviceHandle &);
+  virtual ~XrtContext();
+  xclDeviceHandle get_dev_handle() const { return dev_handle_; }
+  xclBufferHandle get_bo_handle() const { return bo_handle_; }
+  void *get_bo_addr() { return bo_addr_; }
+
+ private:
+  XrtContext() = delete;
+  XrtDeviceHandle &handle_;
+  xclDeviceHandle dev_handle_;
+  xclBufferHandle bo_handle_;
+  void *bo_addr_;
+};
+

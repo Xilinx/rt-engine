@@ -30,9 +30,10 @@ void DpuV4eController::run(const std::vector<xir::vart::TensorBuffer*> &inputs,
   (void)inbuf; // TODO
   (void)outbuf; // TODO
 
-  auto xcl_handle = handle_->get_dev_handle();
-  auto bo_handle = xclAllocBO(xcl_handle, 4096, DOMAIN, XCL_BO_FLAGS_EXECBUF);
-  auto bo_addr = xclMapBO(xcl_handle, bo_handle, true);
+  XrtContext context(*handle_);
+  auto xcl_handle = context.get_dev_handle();
+  auto bo_handle = context.get_bo_handle();
+  auto bo_addr = context.get_bo_addr();
   auto ecmd = reinterpret_cast<ert_start_kernel_cmd*>(bo_addr);
 
 #if 0

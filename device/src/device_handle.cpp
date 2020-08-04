@@ -284,7 +284,9 @@ XclDeviceHandle::XclDeviceHandle(std::string kernelName, std::string xclbin)
         context_, 1, &get_device_info().device_id, &size, &data, &status, &err);
   }
 
-  xrtcpp::acquire_cu_context(get_device_info().xdev, get_device_info().cu_index);
+  xrtcpp::acquire_cu_context(get_device_info().xdev, get_device_info().cu_index
+    /*,shared=true*/ // enable shared in new XRT codebase
+  ); 
 }
 
 XclDeviceHandle::~XclDeviceHandle() {
@@ -313,16 +315,29 @@ XrtDeviceHandle::XrtDeviceHandle(std::string kernelName, std::string xclbin)
   xclClose(handle);
 
   uuid_ = binstream.get_uuid();
-  xhandle_ = xclOpen(get_device_info().device_index, NULL, XCL_INFO);
-  auto ret =
-      xclOpenContext(xhandle_, &uuid_[0], get_device_info().cu_index, true);
-  if (ret)
-    throw std::runtime_error("Error: xclOpenContext failed");
+  context_.reset(new XrtContext(*this));
 }
 
 XrtDeviceHandle::~XrtDeviceHandle() {
-  xclCloseContext(xhandle_, &uuid_[0], get_device_info().cu_index);
-  xclClose(xhandle_);
+}
+
+/*
+ * XRT device context (MUST alloc one for each thread)
+ */
+XrtContext::XrtContext(XrtDeviceHandle &handle) : handle_(handle) {
+  dev_handle_ = xclOpen(handle.get_device_info().device_index, NULL, XCL_INFO);
+  auto ret = xclOpenContext(dev_handle_, handle.get_uuid(), 
+    handle.get_device_info().cu_index, true);
+  if (ret)
+    throw std::runtime_error("Error: xclOpenContext failed");
+  bo_handle_ = xclAllocBO(dev_handle_, 4096, 0, XCL_BO_FLAGS_EXECBUF);
+  bo_addr_ = xclMapBO(dev_handle_, bo_handle_, true);
+}
+
+XrtContext::~XrtContext() {
+  xclFreeBO(dev_handle_, bo_handle_);
+  xclCloseContext(dev_handle_, handle_.get_uuid(), handle_.get_device_info().cu_index);
+  xclClose(dev_handle_);
 }
 
 #if 0
