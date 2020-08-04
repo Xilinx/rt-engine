@@ -121,6 +121,8 @@ class XrtContext {
 
  private:
   XrtContext() = delete;
+  XrtContext(const XrtContext &) = delete;
+
   XrtDeviceHandle &handle_;
   xclDeviceHandle dev_handle_;
   xclBufferHandle bo_handle_;
