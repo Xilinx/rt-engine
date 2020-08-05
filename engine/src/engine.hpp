@@ -17,6 +17,7 @@ class EngineThreadPool {
 
     uint32_t enqueue(std::function<void()> task);
     void wait(uint32_t id, int timeout_ms=-1);
+    unsigned get_num_workers() const { return threads_.size(); }
     unsigned get_worker_id(std::thread::id); // get a thread's 0-indexed worker id
 
   private:
@@ -40,6 +41,7 @@ class Engine {
     
     uint32_t submit(std::function<void()> task);
     void wait(uint32_t id, int timeout_ms=-1);
+    unsigned get_num_workers() const { return tpool_.get_num_workers(); }
     unsigned get_my_worker_id(); // for task to get its 0-indexed worker id
 
   private:
