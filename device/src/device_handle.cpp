@@ -32,11 +32,6 @@ DeviceResource::DeviceResource(std::string kernelName, std::string xclbin) {
   naive_resource_mgr_on_ = true;
   auto cuIdx = naive_resource_mgr_cu_idx_.fetch_add(1);
 
-  auto handle = xclOpen(deviceIdx, NULL, XCL_INFO);
-  xclDeviceInfo2 deviceInfo;
-  xclGetDeviceInfo2(handle, &deviceInfo);
-  xclClose(handle);
-
   xir::XrtBinStream binstream(xclbin);
   auto cu_full_name = kernelName + ":" 
     + std::to_string(deviceIdx) + ":" + std::to_string(cuIdx);

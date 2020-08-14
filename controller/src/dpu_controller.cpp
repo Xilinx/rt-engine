@@ -34,6 +34,7 @@ XclDpuController<Dhandle, DbufIn, DbufOut>::XclDpuController(std::string meta)
   std::string xclbinPath = json_object_get_string(xclbinObj);
   std::cout << "loading xclbin: " << xclbinPath << std::endl;
   handle_.reset(new Dhandle(kernelName, xclbinPath));
+  std::cout << "done loading xclbin" << std::endl;
 }
 
 template <class Dhandle, class DbufIn, class DbufOut>
