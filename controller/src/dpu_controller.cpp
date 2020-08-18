@@ -96,7 +96,7 @@ XclDpuController<Dhandle, DbufIn, DbufOut>::create_tensor_buffers(
   for (unsigned ti=0; ti < tensors.size(); ti++)
   {
     // allocate aligned host memory
-    static const size_t dataSize = xir::vart::size_of(tensors[ti]->get_data_type());
+    const size_t dataSize = xir::vart::size_of(tensors[ti]->get_data_type());
     size_t size = tensors[ti]->get_element_num() * dataSize;
     void *data;
     if (posix_memalign(&data, getpagesize(), size))
