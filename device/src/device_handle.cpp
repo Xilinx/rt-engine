@@ -1,3 +1,5 @@
+#include <atomic>
+#include <climits>
 #include <fstream>
 #include <memory>
 #include <dirent.h>
