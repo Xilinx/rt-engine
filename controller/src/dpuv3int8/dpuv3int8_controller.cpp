@@ -164,18 +164,16 @@ Dpuv3Int8Controller::Dpuv3Int8Controller(std::string meta) : XclDpuController<Xc
     dout_ = load(dout_filename_);
     const std::vector<std::int32_t> indims = { int32_t(din.size()) };
     const std::vector<std::int32_t> outdims = { int32_t(dout_.size()) };
-    in_tensor_.reset(
-      new xir::vart::Tensor("input", indims, xir::vart::Tensor::DataType::INT32));
+    xir::Tensor *in_t = xir::Tensor::create("input", indims, xir::DataType::INT32, 32u).release();
+    xir::Tensor *in_hw = xir::Tensor::create("inputHw", indims, xir::DataType::INT32, 32u).release();
+    xir::Tensor *op = xir::Tensor::create("output", indims, xir::DataType::INT32, 32u).release();
+    xir::Tensor *op_hw = xir::Tensor::create("outputHw", indims, xir::DataType::INT32, 32u).release();
+
+    in_tensor_.reset(in_t);
     //For now we using indims for inhw as well, but ideally inhw would be different and this would come from meta.json
-    in_hw_tensor_.reset(
-      new xir::vart::Tensor("inputHw", indims, xir::vart::Tensor::DataType::INT32));
-    
-    out_tensor_.reset(
-      new xir::vart::Tensor("output", outdims, xir::vart::Tensor::DataType::INT32));
-
-    out_hw_tensor_.reset(
-      new xir::vart::Tensor("outputHw", outdims, xir::vart::Tensor::DataType::INT32));
-
+    in_hw_tensor_.reset(in_hw);
+    out_tensor_.reset(op);
+    out_hw_tensor_.reset(op_hw);
   }
 
 
@@ -315,21 +313,23 @@ void Dpuv3Int8Controller::initCreateBuffers()
     const std::vector<std::int32_t> swapdims = { int32_t(BLK_SIZE/sizeof(int32_t)) };
     const std::vector<std::int32_t> fuSrcdims = swapdims;
     const std::vector<std::int32_t> fuDstdims = swapdims;
+    
+    xir::Tensor *instr_t = xir::Tensor::create("instr", instrdims, xir::DataType::UINT32, 32u).release();
+    xir::Tensor *params_t = xir::Tensor::create("params", paramsdims, xir::DataType::INT32, 32u).release();
+    xir::Tensor *swap_t = xir::Tensor::create("swap", swapdims, xir::DataType::INT32, 32u).release();
+    xir::Tensor *fusrc_t = xir::Tensor::create("fuSrc", fuSrcdims, xir::DataType::INT32, 32u).release();
+    xir::Tensor *fudst_t = xir::Tensor::create("fuDst", fuDstdims, xir::DataType::INT32, 32u).release();
 
-    instr_tensor_.reset(
-      new xir::vart::Tensor("instr", instrdims, xir::vart::Tensor::DataType::UINT32));
-    params_tensor_.reset(
-      new xir::vart::Tensor("params", paramsdims, xir::vart::Tensor::DataType::UINT32));
-    swap_tensor_.reset(
-      new xir::vart::Tensor("swap", swapdims, xir::vart::Tensor::DataType::UINT32));
-    fuSrc_tensor_.reset(
-      new xir::vart::Tensor("fuSrc", fuSrcdims, xir::vart::Tensor::DataType::UINT32));
-    fuDst_tensor_.reset(
-      new xir::vart::Tensor("fuDst", fuDstdims, xir::vart::Tensor::DataType::UINT32));
+
+    instr_tensor_.reset(instr_t);
+    params_tensor_.reset(params_t);
+    swap_tensor_.reset(swap_t);
+    fuSrc_tensor_.reset(fusrc_t);
+    fuDst_tensor_.reset(fudst_t);
 
     
-    instrTbuf_.reset(new xir::vart::CpuFlatTensorBuffer((void*)instr_.data(),&(*instr_tensor_)));
-    paramsTbuf_.reset(new xir::vart::CpuFlatTensorBuffer((void*)params_.data(),&(*params_tensor_)));
+    instrTbuf_.reset(new vart::CpuFlatTensorBuffer((void*)instr_.data(),&(*instr_tensor_)));
+    paramsTbuf_.reset(new vart::CpuFlatTensorBuffer((void*)params_.data(),&(*params_tensor_)));
 
 
     instr_buf_.reset(new XclDeviceBuffer(handle_.get(), instrTbuf_.get(), handle_->get_device_info().ddr_bank));
@@ -386,7 +386,7 @@ void Dpuv3Int8Controller::execute(uint64_t *buf_addr, uint32_t *buf_size)
 
 void Dpuv3Int8Controller::checkFpgaOutput(XclDeviceBuffer *outbuf)
 {
-    xir::vart::TensorBuffer* tbuf = outbuf->get_tensor_buffer();
+    vart::TensorBuffer* tbuf = outbuf->get_tensor_buffer();
     std::ofstream outputfile;
     std::string log_filename="";
     for (unsigned i = 0 ; i < dout_.size(); i++)
@@ -417,24 +417,24 @@ void Dpuv3Int8Controller::checkFpgaOutput(XclDeviceBuffer *outbuf)
 
 }
 
-std::vector<const xir::vart::Tensor*> 
+std::vector<const xir::Tensor*> 
 Dpuv3Int8Controller::get_input_tensors() const  {
-  return std::vector<const xir::vart::Tensor*>{ in_tensor_.get() };
+  return std::vector<const xir::Tensor*>{ in_tensor_.get() };
 }
 
-std::vector<const xir::vart::Tensor*> 
+std::vector<const xir::Tensor*> 
 Dpuv3Int8Controller::get_output_tensors() const {
-  return std::vector<const xir::vart::Tensor*>{ out_tensor_.get() };
+  return std::vector<const xir::Tensor*>{ out_tensor_.get() };
 }
 
-std::vector<xir::vart::TensorBuffer*> 
+std::vector<vart::TensorBuffer*> 
 Dpuv3Int8Controller::get_inputs() {
   auto stdBufs = create_tensor_buffers(get_input_tensors(), /*isInput*/true);
   auto hwBufs = create_hw_buffers(stdBufs, /*isInput*/true);
   return stdBufs;
 }
 
-std::vector<xir::vart::TensorBuffer*> 
+std::vector<vart::TensorBuffer*> 
 Dpuv3Int8Controller::get_outputs() {
   auto stdBufs = create_tensor_buffers(get_output_tensors(), /*isInput*/false);
   auto hwBufs = create_hw_buffers(stdBufs, /*isInput*/false);
@@ -442,9 +442,9 @@ Dpuv3Int8Controller::get_outputs() {
 
 }
 
-std::vector<xir::vart::TensorBuffer*>
-Dpuv3Int8Controller::create_hw_buffers(std::vector<xir::vart::TensorBuffer*> stdBuf, bool isInput) {
-  std::vector<xir::vart::TensorBuffer*> hwBuf;
+std::vector<vart::TensorBuffer*>
+Dpuv3Int8Controller::create_hw_buffers(std::vector<vart::TensorBuffer*> stdBuf, bool isInput) {
+  std::vector<vart::TensorBuffer*> hwBuf;
   if(isInput)
     {
       hwBuf = create_tensor_buffers({in_hw_tensor_.get()}, isInput);
@@ -458,7 +458,7 @@ Dpuv3Int8Controller::create_hw_buffers(std::vector<xir::vart::TensorBuffer*> std
   return hwBuf;
 }
 
-xir::vart::TensorBuffer* Dpuv3Int8Controller::get_hw_buffer(xir::vart::TensorBuffer* stdBuffer) {
+vart::TensorBuffer* Dpuv3Int8Controller::get_hw_buffer(vart::TensorBuffer* stdBuffer) {
   return stdbuf2hwbuf_[stdBuffer];
 }
 
@@ -470,7 +470,7 @@ bool isDebugMode()
   return DPUV3INT8_DEBUG_MODE;
 }
 
-void Dpuv3Int8Controller::preprocess(xir::vart::TensorBuffer* stdbuf, xir::vart::TensorBuffer* hwbuf)
+void Dpuv3Int8Controller::preprocess(vart::TensorBuffer* stdbuf, vart::TensorBuffer* hwbuf)
 {
   
   //TO-DO MNDBG: this function's purpose is to take in input rgb tensor float tensor data and convert it to data format of the corresponding DDR space in a 32bit continuous style.
@@ -479,41 +479,41 @@ void Dpuv3Int8Controller::preprocess(xir::vart::TensorBuffer* stdbuf, xir::vart:
 
   //This function cna also be used to load any intermediate tenosr buffer data, for debug purposes if we wish to test any particular layer we can extend this function to handle the intermidate buffer case too.
 
-  if(isDebugMode())
-  {
-    std::pair<void*, size_t> hwbufPair;
-    void* hwBufptr;
+  //if(isDebugMode())
+  //{
+  //  std::pair<void*, size_t> hwbufPair;
+  //  void* hwBufptr;
 
-    std::vector<int,aligned_allocator<int>> hwDinVector;
-    hwbufPair = hwbuf->data();
-    hwBufptr = hwbufPair.first; 
+  //  std::vector<int,aligned_allocator<int>> hwDinVector;
+  //  hwbufPair = hwbuf->data();
+  //  hwBufptr = hwbufPair.first; 
 
-    hwDinVector = load(din_filename_); 
-    
-    memcpy(hwBufptr, (void*)hwDinVector.data(), hwDinVector.size()*xir::vart::size_of(in_tensor_->get_data_type()));
+  //  hwDinVector = load(din_filename_); 
+  //  
+  //  memcpy(hwBufptr, (void*)hwDinVector.data(), hwDinVector.size()*xir::vart::size_of(in_tensor_->get_data_type()));
 
-  }
+  //}
 }
 
-void Dpuv3Int8Controller::postprocess(xir::vart::TensorBuffer* stdbuf, xir::vart::TensorBuffer* hwbuf)
+void Dpuv3Int8Controller::postprocess(vart::TensorBuffer* stdbuf, vart::TensorBuffer* hwbuf)
 {
   //TO-DO MNDBG: This function's purpose is to take in fpga outputs and convert 8bit to float, also convert from ddr space 32bit continuous style to standard format. This standard format can be sent to softmax, then later to get prediction labels. The function can be extended to intrgrate softmax, label prdictions.
-  if(isDebugMode())
-  {
-//get size from meta.json
-    memcpy(stdbuf->data().first, hwbuf->data().first, dout_.size()*xir::vart::size_of(out_tensor_->get_data_type()));
-  
-  }
+  //if(isDebugMode())
+  //{
+////get size from meta.json
+  //  memcpy(stdbuf->data().first, hwbuf->data().first, dout_.size()*xir::vart::size_of(out_tensor_->get_data_type()));
+  //
+  //}
  
 }
 
-void Dpuv3Int8Controller::run(const std::vector<xir::vart::TensorBuffer*> &inputs, 
-                        const std::vector<xir::vart::TensorBuffer*> &outputs) {
+void Dpuv3Int8Controller::run(const std::vector<vart::TensorBuffer*> &inputs, 
+                        const std::vector<vart::TensorBuffer*> &outputs) {
   XclDeviceBuffer* inbuf = dynamic_cast<XclDeviceBuffer*>(get_device_buffer(inputs[0]));
   XclDeviceBuffer* outbuf = dynamic_cast<XclDeviceBuffer*>(get_device_buffer(outputs[0]));
 
-  xir::vart::TensorBuffer* inHwTbuf = get_hw_buffer(inputs[0]);
-  xir::vart::TensorBuffer* outHwTbuf = get_hw_buffer(outputs[0]);
+  vart::TensorBuffer* inHwTbuf = get_hw_buffer(inputs[0]);
+  vart::TensorBuffer* outHwTbuf = get_hw_buffer(outputs[0]);
 
   XclDeviceBuffer *inHwBuf = dynamic_cast<XclDeviceBuffer*>(get_device_buffer(inHwTbuf));
   XclDeviceBuffer *outHwBuf = dynamic_cast<XclDeviceBuffer*>(get_device_buffer(outHwTbuf));
@@ -522,9 +522,9 @@ void Dpuv3Int8Controller::run(const std::vector<xir::vart::TensorBuffer*> &input
   std::vector<int,aligned_allocator<int>> fuSrc(fuSrc_tensor_->get_element_num());
   std::vector<int,aligned_allocator<int>> fuDst(fuDst_tensor_->get_element_num()); 
 
-  std::unique_ptr<xir::vart::CpuFlatTensorBuffer> swapTbuf(new xir::vart::CpuFlatTensorBuffer((void*)swap.data(),&(*swap_tensor_)));
-  std::unique_ptr<xir::vart::CpuFlatTensorBuffer> fuSrcTbuf(new xir::vart::CpuFlatTensorBuffer((void*)fuSrc.data(),&(*fuSrc_tensor_)));
-  std::unique_ptr<xir::vart::CpuFlatTensorBuffer> fuDstTbuf(new xir::vart::CpuFlatTensorBuffer((void*)fuDst.data(),&(*fuDst_tensor_)));
+  std::unique_ptr<vart::CpuFlatTensorBuffer> swapTbuf(new vart::CpuFlatTensorBuffer((void*)swap.data(),&(*swap_tensor_)));
+  std::unique_ptr<vart::CpuFlatTensorBuffer> fuSrcTbuf(new vart::CpuFlatTensorBuffer((void*)fuSrc.data(),&(*fuSrc_tensor_)));
+  std::unique_ptr<vart::CpuFlatTensorBuffer> fuDstTbuf(new vart::CpuFlatTensorBuffer((void*)fuDst.data(),&(*fuDst_tensor_)));
 
   std::unique_ptr<XclDeviceBuffer> swap_buf(new XclDeviceBuffer(handle_.get(), swapTbuf.get(), handle_->get_device_info().ddr_bank));
   std::unique_ptr<XclDeviceBuffer> fuSrc_buf(new XclDeviceBuffer(handle_.get(), fuSrcTbuf.get(), handle_->get_device_info().ddr_bank));

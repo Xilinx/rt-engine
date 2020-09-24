@@ -14,7 +14,7 @@ class SingleThreadTest : public Test {
 
   private:
     unsigned num_queries_;
-    std::unique_ptr<DpuRunner> runner_;
+    std::unique_ptr<vart::DpuRunner> runner_;
 };
 
 class MultiThreadTest : public Test {
@@ -30,7 +30,7 @@ class MultiThreadTest : public Test {
     unsigned num_threads_;
     unsigned num_runners_;
     std::string runner_dir_;
-    std::vector<std::unique_ptr<DpuRunner>> runners_;
+    std::vector<std::unique_ptr<vart::DpuRunner>> runners_;
 };
 
 class TestClassify : public Test {
@@ -38,11 +38,11 @@ class TestClassify : public Test {
     TestClassify(std::string runner_dir, unsigned num_queries);
     virtual void run();
     void loadImages(); //TO-DO MNDBG
-    void copy(std::vector<float>, std::vector<xir::vart::TensorBuffer*>); //TO-DO MNDBG
+    void copy(std::vector<float>, std::vector<vart::TensorBuffer*>); //TO-DO MNDBG
   private:
     unsigned num_queries_;
     std::vector<std::vector<float>>images_; //TO-DO MNDBG
-    std::unique_ptr<DpuRunner> runner_;
+    std::unique_ptr<vart::DpuRunner> runner_;
 };
 
 

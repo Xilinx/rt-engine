@@ -4,7 +4,7 @@
 SingleThreadTest::SingleThreadTest(std::string runner_dir, unsigned num_queries) 
  : num_queries_(num_queries)
 {
-  runner_.reset(new DpuRunner(runner_dir));
+  runner_.reset(new vart::DpuRunner(runner_dir));
 }
 
 void SingleThreadTest::run() {
