@@ -66,22 +66,21 @@ public:
 public:
   virtual std::pair<uint64_t, size_t>
   data(const std::vector<int> idx = {}) override {
+  uint32_t dtype_size = std::ceil(tensor_->get_data_type().bit_width / 8.f);
     if (idx.size() == 0) {
     //return std::make_pair(data_, tensor_->get_element_num());
-	return std::make_pair(reinterpret_cast<uint64_t>(data_), tensor_->get_element_num());
+	return std::make_pair(reinterpret_cast<uint64_t>(data_), tensor_->get_element_num()*dtype_size);
   }
-  auto dims = tensor_->get_dims();
+  auto dims = tensor_->get_shape();
   auto offset = 0;
-  for (auto k = 0; k < tensor_->get_dim_num(); k++) {
+  for (auto k = 0; k < tensor_->get_element_num(); k++) {
     auto stride = 1;
-    for (auto m = k + 1; m < tensor_->get_dim_num(); m++) {
+    for (auto m = k + 1; m < tensor_->get_element_num(); m++) {
       stride *= dims[m];
     }
     offset += idx[k] * stride;
   }
 
-  //auto dtype_size = size_of(tensor_->get_data_type());
-  uint32_t dtype_size = std::ceil(tensor_->get_bit_width() / 8.f);
   auto elem_num = tensor_->get_element_num();
 
   //# Temp code to add offset according to previous

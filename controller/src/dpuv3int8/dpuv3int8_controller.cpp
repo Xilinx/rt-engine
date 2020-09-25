@@ -164,10 +164,10 @@ Dpuv3Int8Controller::Dpuv3Int8Controller(std::string meta) : XclDpuController<Xc
     dout_ = load(dout_filename_);
     const std::vector<std::int32_t> indims = { int32_t(din.size()) };
     const std::vector<std::int32_t> outdims = { int32_t(dout_.size()) };
-    xir::Tensor *in_t = xir::Tensor::create("input", indims, xir::DataType::INT32, 32u).release();
-    xir::Tensor *in_hw = xir::Tensor::create("inputHw", indims, xir::DataType::INT32, 32u).release();
-    xir::Tensor *op = xir::Tensor::create("output", indims, xir::DataType::INT32, 32u).release();
-    xir::Tensor *op_hw = xir::Tensor::create("outputHw", indims, xir::DataType::INT32, 32u).release();
+    xir::Tensor *in_t = xir::Tensor::create("input", indims, xir::DataType{xir::DataType::INT32, 32}).release();
+    xir::Tensor *in_hw = xir::Tensor::create("inputHw", indims, xir::DataType{xir::DataType::INT32, 32}).release();
+    xir::Tensor *op = xir::Tensor::create("output", indims, xir::DataType{xir::DataType::INT32, 32}).release();
+    xir::Tensor *op_hw = xir::Tensor::create("outputHw", indims, xir::DataType{xir::DataType::INT32, 32}).release();
 
     in_tensor_.reset(in_t);
     //For now we using indims for inhw as well, but ideally inhw would be different and this would come from meta.json
@@ -314,11 +314,11 @@ void Dpuv3Int8Controller::initCreateBuffers()
     const std::vector<std::int32_t> fuSrcdims = swapdims;
     const std::vector<std::int32_t> fuDstdims = swapdims;
     
-    xir::Tensor *instr_t = xir::Tensor::create("instr", instrdims, xir::DataType::UINT32, 32u).release();
-    xir::Tensor *params_t = xir::Tensor::create("params", paramsdims, xir::DataType::INT32, 32u).release();
-    xir::Tensor *swap_t = xir::Tensor::create("swap", swapdims, xir::DataType::INT32, 32u).release();
-    xir::Tensor *fusrc_t = xir::Tensor::create("fuSrc", fuSrcdims, xir::DataType::INT32, 32u).release();
-    xir::Tensor *fudst_t = xir::Tensor::create("fuDst", fuDstdims, xir::DataType::INT32, 32u).release();
+    xir::Tensor *instr_t = xir::Tensor::create("instr", instrdims, xir::DataType{xir::DataType::INT32, 32}).release();
+    xir::Tensor *params_t = xir::Tensor::create("params", paramsdims, xir::DataType{xir::DataType::INT32, 32}).release();
+    xir::Tensor *swap_t = xir::Tensor::create("swap", swapdims, xir::DataType{xir::DataType::INT32, 32}).release();
+    xir::Tensor *fusrc_t = xir::Tensor::create("fuSrc", fuSrcdims, xir::DataType{xir::DataType::INT32, 32}).release();
+    xir::Tensor *fudst_t = xir::Tensor::create("fuDst", fuDstdims, xir::DataType{xir::DataType::INT32, 32}).release();
 
 
     instr_tensor_.reset(instr_t);

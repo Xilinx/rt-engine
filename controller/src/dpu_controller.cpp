@@ -66,7 +66,7 @@ std::vector<const xir::Tensor*>
 XclDpuController<Dhandle, DbufIn, DbufOut>::get_input_tensors() const {
   // TODO get from compiler 
   static const std::vector<std::int32_t> dims = { 4, 224, 224, 3 };
-  const xir::Tensor *t = xir::Tensor::create("input", dims, xir::DataType::INT8, 8u).release();
+  static const xir::Tensor *t = xir::Tensor::create("input", dims, xir::DataType{xir::DataType::INT8, 8}).release();
   return std::vector<const xir::Tensor*>{ t };
   //static xir::Tensor tensor("input", dims, xir::Tensor::DataType::INT8); 
   //return std::vector<const xir::Tensor*>{ &tensor };
@@ -77,7 +77,7 @@ std::vector<const xir::Tensor*>
 XclDpuController<Dhandle, DbufIn, DbufOut>::get_output_tensors() const {
   // TODO get from compiler
   static const std::vector<std::int32_t> dims = { 4, 1, 1, 1000 };
-  static const xir::Tensor *t = xir::Tensor::create("output", dims, xir::DataType::INT8, 8u).release();
+  static const xir::Tensor *t = xir::Tensor::create("output", dims, xir::DataType{xir::DataType::INT8, 8}).release();
   return std::vector<const xir::Tensor*>{ t };
 //  static xir::Tensor tensor("output", dims, xir::Tensor::DataType::INT8); 
 //  return std::vector<const xir::Tensor*>{ &tensor };
