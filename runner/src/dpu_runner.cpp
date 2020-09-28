@@ -18,6 +18,7 @@ DpuRunner::DpuRunner(std::string meta) : exec_core_idx_(0) {
     throw std::runtime_error("Error: no FPGA resources available");
 }
 
+
 DpuRunner::~DpuRunner() {
 }
 
@@ -63,3 +64,18 @@ int DpuRunner::wait(int jobid, int timeout) {
 }
 
 } //namespace vart
+
+ /** @brief create dpu runner
+ */
+ 
+std::vector<std::unique_ptr<vart::Runner>> *create_runner(
+ const vart::DpuMeta& dpuMeta) 
+{
+  std::string meta = "tests/app/models/sample_resnet50/meta.json";
+  auto runners = new std::vector<std::unique_ptr<vart::Runner>>();
+  runners->emplace_back(new vart::DpuRunner(meta));
+  return runners;
+} 
+  
+  
+ 

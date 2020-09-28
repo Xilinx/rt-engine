@@ -12,8 +12,6 @@
 #include "xir/tensor/tensor.hpp"
 #include "vart/runner.hpp"
 #include "dpu_runner_ext.hpp"
-//#include "runner.hpp"
-//#include "tensor.hpp"
 #include "dpu_controller.hpp"
 
 /*
@@ -51,7 +49,6 @@ class DpuRunner: public vart::dpu::DpuRunnerExt {
     virtual std::vector<float> get_output_scale() const override;
 
   protected:
-    std::vector<std::unique_ptr<vart::Runner>> *myRunner;
     std::vector<std::unique_ptr<DpuController>> dpu_controller_;
     std::atomic<unsigned> exec_core_idx_;
     std::vector<float> ip_scale;
@@ -97,6 +94,6 @@ private:
  
 } //vart namespace
 
-//extern "C" {
-//  std::vector<std::unique_ptr<vart::Runner>> *create_runner(const vart::DpuMeta &dpuMeta);
-//}
+extern "C" {
+  std::vector<std::unique_ptr<vart::Runner>> *create_runner(const vart::DpuMeta &dpuMeta);
+}
