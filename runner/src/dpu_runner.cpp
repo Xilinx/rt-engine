@@ -5,36 +5,49 @@
 #include "engine.hpp"
 #include "json-c/json.h"
 
+namespace vart{
+
 DpuRunner::DpuRunner(std::string meta) : exec_core_idx_(0) {
   // default: each DpuController controls one core,
   //          each DpuRunner has one DpuController
   // (keep it simple)
   dpu_controller_.emplace_back(new SampleDpuController(meta));
+  ip_scale.push_back(1.0f);
+  op_scale.push_back(1.0f);
   if (dpu_controller_.empty())
     throw std::runtime_error("Error: no FPGA resources available");
 }
 
+
 DpuRunner::~DpuRunner() {
 }
 
-std::vector<const xir::vart::Tensor*> DpuRunner::get_input_tensors() {
+std::vector<const xir::Tensor*> DpuRunner::get_input_tensors() {
   return dpu_controller_[0]->get_input_tensors();
 }
-std::vector<const xir::vart::Tensor*> DpuRunner::get_output_tensors() {
+std::vector<const xir::Tensor*> DpuRunner::get_output_tensors() {
   return dpu_controller_[0]->get_output_tensors();
 }
 
-std::vector<xir::vart::TensorBuffer*> DpuRunner::get_inputs() {
+std::vector<float> DpuRunner::get_input_scale() const {
+    return ip_scale; 
+}
+
+std::vector<float> DpuRunner::get_output_scale() const {
+    return op_scale; 
+}
+
+std::vector<vart::TensorBuffer*> DpuRunner::get_inputs() {
   return dpu_controller_[0]->get_inputs();
 }
 
-std::vector<xir::vart::TensorBuffer*> DpuRunner::get_outputs() {
+std::vector<vart::TensorBuffer*> DpuRunner::get_outputs() {
   return dpu_controller_[0]->get_outputs();
 }
 
 std::pair<uint32_t, int> DpuRunner::execute_async(
-  const std::vector<xir::vart::TensorBuffer*>& inputs,
-  const std::vector<xir::vart::TensorBuffer*>& outputs) {
+  const std::vector<vart::TensorBuffer*>& inputs,
+  const std::vector<vart::TensorBuffer*>& outputs) {
   Engine& engine = Engine::get_instance();
   auto job_id = engine.submit([this, &inputs, &outputs] {
     auto core_idx = exec_core_idx_.fetch_add(1) % dpu_controller_.size();
@@ -49,3 +62,20 @@ int DpuRunner::wait(int jobid, int timeout) {
 
   return 0;
 }
+
+} //namespace vart
+
+ /** @brief create dpu runner
+ */
+ 
+std::vector<std::unique_ptr<vart::Runner>> *create_runner(
+ const vart::DpuMeta& dpuMeta) 
+{
+  std::string meta = "tests/app/models/sample_resnet50/meta.json";
+  auto runners = new std::vector<std::unique_ptr<vart::Runner>>();
+  runners->emplace_back(new vart::DpuRunner(meta));
+  return runners;
+} 
+  
+  
+ 

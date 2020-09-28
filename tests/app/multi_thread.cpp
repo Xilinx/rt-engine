@@ -1,6 +1,7 @@
 #include <unistd.h>
 #include <thread>
 #include "tests.hpp"
+#include "vart/tensor_buffer.hpp"
 
 MultiThreadTest::MultiThreadTest(
   std::string runner_dir, unsigned nqueries, unsigned nthreads, unsigned nrunners) 
@@ -28,7 +29,7 @@ void MultiThreadTest::run() {
 }
 
 void MultiThreadTest::init_thread(unsigned ridx) {
-  runners_[ridx].reset(new DpuRunner(runner_dir_));
+  runners_[ridx].reset(new vart::DpuRunner(runner_dir_));
 }
 
 void MultiThreadTest::run_thread(unsigned ridx, unsigned n) {

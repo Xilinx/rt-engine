@@ -6,6 +6,6 @@ class DpuV4eController
   DpuV4eController(std::string meta);
   virtual ~DpuV4eController() override;
   virtual void run(
-    const std::vector<xir::vart::TensorBuffer*> &inputs, 
-    const std::vector<xir::vart::TensorBuffer*> &outputs) override;
+    const std::vector<vart::TensorBuffer*> &inputs, 
+    const std::vector<vart::TensorBuffer*> &outputs) override;
 };

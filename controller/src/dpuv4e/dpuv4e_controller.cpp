@@ -22,8 +22,8 @@ DpuV4eController::DpuV4eController(std::string meta)
 DpuV4eController::~DpuV4eController() {
 }
 
-void DpuV4eController::run(const std::vector<xir::vart::TensorBuffer*> &inputs, 
-    const std::vector<xir::vart::TensorBuffer*> &outputs) {
+void DpuV4eController::run(const std::vector<vart::TensorBuffer*> &inputs, 
+    const std::vector<vart::TensorBuffer*> &outputs) {
   std::cout << "DpuV4eController::run start" << std::endl;
   XrtDeviceBuffer *inbuf = dynamic_cast<XrtDeviceBuffer*>(get_device_buffer(inputs[0]));
   XrtDeviceBuffer *outbuf = dynamic_cast<XrtDeviceBuffer*>(get_device_buffer(outputs[0]));

@@ -1,6 +1,8 @@
 #include <iostream>
 #include <vector>
-#include "runner.hpp"
+//#include "vart/runner.hpp"
+#include "vart/tensor_buffer.hpp"
+//#include "runner.hpp"
 #include "engine.hpp"
 #include "tests.hpp"
 
@@ -18,8 +20,8 @@ void SingleThreadTest::run() {
   for (unsigned i=0; i < num_queries_; i++)
   {
     // fill the pipe
-    const std::vector<xir::vart::TensorBuffer*> inputs;
-    const std::vector<xir::vart::TensorBuffer*> outputs;
+    const std::vector<vart::TensorBuffer*> inputs;
+    const std::vector<vart::TensorBuffer*> outputs;
     ids.emplace_back(engine.submit([this, &inputs, &outputs]{ 
       inputs.size();
       outputs.size();

@@ -1,9 +1,10 @@
 #include "device_memory.hpp"
+#include<cmath>
 
-DeviceBuffer::DeviceBuffer(const DeviceHandle *handle, xir::vart::TensorBuffer *tbuf, unsigned bank) 
+DeviceBuffer::DeviceBuffer(const DeviceHandle *handle, vart::TensorBuffer *tbuf, unsigned bank) 
  : handle_(handle), tbuf_(tbuf), bank_(bank), size_(0), phys_addr_(0)
 {
-  const size_t dataSize = xir::vart::size_of(tbuf->get_tensor()->get_data_type());
+  const size_t dataSize =  std::ceil((tbuf->get_tensor())->get_data_type().bit_width / 8.f);
   if (dataSize == 0)
     throw std::runtime_error("Error: cannot alloc device buffer -- unknown datatype");
 
@@ -14,7 +15,7 @@ DeviceBuffer::DeviceBuffer(const DeviceHandle *handle, xir::vart::TensorBuffer *
  * XclDeviceBuffer
  */
 
-XclDeviceBuffer::XclDeviceBuffer(const XclDeviceHandle *handle, xir::vart::TensorBuffer *tbuf, unsigned bank) 
+XclDeviceBuffer::XclDeviceBuffer(const XclDeviceHandle *handle, vart::TensorBuffer *tbuf, unsigned bank) 
  : DeviceBuffer(handle, tbuf, bank) {
   static const std::vector<unsigned> ddrBankMap = {
     XCL_MEM_DDR_BANK0,
@@ -79,7 +80,7 @@ XclDeviceBuffer::~XclDeviceBuffer() {
 /*
  * XrtDeviceBuffer
  */
-XrtDeviceBuffer::XrtDeviceBuffer(const XrtDeviceHandle *handle, xir::vart::TensorBuffer *tbuf, unsigned bank) 
+XrtDeviceBuffer::XrtDeviceBuffer(const XrtDeviceHandle *handle, vart::TensorBuffer *tbuf, unsigned bank) 
  : DeviceBuffer(handle, tbuf, bank) {
   auto myHandle = dynamic_cast<const XrtDeviceHandle*>(handle_);
   auto devHandle = myHandle->get_context().get_dev_handle();
