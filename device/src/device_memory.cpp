@@ -1,14 +1,14 @@
 #include "device_memory.hpp"
+#include<cmath>
 
 DeviceBuffer::DeviceBuffer(const DeviceHandle *handle, vart::TensorBuffer *tbuf, unsigned bank) 
  : handle_(handle), tbuf_(tbuf), bank_(bank), size_(0), phys_addr_(0)
 {
-  const size_t dataSize = 1;//xir::vart::size_of(tbuf->get_tensor()->get_data_type());
+  const size_t dataSize =  std::ceil((tbuf->get_tensor())->get_data_type().bit_width / 8.f);
   if (dataSize == 0)
     throw std::runtime_error("Error: cannot alloc device buffer -- unknown datatype");
 
-  //TODO::Fix this
-  size_ = 224*224*3;//tbuf->get_tensor()->get_element_num() * dataSize;
+  size_ = tbuf->get_tensor()->get_element_num() * dataSize;
 }
 
 /*

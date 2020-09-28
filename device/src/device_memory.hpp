@@ -4,6 +4,7 @@
 #pragma GCC diagnostic ignored "-Wignored-qualifiers"
 #include "CL/cl_ext_xilinx.h"
 #pragma GCC diagnostic pop 
+#include "xir/tensor/tensor.hpp"
 #include "vart/runner.hpp"
 //#include "tensor_buffer.hpp"
 #include "device_handle.hpp"
