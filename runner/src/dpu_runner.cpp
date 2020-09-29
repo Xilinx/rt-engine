@@ -71,7 +71,8 @@ int DpuRunner::wait(int jobid, int timeout) {
 std::vector<std::unique_ptr<vart::Runner>> *create_runner(
  const vart::DpuMeta& dpuMeta) 
 {
-  std::string meta = "tests/app/models/sample_resnet50/meta.json";
+  //# Hardcoded for this example
+  std::string meta = "model/meta.json";
   auto runners = new std::vector<std::unique_ptr<vart::Runner>>();
   runners->emplace_back(new vart::DpuRunner(meta));
   return runners;

@@ -3,7 +3,7 @@ TARGET_LIB := libengine.so
 BUILD_DIR ?= ./build
 SRC_DIRS ?= ./engine/src ./runner/src ./device/src ./controller/src ./vitis/src
 
-CXX := g++
+CXX := g++ -g
 SRCS := $(shell find $(SRC_DIRS) -name *.cpp)
 OBJS := $(SRCS:%=$(BUILD_DIR)/%.o)
 DEPS := $(OBJS:.o=.d)
@@ -33,10 +33,10 @@ all: $(BUILD_DIR)/$(TARGET_LIB) $(TEST_BINS)
 
 $(BUILD_DIR)/tests/%.exe: tests/%/*.cpp $(BUILD_DIR)/$(TARGET_LIB)
 	$(MKDIR_P) $(dir $@) 
-	$(CXX) $(CPPFLAGS) -o $@ $(dir $<)*.cpp -lengine -lpthread -lbutler -lxilinxopencl -lxrt_core -ljson-c -lglog -lgflags -lxrt++ -lxrt_coreutil -lunilog -lprotobuf -lxir -lvart-runner -ljsoncpp
+	$(CXX) $(CPPFLAGS) -o $@ $(dir $<)*.cpp -lengine -lpthread -lxilinxopencl -lxrt_core -ljson-c -lglog -lgflags -lxrt++ -lxrt_coreutil -lunilog -lprotobuf -lxir -lvart-runner -ljsoncpp -lbutler
 
 $(BUILD_DIR)/$(TARGET_LIB): $(OBJS)
-	$(CXX) -fPIC -shared -o $@ $^ 
+	$(CXX) -fPIC -shared -o $@ $^ $(VITIS_LIBS) -lpthread -lxilinxopencl -lxrt_core -ljson-c -lglog -lgflags -lxrt++ -lxrt_coreutil -lunilog -lprotobuf -lxir -lvart-runner -ljsoncpp -lbutler	
 
 $(BUILD_DIR)/%.cpp.o: %.cpp
 	$(MKDIR_P) $(dir $@)
