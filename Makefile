@@ -3,7 +3,7 @@ TARGET_LIB := libengine.so
 BUILD_DIR ?= ./build
 SRC_DIRS ?= ./engine/src ./runner/src ./device/src ./controller/src ./vitis/src
 
-CXX := g++
+CXX := g++ 
 SRCS := $(shell find $(SRC_DIRS) -name *.cpp)
 OBJS := $(SRCS:%=$(BUILD_DIR)/%.o)
 DEPS := $(OBJS:.o=.d)
@@ -15,8 +15,18 @@ INC_DIRS := $(shell find $(SRC_DIRS) -type d)
 INC_FLAGS := $(addprefix -I,$(INC_DIRS))
 
 XILINX_XRT := /opt/xilinx/xrt
-VITIS_INCLUDES := -I $(XILINX_XRT)/include -I$(CONDA_PREFIX)/include/xip/butler -I$(CONDA_PREFIX)/include
-VITIS_LIBS := -L$(BUILD_DIR) -L$(CONDA_PREFIX)/lib -L$(XILINX_XRT)/lib 
+
+
+install_prefix_default=$(HOME)/.local/Ubuntu.18.04.x86_64
+
+ifndef XILINX_VART
+	# setting default path
+	XILINX_VART=${install_prefix_default}.Release
+endif
+
+XILINX_XRT := /opt/xilinx/xrt
+VITIS_INCLUDES := -I $(XILINX_XRT)/include -I$(CONDA_PREFIX)/include/xip/butler -I$(CONDA_PREFIX)/include -I$(XILINX_VART)/include
+VITIS_LIBS := -L$(BUILD_DIR) -L$(CONDA_PREFIX)/lib -L$(XILINX_XRT)/lib -L$(XILINX_VART)/lib
 
 XILINX_XRM := /opt/xilinx/xrm
 ifneq "$(wildcard $(XILINX_XRM))" ""
@@ -33,10 +43,10 @@ all: $(BUILD_DIR)/$(TARGET_LIB) $(TEST_BINS)
 
 $(BUILD_DIR)/tests/%.exe: tests/%/*.cpp $(BUILD_DIR)/$(TARGET_LIB)
 	$(MKDIR_P) $(dir $@) 
-	$(CXX) $(CPPFLAGS) -o $@ $(dir $<)*.cpp -lengine -lpthread -lbutler -lxilinxopencl -lxrt_core -ljson-c -lglog -lgflags -lxrt++ -lxrt_coreutil -lunilog -lprotobuf -lxir -lvart-runner -ljsoncpp
+	$(CXX) $(CPPFLAGS) -o $@ $(dir $<)*.cpp -lengine -lpthread -lxilinxopencl -lxrt_core -ljson-c -lglog -lgflags -lxrt++ -lxrt_coreutil -lunilog -lprotobuf -lxir -lvart-runner -ljsoncpp -lbutler
 
 $(BUILD_DIR)/$(TARGET_LIB): $(OBJS)
-	$(CXX) -fPIC -shared -o $@ $^ 
+	$(CXX) -fPIC -shared -o $@ $^ $(VITIS_LIBS) -lpthread -lxilinxopencl -lxrt_core -ljson-c -lglog -lgflags -lxrt++ -lxrt_coreutil -lunilog -lprotobuf -lxir -lvart-runner -ljsoncpp -lbutler	
 
 $(BUILD_DIR)/%.cpp.o: %.cpp
 	$(MKDIR_P) $(dir $@)
