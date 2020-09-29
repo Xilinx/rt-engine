@@ -3,7 +3,7 @@ TARGET_LIB := libengine.so
 BUILD_DIR ?= ./build
 SRC_DIRS ?= ./engine/src ./runner/src ./device/src ./controller/src ./vitis/src
 
-CXX := g++ -g
+CXX := g++ 
 SRCS := $(shell find $(SRC_DIRS) -name *.cpp)
 OBJS := $(SRCS:%=$(BUILD_DIR)/%.o)
 DEPS := $(OBJS:.o=.d)
