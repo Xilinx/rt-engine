@@ -9,6 +9,8 @@
 #include "CL/cl_ext_xilinx.h"
 #pragma GCC diagnostic pop 
 #include "xir/tensor/tensor.hpp"
+#include <xir/graph/graph.hpp>
+#include <xir/graph/subgraph.hpp>
 #include "vart/tensor_buffer.hpp"
 #include "dpu_controller.hpp"
 #include "dpu_runner.hpp"
@@ -39,6 +41,20 @@ XclDpuController<Dhandle, DbufIn, DbufOut>::XclDpuController(std::string meta)
   handle_.reset(new Dhandle(kernelName, xclbinPath));
   std::cout << "done loading xclbin" << std::endl;
 }
+
+template <class Dhandle, class DbufIn, class DbufOut>
+XclDpuController<Dhandle, DbufIn, DbufOut>::XclDpuController(xir::Subgraph *subgraph) 
+: DpuController(subgraph) {
+  
+  std::string kernelName = subgraph->get_attr<std::string>("kernel");
+  // get xclbin path and acquire handle
+  std::string xclbinPath = subgraph->get_attr<std::string>("xclbin");
+  
+  std::cout << "loading xclbin: " << xclbinPath << std::endl;
+  handle_.reset(new Dhandle(kernelName, xclbinPath));
+  std::cout << "done loading xclbin" << std::endl;
+}
+
 
 template <class Dhandle, class DbufIn, class DbufOut>
 XclDpuController<Dhandle, DbufIn, DbufOut>::~XclDpuController() {
@@ -163,8 +179,9 @@ void SampleDpuController::execute(XclDeviceBuffer *in, XclDeviceBuffer *out) con
 /*
  * template instantiations
  */
-
 template XclDpuController<XclDeviceHandle, XclDeviceBuffer, XclDeviceBuffer>::XclDpuController(std::string meta);
 template XclDpuController<XrtDeviceHandle, XrtDeviceBuffer, XrtDeviceBuffer>::XclDpuController(std::string meta);
+template XclDpuController<XclDeviceHandle, XclDeviceBuffer, XclDeviceBuffer>::XclDpuController(xir::Subgraph *subgraph);
+template XclDpuController<XrtDeviceHandle, XrtDeviceBuffer, XrtDeviceBuffer>::XclDpuController(xir::Subgraph *subgraph);
 template DeviceBuffer* XclDpuController<XclDeviceHandle, XclDeviceBuffer, XclDeviceBuffer>::get_device_buffer(vart::TensorBuffer *tb);
 template DeviceBuffer* XclDpuController<XrtDeviceHandle, XrtDeviceBuffer, XrtDeviceBuffer>::get_device_buffer(vart::TensorBuffer *tb);
