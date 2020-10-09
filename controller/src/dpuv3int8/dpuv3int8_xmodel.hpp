@@ -25,7 +25,7 @@ class Xmodel {
     std::string getDebugGoldenFilename();
 
     Xmodel(std::string meta, bool isDebugMode);
-    Xmodel(xir::Subgraph *subgraph, bool isDebugMode);        
+    Xmodel(const xir::Subgraph *subgraph, bool isDebugMode);        
     
   private:
     std::string getFileNameIfExists(std::string name, json_object* jobj);
@@ -33,7 +33,7 @@ class Xmodel {
     bool getBool(std::string name, json_object* jobj);
     void loadParamsJson(json_object* jobj, bool isDebugMode);
     void loadParamsXIR(std::string xmodel_filename, bool isDebugMode);
-    void loadParamsSubgraph(xir::Subgraph *subgraph, bool isDebugMode);
+    void loadParamsSubgraph(const xir::Subgraph *subgraph, bool isDebugMode);
     std::unique_ptr<InstrFormatConverter> instrFormatConverter_;
 
     uint32_t inW_;

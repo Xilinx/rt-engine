@@ -15,7 +15,7 @@
 #
 
 cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1
-CXX=${CXX:-g++}
+CXX=${CXX:-g++ -g}
 os=`lsb_release -a | grep "Distributor ID" | sed 's/^.*:\s*//'`
 os_version=`lsb_release -a | grep "Release" | sed 's/^.*:\s*//'`
 arch=`uname -p`
@@ -48,15 +48,18 @@ $CXX -O2 -fno-inline -I. \
      -I$CONDA_PREFIX/include \
      -I${install_prefix_default}.Debug/include \
      -I${install_prefix_default}.Release/include \
-     -I../../runner/src \
+     -I../../../runner/src \
+     -I$PWD/utils/ \
      -L${install_prefix_default}.Debug/lib \
      -L${install_prefix_default}.Release/lib \
      -L$CONDA_PREFIX/lib \
+     -Wl,-rpath=$CONDA_PREFIX/lib \
      -Wl,-rpath=${install_prefix_default}.Debug/lib \
      -Wl,-rpath=${install_prefix_default}.Release/lib \
-     -Wl,-rpath=$CONDA_PREFIX/lib \
      -I$PWD/../common  -o $name -std=c++17 \
      $PWD/src/main.cc \
+     $PWD/utils/cpuUtil.cpp \
+     $PWD/utils/jsonOrXirKeys.cpp \
      -Wl,-rpath=$PWD/lib \
      -lvart-runner \
      -lopencv_videoio  \
@@ -64,9 +67,12 @@ $CXX -O2 -fno-inline -I. \
      -lopencv_highgui \
      -lopencv_imgproc \
      -lopencv_core \
-     -lbutler \
      -lglog \
      -lxir \
      -lunilog \
+     -ljson-c \
+     -lboost_system \
+     -lboost_filesystem \
+     -ljson-c \
      -lpthread
 fi

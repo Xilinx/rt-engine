@@ -4,7 +4,10 @@
 TestClassify::TestClassify(std::string runner_dir, unsigned num_queries) 
  : num_queries_(num_queries)
 {
-  runner_.reset(new vart::DpuRunner(runner_dir));
+  std::unique_ptr<xir::Graph> graph = xir::Graph::deserialize(runner_dir);
+  std::vector<xir::Subgraph *> subgraphs = graph->get_root_subgraph()->children_topological_sort();
+  auto subgraph = subgraphs[1];//TO_DO - replace 1 with automated value
+  runner_.reset(new vart::DpuRunner(subgraph));
   loadImages(); // TO-DO MNDBG: this function needs to be populated to read JPEG and save NHWC or NCHW tensors
 
 }

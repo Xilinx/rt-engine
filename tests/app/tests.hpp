@@ -1,6 +1,8 @@
 #pragma once 
 #include <string>
 #include <memory>
+#include <xir/graph/graph.hpp>
+#include <xir/tensor/tensor.hpp>
 #include "dpu_runner.hpp"
 
 class Test {

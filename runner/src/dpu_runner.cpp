@@ -4,14 +4,24 @@
 #include "dpu_runner.hpp"
 #include "engine.hpp"
 #include "json-c/json.h"
+#include "dpuv3int8_controller.hpp"
 
 namespace vart{
 
-DpuRunner::DpuRunner(std::string meta) : exec_core_idx_(0) {
+DpuRunner::DpuRunner(const xir::Subgraph* subgraph) : exec_core_idx_(0) {
   // default: each DpuController controls one core,
   //          each DpuRunner has one DpuController
   // (keep it simple)
-  dpu_controller_.emplace_back(new SampleDpuController(meta));
+  const bool DPUV3INT8_DEBUGMODE =
+      std::getenv("DPUV3INT8_DEBUGMODE") ? atoi(std::getenv("DPUV3INT8_DEBUGMODE")) == 1 : false;
+ 
+  //# Hardcoded for Debug controller
+  string meta = "/proj/xsjhdstaff6/anup/rt-engine/vitis/rt-engine_dummy/tests/dpuv3int8/models/dpuv3int8_xir/meta.json";
+  if(DPUV3INT8_DEBUGMODE==1) 
+      dpu_controller_.emplace_back(new Dpuv3Int8DebugController(meta));
+  else 
+      dpu_controller_.emplace_back(new Dpuv3Int8Controller(subgraph));
+  
   ip_scale.push_back(1.0f);
   op_scale.push_back(1.0f);
   if (dpu_controller_.empty())
@@ -65,18 +75,9 @@ int DpuRunner::wait(int jobid, int timeout) {
 
 } //namespace vart
 
- /** @brief create dpu runner
- */
- 
-std::vector<std::unique_ptr<vart::Runner>> *create_runner(
- const vart::DpuMeta& dpuMeta) 
-{
-  //# Hardcoded for this example
-  std::string meta = "model/meta.json";
-  auto runners = new std::vector<std::unique_ptr<vart::Runner>>();
-  runners->emplace_back(new vart::DpuRunner(meta));
-  return runners;
-} 
-  
-  
- 
+/** @brief create dpu runner
+*/
+vart::Runner* create_runner(const xir::Subgraph* subgraph) {
+     auto ret = std::make_unique<vart::DpuRunner>(subgraph);
+     return ret.release();
+}

@@ -26,7 +26,7 @@ namespace vart {
 
 class DpuRunner: public vart::dpu::DpuRunnerExt {
   public:
-    DpuRunner(std::string meta);
+    DpuRunner(const xir::Subgraph* subgraph);
     ~DpuRunner();
     DpuRunner(const DpuRunner&) = delete;
     DpuRunner& operator=(const DpuRunner& other) = delete;
@@ -95,5 +95,5 @@ private:
 } //vart namespace
 
 extern "C" {
-  std::vector<std::unique_ptr<vart::Runner>> *create_runner(const vart::DpuMeta &dpuMeta);
+  vart::Runner* create_runner(const xir::Subgraph* subgraph);
 }
