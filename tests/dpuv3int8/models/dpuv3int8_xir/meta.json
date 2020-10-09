@@ -1,0 +1,7 @@
+{
+    "kernel": "dpdpuv3_wrapper",
+    "xclbin": "tests/dpuv3int8/models/commonImgLabelDir",
+    "debugMode":false,
+    "usexmodel":true,
+    "xmodelFile": "resnet50_handwritten.xmodel"
+}
