@@ -15,7 +15,7 @@
 class DpuController {
  public:
   DpuController(std::string meta) {}
-  DpuController(xir::Subgraph *subgraph) {}
+  DpuController(const xir::Subgraph *subgraph) {}
   virtual ~DpuController() {}
   virtual void run(
     const std::vector<vart::TensorBuffer*> &inputs, 
@@ -33,7 +33,7 @@ template <class Dhandle, class DbufIn, class DbufOut>
 class XclDpuController : public DpuController {
  public:
   XclDpuController(std::string meta);
-  XclDpuController(xir::Subgraph *subgraph);
+  XclDpuController(const xir::Subgraph *subgraph);
   virtual ~XclDpuController() override;
   virtual void run(
     const std::vector<vart::TensorBuffer*> &inputs, 

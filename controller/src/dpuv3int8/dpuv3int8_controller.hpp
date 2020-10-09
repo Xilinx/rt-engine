@@ -42,7 +42,7 @@ struct aligned_allocator
 class Dpuv3Int8Controller : public XclDpuController<XclDeviceHandle, XclDeviceBuffer, XclDeviceBuffer> {
  public:
   Dpuv3Int8Controller(std::string meta);
-  Dpuv3Int8Controller(xir::Subgraph *subgraph);
+  Dpuv3Int8Controller(const xir::Subgraph *subgraph);
   virtual ~Dpuv3Int8Controller() override;
   virtual void run(const std::vector<vart::TensorBuffer*> &inputs, 
            const std::vector<vart::TensorBuffer*> &outputs) override;

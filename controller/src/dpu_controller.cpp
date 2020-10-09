@@ -43,7 +43,7 @@ XclDpuController<Dhandle, DbufIn, DbufOut>::XclDpuController(std::string meta)
 }
 
 template <class Dhandle, class DbufIn, class DbufOut>
-XclDpuController<Dhandle, DbufIn, DbufOut>::XclDpuController(xir::Subgraph *subgraph) 
+XclDpuController<Dhandle, DbufIn, DbufOut>::XclDpuController(const xir::Subgraph *subgraph) 
 : DpuController(subgraph) {
   
   std::string kernelName = subgraph->get_attr<std::string>("kernel");
@@ -181,7 +181,7 @@ void SampleDpuController::execute(XclDeviceBuffer *in, XclDeviceBuffer *out) con
  */
 template XclDpuController<XclDeviceHandle, XclDeviceBuffer, XclDeviceBuffer>::XclDpuController(std::string meta);
 template XclDpuController<XrtDeviceHandle, XrtDeviceBuffer, XrtDeviceBuffer>::XclDpuController(std::string meta);
-template XclDpuController<XclDeviceHandle, XclDeviceBuffer, XclDeviceBuffer>::XclDpuController(xir::Subgraph *subgraph);
-template XclDpuController<XrtDeviceHandle, XrtDeviceBuffer, XrtDeviceBuffer>::XclDpuController(xir::Subgraph *subgraph);
+template XclDpuController<XclDeviceHandle, XclDeviceBuffer, XclDeviceBuffer>::XclDpuController(const xir::Subgraph *subgraph);
+template XclDpuController<XrtDeviceHandle, XrtDeviceBuffer, XrtDeviceBuffer>::XclDpuController(const xir::Subgraph *subgraph);
 template DeviceBuffer* XclDpuController<XclDeviceHandle, XclDeviceBuffer, XclDeviceBuffer>::get_device_buffer(vart::TensorBuffer *tb);
 template DeviceBuffer* XclDpuController<XrtDeviceHandle, XrtDeviceBuffer, XrtDeviceBuffer>::get_device_buffer(vart::TensorBuffer *tb);

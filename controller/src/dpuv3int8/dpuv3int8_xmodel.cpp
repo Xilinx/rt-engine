@@ -98,7 +98,7 @@ void Xmodel::loadParamsXIR(std::string xmodel_filename, bool isDebugMode)
   loadParamsSubgraph(subgraph, isDebugMode);  
 }
 
-void Xmodel::loadParamsSubgraph(xir::Subgraph *subgraph, bool isDebugMode)
+void Xmodel::loadParamsSubgraph(const xir::Subgraph *subgraph, bool isDebugMode)
 {
 
   std::vector<std::string> machineCode = subgraph->get_attr<std::vector<std::string>>("mc_code");
@@ -171,7 +171,7 @@ Xmodel::Xmodel(std::string meta, bool isDebugMode)
 
 }
 
-Xmodel::Xmodel(xir::Subgraph *subgraph, bool isDebugMode)
+Xmodel::Xmodel(const xir::Subgraph *subgraph, bool isDebugMode)
 {
   runner_dir_ = "tests/dpuv3int8/models/dpuv3int8_xir/";//subgraph->get_attr<std::string>("runner_dir");
   std::cout<<"Runner dir is hardcoded right now, xir subgraph has ot be annotated with runner dir"<<std::endl;

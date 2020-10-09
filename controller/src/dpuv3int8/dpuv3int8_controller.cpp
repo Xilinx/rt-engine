@@ -13,7 +13,7 @@ Dpuv3Int8Controller::Dpuv3Int8Controller(std::string meta) : XclDpuController<Xc
   initCreateBuffers();
 }
 
-Dpuv3Int8Controller::Dpuv3Int8Controller(xir::Subgraph *subgraph) : XclDpuController<XclDeviceHandle, XclDeviceBuffer, XclDeviceBuffer>(subgraph)
+Dpuv3Int8Controller::Dpuv3Int8Controller(const xir::Subgraph *subgraph) : XclDpuController<XclDeviceHandle, XclDeviceBuffer, XclDeviceBuffer>(subgraph)
 {
 
   xmodel_.reset(new Xmodel(subgraph, false));

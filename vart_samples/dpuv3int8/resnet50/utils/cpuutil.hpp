@@ -1,42 +1,11 @@
 #pragma once 
 #include <string>
 #include <memory>
-#include "dpu_runner.hpp"
 #include <opencv2/opencv.hpp>
 #include "json-c/json.h"
-#include <xir/graph/graph.hpp>
-#include <xir/tensor/tensor.hpp>
+#include <vart/runner.hpp>
 
 using namespace std;
-class Test {
-  virtual void run() = 0;
-};
-
-class SingleThreadTest : public Test {
-  public:
-    SingleThreadTest(std::string runner_dir, unsigned num_queries);
-    virtual void run();
-
-  private:
-    unsigned num_queries_;
-    std::unique_ptr<vart::DpuRunner> runner_;
-};
-
-class MultiThreadTest : public Test {
-  public:
-    MultiThreadTest(std::string runner_dir, unsigned nqueries, unsigned nthreads, unsigned nrunners);
-    virtual void run();
-
-  private:
-    void init_thread(unsigned ridx);
-    void run_thread(unsigned ridx, unsigned n);
-
-    unsigned num_queries_;
-    unsigned num_threads_;
-    unsigned num_runners_;
-    std::string runner_dir_;
-    std::vector<std::unique_ptr<vart::DpuRunner>> runners_;
-};
 
 class jsonOrXirKeys
 {
@@ -98,44 +67,5 @@ class cpuUtil
     bool goldenAvailable_;
     bool verbose_;
     std::unique_ptr<jsonOrXirKeys> keysobj_;
-};
-
-class TestClassify : public Test {
-  public:
-    TestClassify(std::string runner_dir, unsigned num_queries, std::string img_dir, const bool goldenAvailable, const bool verbose);
-    virtual void run();
-
-  private:
-    unsigned num_queries_;
-    std::unique_ptr<vart::DpuRunner> runner_;
-    std::unique_ptr<cpuUtil> cpuUtilobj_;
-     
-};
-
-class TestClassifyMultiThread : public Test {
-  public:
-    TestClassifyMultiThread(std::string runner_dir, unsigned nqueries, unsigned nthreads, unsigned nrunners, std::string img_dir, const bool goldenAvailable, const bool verbose);
-    virtual void run();
-
-  private:
-    void init_thread(unsigned ridx);
-    void run_thread(unsigned tidx, unsigned ridx, unsigned n);
-
-    unsigned num_queries_;
-    unsigned num_threads_;
-    unsigned num_runners_;
-    std::string runner_dir_;
-    std::vector<std::unique_ptr<vart::DpuRunner>> runners_;
-    std::unique_ptr<cpuUtil> cpuUtilobj_;
-};
-
-class FpgaOnlySingleQueryExecutionHack : public Test {
-  public:
-    FpgaOnlySingleQueryExecutionHack(std::string runner_dir);
-    virtual void run();
-
-  private:
-    std::unique_ptr<vart::DpuRunner> runner_;
-     
 };
 
