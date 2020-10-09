@@ -15,7 +15,7 @@
 #
 
 cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1
-CXX=${CXX:-g++ -g}
+CXX=${CXX:-g++ }
 os=`lsb_release -a | grep "Distributor ID" | sed 's/^.*:\s*//'`
 os_version=`lsb_release -a | grep "Release" | sed 's/^.*:\s*//'`
 arch=`uname -p`
