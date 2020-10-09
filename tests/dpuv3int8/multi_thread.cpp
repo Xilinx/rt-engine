@@ -28,7 +28,10 @@ void MultiThreadTest::run() {
 }
 
 void MultiThreadTest::init_thread(unsigned ridx) {
-  runners_[ridx].reset(new vart::DpuRunner(runner_dir_));
+  std::unique_ptr<xir::Graph> graph = xir::Graph::deserialize(runner_dir_);
+  std::vector<xir::Subgraph *> subgraphs = graph->get_root_subgraph()->children_topological_sort();
+  auto subgraph = subgraphs[1];//TO_DO - replace 1 with automated value
+  runners_[ridx].reset(new vart::DpuRunner(subgraph));
 }
 
 void MultiThreadTest::run_thread(unsigned ridx, unsigned n) {

@@ -6,6 +6,7 @@ using namespace boost::filesystem;
 
 cpuUtil::cpuUtil(std::string runner_dir, bool goldenAvailable, bool verbose, std::string img_dir, unsigned num_queries)
 {
+  runner_dir = "tests/dpuv3int8/models/dpuv3int8_xir/meta.json"; 
   goldenAvailable_ = goldenAvailable;
   verbose_ = verbose;
   keysobj_.reset(new jsonOrXirKeys(runner_dir));

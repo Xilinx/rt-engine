@@ -4,6 +4,8 @@
 #include "dpu_runner.hpp"
 #include <opencv2/opencv.hpp>
 #include "json-c/json.h"
+#include <xir/graph/graph.hpp>
+#include <xir/tensor/tensor.hpp>
 
 using namespace std;
 class Test {
