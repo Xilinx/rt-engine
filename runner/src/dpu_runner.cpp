@@ -12,22 +12,29 @@ DpuRunner::DpuRunner(const xir::Subgraph* subgraph) : exec_core_idx_(0) {
   // default: each DpuController controls one core,
   //          each DpuRunner has one DpuController
   // (keep it simple)
-  const bool DPUV3INT8_DEBUGMODE =
-      std::getenv("DPUV3INT8_DEBUGMODE") ? atoi(std::getenv("DPUV3INT8_DEBUGMODE")) == 1 : false;
+
+  const std::string kernel = subgraph->get_attr<std::string>("kernel");
+  if (kernel == "dpdpuv3_wrapper") 
+  // TODO/FIXME replace kernel name with standard name for dpuv3int8 
+  // e.g., DPUABC123XYZ
+  {
+    const bool DPUV3INT8_DEBUGMODE =
+        std::getenv("DPUV3INT8_DEBUGMODE") ? atoi(std::getenv("DPUV3INT8_DEBUGMODE")) == 1 : false;
  
-  //# Hardcoded for Debug controller
-  string meta = "meta.json";
-  if(DPUV3INT8_DEBUGMODE==1) 
-      dpu_controller_.emplace_back(new Dpuv3Int8DebugController(meta));
+    if(DPUV3INT8_DEBUGMODE==1) 
+        dpu_controller_.emplace_back(new Dpuv3Int8DebugController("meta.json"));
+    else 
+        dpu_controller_.emplace_back(new Dpuv3Int8Controller(subgraph));
+  }
   else 
-      dpu_controller_.emplace_back(new Dpuv3Int8Controller(subgraph));
+    throw std::runtime_error("Error: no DpuController found for " + kernel);
   
   ip_scale.push_back(1.0f);
   op_scale.push_back(1.0f);
+
   if (dpu_controller_.empty())
     throw std::runtime_error("Error: no FPGA resources available");
 }
-
 
 DpuRunner::~DpuRunner() {
 }
