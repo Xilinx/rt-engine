@@ -5,7 +5,7 @@
 #include "engine.hpp"
 #include "json-c/json.h"
 #include "dpuv3int8_controller.hpp"
-
+#include "dpuv4e_controller.hpp"
 namespace vart{
 
 DpuRunner::DpuRunner(const xir::Subgraph* subgraph) : exec_core_idx_(0) {
@@ -25,6 +25,10 @@ DpuRunner::DpuRunner(const xir::Subgraph* subgraph) : exec_core_idx_(0) {
         dpu_controller_.emplace_back(new Dpuv3Int8DebugController("meta.json"));
     else 
         dpu_controller_.emplace_back(new Dpuv3Int8Controller(subgraph));
+  }
+  else if (kernel == "DPUABC123XYZ") 
+  {
+    dpu_controller_.emplace_back(new DpuV4eController(subgraph));
   }
   else 
     throw std::runtime_error("Error: no DpuController found for " + kernel);
