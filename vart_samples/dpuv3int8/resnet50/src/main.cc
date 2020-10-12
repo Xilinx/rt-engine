@@ -46,6 +46,22 @@
 using namespace std;
 using namespace cv;
 
+std::vector<const xir::Subgraph*> get_dpu_subgraph(
+            const xir::Graph* graph) {
+    auto root = graph->get_root_subgraph();
+    auto children = root->children_topological_sort();
+    auto ret = std::vector<const xir::Subgraph*>();
+    for (auto c : children) {
+        CHECK(c->has_attr("device"));
+        auto device = c->get_attr<std::string>("device");
+        if (device == "DPU") {
+            ret.emplace_back(c);
+        }
+    }
+    return ret;
+}
+
+
 /**
  * @brief Entry for runing ResNet50 neural network
  *
@@ -70,11 +86,18 @@ int main(int argc, char* argv[]) {
   assert((numImgs%batchSz)==0);
   const unsigned num_queries_ = numImgs/batchSz;
 
-  std::unique_ptr<xir::Graph> graph = xir::Graph::deserialize(xmodel_filename);
-  std::vector<xir::Subgraph *> subgraphs = graph->get_root_subgraph()->children_topological_sort();
-  auto subgraph = subgraphs[1];//TO_DO - replace 1 with automated value
+  std::unique_ptr<xir::Graph> graph0 = xir::Graph::deserialize(xmodel_filename);
+  auto subgraph0 = graph0->get_root_subgraph();
+  std::map<std::string, std::string> runset;
+  runset.emplace("run","./build/libengine.so");
+  subgraph0->children_topological_sort()[1]->set_attr("runner", runset);
+//  subgraph0->children_topological_sort()[1]->set_attr<std::string>("kernel", "DPUCVDX8H");
+//  subgraph0->children_topological_sort()[1]->set_attr<std::string>("xclbin", "");
+  graph0->serialize("./dpu.xmodel");
+  std::unique_ptr<xir::Graph> graph = xir::Graph::deserialize("./dpu.xmodel");
+  auto subgraph = get_dpu_subgraph(graph.get());
 
-  auto r = vart::Runner::create_runner(subgraph, "run");
+  auto r = vart::Runner::create_runner(subgraph[0], "run");
   auto runner = r.get();
   auto inputs = dynamic_cast<vart::dpu::DpuRunnerExt*>(runner)->get_inputs();
   auto outputs = dynamic_cast<vart::dpu::DpuRunnerExt*>(runner)->get_outputs();
