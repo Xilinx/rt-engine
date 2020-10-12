@@ -26,7 +26,7 @@ DpuRunner::DpuRunner(const xir::Subgraph* subgraph) : exec_core_idx_(0) {
     else 
         dpu_controller_.emplace_back(new Dpuv3Int8Controller(subgraph));
   }
-  else if (kernel == "DPUABC123XYZ") 
+  else if (kernel == "DPUCVDX8H") 
   {
     dpu_controller_.emplace_back(new DpuV4eController(subgraph));
   }
