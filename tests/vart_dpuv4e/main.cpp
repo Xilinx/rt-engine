@@ -89,7 +89,7 @@ int main(int argc, char* argv[]) {
   auto runner = r.get();
   auto inputs = dynamic_cast<vart::dpu::DpuRunnerExt*>(runner)->get_inputs();
   auto outputs = dynamic_cast<vart::dpu::DpuRunnerExt*>(runner)->get_outputs();
-  
+  auto output_tensors = runner->get_output_tensors(); 
   //std::unique_ptr<cpuUtil> cpuUtilobj_;
   //cpuUtilobj_.reset(new cpuUtil(meta, goldenAvailable, verbose, img_dir, num_queries_));
   std::vector<vart::TensorBuffer*> inTensors;    
@@ -115,6 +115,23 @@ int main(int argc, char* argv[]) {
     	auto ret = (runner)->execute_async(inputs, outputs);
        	(runner)->wait(uint32_t(ret.first), -1);
         //cpuUtilobj_->postProcess(outputs, i);
+        //
+    const auto mode = std::ios_base::out | std::ios_base::binary | std::ios_base::trunc;
+    for (int bi=0; bi < 8; bi++) {
+      for (int t=0;t<3;t++) { 
+        auto output_file = "./output0" +to_string(t)+ to_string( bi) + ".bin";
+        //auto output_file = "./output1" + to_string( bi) + ".bin";
+        //auto output_file = "./output2" + to_string( bi) + ".bin";
+        void* outData;
+        size_t sz;
+        //std::tie(outData, sz) = outputs[bi*3+t]->data();
+        //const char *out = (const char*)outData;
+
+        std::ofstream(output_file, mode).write((char*)outputs[bi*3+t]->data().first, output_tensors[t]->get_element_num());
+      }
+    }
+
+
   }
   auto t2 = std::chrono::high_resolution_clock::now();
   std::chrono::duration<double> elapsed = t2-t1;

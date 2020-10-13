@@ -50,8 +50,6 @@ class XclDpuController : public DpuController {
 
   std::unique_ptr<Dhandle> handle_;
   std::vector<std::unique_ptr<vart::TensorBuffer>> tbufs_;
-  std::vector<std::unique_ptr<vart::TensorBuffer>> input_tensor_buffers_;
-  std::vector<std::unique_ptr<vart::TensorBuffer>> output_tensor_buffers_;
   std::unordered_map<vart::TensorBuffer*, std::unique_ptr<DeviceBuffer>> tbuf2dbuf_;
   std::mutex tbuf_mtx_;
 };

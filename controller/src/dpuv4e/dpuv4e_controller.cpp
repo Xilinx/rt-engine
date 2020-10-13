@@ -58,7 +58,7 @@ using namespace chrono;
 DEF_ENV_PARAM(DPU_IP_LATENCY, "0");
 DEF_ENV_PARAM(DPU_DEBUG_DUMP, "0");
 DEF_ENV_PARAM(DEEPHI_PROFILINE, "0");
-DEF_ENV_PARAM(MLPERF, "0");
+DEF_ENV_PARAM(ENABLE_TB_CREATE, "0");
 /*
  * a contiguous memory block is allocated for each requests' I/O
  * layout:
@@ -94,8 +94,8 @@ DpuV4eController::DpuV4eController(const xir::Subgraph *subgraph)
 }
 DpuV4eController::~DpuV4eController() {
 }
-void DpuV4eController::init_tensor_buffer(std::vector<const xir::Tensor*> tensors,bool isInput) {
-
+std::vector<vart::TensorBuffer*> DpuV4eController::init_tensor_buffer(std::vector<const xir::Tensor*> tensors) {
+ std::vector<vart::TensorBuffer*>  tbufs;
  for (unsigned bs=0; bs < BATCHSIZE; bs++) {
     for (unsigned ti=0; ti < tensors.size(); ti++)
     {
@@ -109,15 +109,18 @@ void DpuV4eController::init_tensor_buffer(std::vector<const xir::Tensor*> tensor
       // make TensorBuffer to hold host memory
       std::unique_ptr<vart::CpuFlatTensorBuffer> tbuf(
         new vart::CpuFlatTensorBuffer(data, tensors[ti]));
+      tbufs.emplace_back(tbuf.get());
       {
         std::unique_lock<std::mutex> lock(tbuf_mtx_);
-        if(isInput)
-          input_tensor_buffers_.emplace_back(std::move(tbuf));
-        else
-          output_tensor_buffers_.emplace_back(std::move(tbuf));
+        tbufs_.emplace_back(std::move(tbuf));
+        //if(isInput)
+        //  input_tensor_buffers_.emplace_back(std::move(tbuf));
+        //else
+        //  output_tensor_buffers_.emplace_back(std::move(tbuf));
       }
     }
   }
+  return tbufs;
 
 }
 
@@ -309,9 +312,6 @@ void DpuV4eController::init_graph(const xir::Subgraph* subgraph) {
     }
 
   }
-  init_tensor_buffer(input_tensors_,true);
-  init_tensor_buffer(output_tensors_,false);
-  create_tensor_buffers(get_merged_io_tensors(),false);
 
   // reg0
   void *reg0Ptr = NULL; 
@@ -365,11 +365,20 @@ std::vector<vart::TensorBuffer*> get_tensor_buffer_pointer(
   return ret;
 }
 std::vector<vart::TensorBuffer*> DpuV4eController::get_inputs() {
-  return get_tensor_buffer_pointer(input_tensor_buffers_);
+//  return get_tensor_buffer_pointer(input_tensor_buffers_);
+  return init_tensor_buffer(input_tensors_);
 }
 
 std::vector<vart::TensorBuffer*> DpuV4eController::get_outputs() {
-  return get_tensor_buffer_pointer(output_tensor_buffers_);
+//  return get_tensor_buffer_pointer(output_tensor_buffers_);
+  auto tbufs = init_tensor_buffer(output_tensors_);
+  auto hwbufs = create_tensor_buffers(get_merged_io_tensors(),false);
+  for (int i=0;i<BATCHSIZE; i++) {
+    std::unique_lock<std::mutex> lock(hwbuf_mtx_);
+    tbuf2hwbuf_.emplace(tbufs[i*output_tensors_.size()], hwbufs[i]);
+    
+  }
+  return tbufs;
 }
 
 #define DPUREG_MISC_END 0x84
@@ -389,6 +398,8 @@ uint32_t read32_dpu_reg(xclDeviceHandle dpu_handle, uint64_t offset) {
 
 void DpuV4eController::run(const std::vector<vart::TensorBuffer*> &inputs, 
     const std::vector<vart::TensorBuffer*> &outputs) {
+  std::vector<vart::TensorBuffer*> input_tensor_buffers;
+  std::vector<vart::TensorBuffer*> output_tensor_buffers;
   if(inputs.size()%input_tensors_.size())
     throw std::runtime_error("Error: input tensorbuffers error");
   unsigned bs = inputs[0]->get_tensor()->get_shape()[0];
@@ -401,24 +412,30 @@ void DpuV4eController::run(const std::vector<vart::TensorBuffer*> &inputs,
   if ((bs != obs) || (inputBs > BATCHSIZE) )
     throw std::runtime_error("Error: size of tensorbuffer not supported");
 
-  if(!ENV_PARAM(MLPERF)) {
+  if(ENV_PARAM(ENABLE_TB_CREATE)) {
+    input_tensor_buffers = get_inputs();
+    output_tensor_buffers = get_outputs();
     unsigned cnt=0;
     for (unsigned i=0; i < input_tensors_.size(); i++ ) {
       for (unsigned j=0; j < inputs.size(); j++) {
         if (inputs[j]->get_tensor()->get_name() == input_tensors_[i]->get_name()) {
           if (bs == inputBs) {
             for (unsigned b=0; b < bs; b++) {
-              memcpy((void*)input_tensor_buffers_[b*input_tensors_.size()+i].get()->data().first,(char*)inputs[j]->data().first+b*input_tensors_[i]->get_element_num(),inputs[j]->get_tensor()->get_element_num());
+              memcpy((void*)input_tensor_buffers[b*input_tensors_.size()+i]->data().first,(char*)inputs[j]->data().first+b*input_tensors_[i]->get_element_num(),inputs[j]->get_tensor()->get_element_num());
             }
           }
           else {
-            memcpy((char*)input_tensor_buffers_[floor(cnt/input_tensors_.size())*input_tensors_.size()+i].get()->data().first,(void *)inputs[j]->data().first,inputs[j]->get_tensor()->get_element_num());
+            memcpy((char*)input_tensor_buffers[floor(cnt/input_tensors_.size())*input_tensors_.size()+i]->data().first,(void *)inputs[j]->data().first,inputs[j]->get_tensor()->get_element_num());
             cnt++;
           }
 
         }
       }
     }
+  }
+  else {
+    input_tensor_buffers = inputs;
+    output_tensor_buffers = outputs;
   }
 
   Engine& engine = Engine::get_instance();
@@ -436,7 +453,16 @@ void DpuV4eController::run(const std::vector<vart::TensorBuffer*> &inputs,
   std::vector<uint64_t> io_addrs(inputBs);
   for (unsigned i=0; i < inputBs; i++)
   {
-    io_bufs[i] = dynamic_cast<XrtDeviceBuffer*>(get_device_buffer(tbufs_[i].get()));
+    vart::TensorBuffer* hwbuf;
+    {
+      std::unique_lock<std::mutex> lock(hwbuf_mtx_);
+      auto it = tbuf2hwbuf_.find(output_tensor_buffers[i*output_tensors_.size()]);
+      if (it == tbuf2hwbuf_.end())
+        throw std::runtime_error("TensorBuffer not found");
+      hwbuf = it->second;
+
+    }
+    io_bufs[i] = dynamic_cast<XrtDeviceBuffer*>(get_device_buffer(hwbuf));
     io_addrs[i] = io_bufs[i]->get_phys_addr(); 
   }
 
@@ -454,7 +480,7 @@ void DpuV4eController::run(const std::vector<vart::TensorBuffer*> &inputs,
 
     for (unsigned j=0; j < xdpu_io_input_offset.size(); j++) {
       const auto inSize = get_input_tensors()[j]->get_element_num();
-      if (xclUnmgdPwrite(xcl_handle, 0, (void *)input_tensor_buffers_[i*xdpu_io_input_offset.size()+j].get()->data().first, inSize,
+      if (xclUnmgdPwrite(xcl_handle, 0, (void *)input_tensor_buffers[i*xdpu_io_input_offset.size()+j]->data().first, inSize,
       //if (xclUnmgdPwrite(xcl_handle, 0, inputs[i]->data().first, inSize,
         io_addrs[i] + xdpu_io_input_offset[j]))
         throw std::runtime_error("Error: upload failed");
@@ -635,7 +661,7 @@ void DpuV4eController::run(const std::vector<vart::TensorBuffer*> &inputs,
     for (unsigned j=0; j< xdpu_io_output_offset.size(); j++) {
       const auto outSize = get_output_tensors()[j]->get_element_num();
       //__TIC_PROFILING__(OUTPUT)
-      if (xclUnmgdPread(xcl_handle, 0, (void*)output_tensor_buffers_[i*xdpu_io_output_offset.size()+j].get()->data().first,
+      if (xclUnmgdPread(xcl_handle, 0, (void*)output_tensor_buffers[i*xdpu_io_output_offset.size()+j]->data().first,
         outSize,
         io_addrs[i] + xdpu_io_output_offset[j]))
         throw std::runtime_error("Error: download failed");
@@ -643,25 +669,25 @@ void DpuV4eController::run(const std::vector<vart::TensorBuffer*> &inputs,
       if(ENV_PARAM(DPU_DEBUG_DUMP)) {
         const auto mode = std::ios_base::out | std::ios_base::binary | std::ios_base::trunc;
         auto output_file = "./output"+ to_string(j) + to_string(i)+".bin";
-          std::ofstream(output_file, mode).write((char*)output_tensor_buffers_[i*xdpu_io_output_offset.size()+j].get()->data().first,outSize);
+          std::ofstream(output_file, mode).write((char*)output_tensor_buffers[i*xdpu_io_output_offset.size()+j]->data().first,outSize);
       }
       sumSize += outSize;
     }
   }
   __TOC__(OUTPUT_D2H)
-  if(!ENV_PARAM(MLPERF)) {
+  if(ENV_PARAM(ENABLE_TB_CREATE)) {
     unsigned cnt=0;
     for (unsigned i=0; i < output_tensors_.size(); i++  ) {
       for (unsigned j=0; j < outputs.size(); j++) {
         if (outputs[j]->get_tensor()->get_name() == output_tensors_[i]->get_name()) {
           if (bs == inputBs) {
             for (unsigned b=0; b < obs; b++) {
-              memcpy((char*)outputs[j]->data().first+b*output_tensors_[i]->get_element_num(), (void*)output_tensor_buffers_[b*output_tensors_.size()+i].get()->data().first,outputs[j]->get_tensor()->get_element_num());
+              memcpy((char*)outputs[j]->data().first+b*output_tensors_[i]->get_element_num(), (void*)output_tensor_buffers[b*output_tensors_.size()+i]->data().first,outputs[j]->get_tensor()->get_element_num());
             }
           }
           else {
 
-            memcpy((char*)outputs[j]->data().first,(void*)output_tensor_buffers_[floor(cnt/output_tensors_.size())*output_tensors_.size()+i].get()->data().first,outputs[j]->get_tensor()->get_element_num());
+            memcpy((char*)outputs[j]->data().first,(void*)output_tensor_buffers[floor(cnt/output_tensors_.size())*output_tensors_.size()+i]->data().first,outputs[j]->get_tensor()->get_element_num());
             cnt++;
 
           }
