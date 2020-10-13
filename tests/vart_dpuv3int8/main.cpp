@@ -89,10 +89,11 @@ int main(int argc, char* argv[]) {
   std::unique_ptr<xir::Graph> graph0 = xir::Graph::deserialize(xmodel_filename);
   auto subgraph0 = graph0->get_root_subgraph();
   std::map<std::string, std::string> runset;
+  //# TODO: Hardcoded rt-engine lib and xclbin path. Update xmodel to aviod this.
   runset.emplace("run","./build/libengine.so");
   subgraph0->children_topological_sort()[1]->set_attr("runner", runset);
+  subgraph0->children_topological_sort()[1]->set_attr<std::string>("xclbin", "tests/dpuv3int8/models/commonImgLabelDir/");
 //  subgraph0->children_topological_sort()[1]->set_attr<std::string>("kernel", "DPUCVDX8H");
-//  subgraph0->children_topological_sort()[1]->set_attr<std::string>("xclbin", "");
   graph0->serialize("./dpu.xmodel");
   std::unique_ptr<xir::Graph> graph = xir::Graph::deserialize("./dpu.xmodel");
   auto subgraph = get_dpu_subgraph(graph.get());
