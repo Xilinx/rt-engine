@@ -3,6 +3,7 @@
 #include <sstream>
 #include <unistd.h>
 #include <unordered_map>
+#include <cstdlib>
 //#include <cmath>
 #pragma GCC diagnostic push 
 #pragma GCC diagnostic ignored "-Wignored-qualifiers"
@@ -48,7 +49,7 @@ XclDpuController<Dhandle, DbufIn, DbufOut>::XclDpuController(const xir::Subgraph
   
   std::string kernelName = subgraph->get_attr<std::string>("kernel");
   // get xclbin path and acquire handle
-  std::string xclbinPath = subgraph->get_attr<std::string>("xclbin");
+  const char* xclbinPath = std::getenv("XLNX_VART_FIRMWARE");
   
   std::cout << "loading xclbin: " << xclbinPath << std::endl;
   handle_.reset(new Dhandle(kernelName, xclbinPath));
@@ -119,7 +120,7 @@ XclDpuController<Dhandle, DbufIn, DbufOut>::create_tensor_buffers(
   for (unsigned ti=0; ti < tensors.size(); ti++)
   {
     // allocate aligned host memory
-    const size_t dataSize = 1;//xir::size_of(tensors[ti]->get_data_type());
+    const size_t dataSize = std::ceil(tensors[ti]->get_data_type().bit_width / 8.f);
     size_t size = tensors[ti]->get_element_num() * dataSize;
     void *data;
     if (posix_memalign(&data, getpagesize(), size))
