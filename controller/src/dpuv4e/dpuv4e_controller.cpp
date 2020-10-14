@@ -390,7 +390,7 @@ std::vector<vart::TensorBuffer*> DpuV4eController::get_outputs() {
 #define DPUREG_SAVE_START 0x9c
 #define DPUREG_LOAD_START 0xa0
 #define DPUREG_CYCLE_COUNTER 0xa8
-uint32_t read32_dpu_reg(xclDeviceHandle dpu_handle, uint64_t offset) {
+static uint32_t read32_dpu_reg(xclDeviceHandle dpu_handle, uint64_t offset) {
   uint32_t val;
   xclRead(dpu_handle, XCL_ADDR_KERNEL_CTRL, offset, (void *)(&val), 4);
   return val;

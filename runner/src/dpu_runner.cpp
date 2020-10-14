@@ -20,7 +20,7 @@ DpuRunner::DpuRunner(const xir::Subgraph* subgraph) : exec_core_idx_(0) {
     const uint8_t type = fingerprint >> 56;
     switch (type) {
       case 0x03: // DPUCAHX8L - DPUv3me - 0x03
-        kernel = "DPUCAHX8L"
+        kernel = "DPUCAHX8L";
         break;
       case 0x05: // DPUCVDX8H - DPUv4e - 0x05
         kernel = "DPUCVDX8H";

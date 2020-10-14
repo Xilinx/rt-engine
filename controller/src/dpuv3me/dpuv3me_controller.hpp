@@ -4,18 +4,19 @@ class DpuV3meController
 : public XclDpuController<XrtDeviceHandle, XrtDeviceBuffer, XrtDeviceBuffer> {
  public:
   DpuV3meController(std::string meta);
+  DpuV3meController(const xir::Subgraph *subgraph);
   virtual ~DpuV3meController() override;
   virtual void run(
-    const std::vector<xir::vart::TensorBuffer*> &inputs,
-    const std::vector<xir::vart::TensorBuffer*> &outputs) override;
-  virtual std::vector<const xir::vart::Tensor*> get_input_tensors() const override;
-  virtual std::vector<const xir::vart::Tensor*> get_output_tensors() const override;
-  virtual std::vector<xir::vart::TensorBuffer*> get_inputs() override;
-  virtual std::vector<xir::vart::TensorBuffer*> get_outputs() override;
+    const std::vector<vart::TensorBuffer*> &inputs,
+    const std::vector<vart::TensorBuffer*> &outputs) override;
+  virtual std::vector<const xir::Tensor*> get_input_tensors() const override;
+  virtual std::vector<const xir::Tensor*> get_output_tensors() const override;
+  virtual std::vector<vart::TensorBuffer*> get_inputs() override;
+  virtual std::vector<vart::TensorBuffer*> get_outputs() override;
 
  private:
   void init(const std::string &meta);
-  std::vector<const xir::vart::Tensor*> get_merged_io_tensors() const;
+  std::vector<const xir::Tensor*> get_merged_io_tensors() const;
 
   std::vector<std::unique_ptr<XrtContext>> contexts_;
   uint64_t code_addr_;

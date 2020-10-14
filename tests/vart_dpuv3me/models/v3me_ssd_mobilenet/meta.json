@@ -1,8 +1,0 @@
-{ 
-  "target": "v3me", 
-  "filename": "dpu.xmodel", 
-  "kernel": "dpu_top", 
-  "config_file": "", 
-  "lib": "", 
-  "xclbin": "/tmp/rexwang/v3me.rt/333.xclbin"
-}

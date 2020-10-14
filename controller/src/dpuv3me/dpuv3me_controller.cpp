@@ -22,6 +22,9 @@
 #include "xir/graph/graph.hpp"
 #include "xir/graph/subgraph.hpp"
 #include "json-c/json.h"
+
+#include "dpu_runner.hpp"
+
 using namespace std;
 #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
 #define BIT(nr) (1 << (nr))
@@ -66,6 +69,14 @@ DpuV3meController::DpuV3meController(std::string meta)
     contexts_.emplace_back(new XrtContext(*handle_));
 
   init(meta);
+}
+
+DpuV3meController::DpuV3meController(const xir::Subgraph *subgraph) 
+  : XclDpuController<XrtDeviceHandle, XrtDeviceBuffer, XrtDeviceBuffer>(subgraph) {
+
+  /**************************
+   * TODO
+   **************************/
 }
 
 DpuV3meController::~DpuV3meController() {
@@ -251,26 +262,26 @@ void DpuV3meController::init(const std::string &meta) {
 }
 
 //FIXME, both the input and output tensor info should come from xmodel
-std::vector<const xir::vart::Tensor*>
+std::vector<const xir::Tensor*>
 DpuV3meController::get_input_tensors() const {
   // TODO get from compiler
-  static xir::vart::Tensor tensor("input", input_dims[0], xir::vart::Tensor::DataType::INT8);
-  return std::vector<const xir::vart::Tensor*>(8, &tensor);
+  static std::unique_ptr<xir::Tensor> tensor(xir::Tensor::create("input", input_dims[0], xir::DataType{xir::DataType::INT, 8}));
+  return std::vector<const xir::Tensor*>(8, tensor.get());
 }
 
-std::vector<const xir::vart::Tensor*>
+std::vector<const xir::Tensor*>
 DpuV3meController::get_output_tensors() const {
   // TODO get from compiler
-  static xir::vart::Tensor tensor("output", output_dims[0], xir::vart::Tensor::DataType::INT8);
-  return std::vector<const xir::vart::Tensor*>(8, &tensor);
+  static std::unique_ptr<xir::Tensor> tensor(xir::Tensor::create("output", output_dims[0], xir::DataType{xir::DataType::INT, 8}));
+  return std::vector<const xir::Tensor*>(8, tensor.get());
 }
 
-std::vector<const xir::vart::Tensor*>
+std::vector<const xir::Tensor*>
 DpuV3meController::get_merged_io_tensors() const {
   // TODO get from compiler
   static const std::vector<std::int32_t> dims = { 1, 1, 1, (int)XDPU_IO_TOTAL_SIZE };
-  static xir::vart::Tensor tensor("inout", dims, xir::vart::Tensor::DataType::INT8);
-  return std::vector<const xir::vart::Tensor*>(8, &tensor);
+  static std::unique_ptr<xir::Tensor> tensor(xir::Tensor::create("inout", dims, xir::DataType{xir::DataType::INT, 8}));
+  return std::vector<const xir::Tensor*>(8, tensor.get());
 }
 
 /*
@@ -278,22 +289,23 @@ DpuV3meController::get_merged_io_tensors() const {
  * (because we used merged {output, input, intermediate}
  *  that is mapped to output TensorBuffer)
  */
-std::vector<xir::vart::TensorBuffer*>
+std::vector<vart::TensorBuffer*>
 DpuV3meController::get_inputs() {
   const auto &tensors = get_input_tensors();
-  std::vector<xir::vart::TensorBuffer*> tbufs;
+  std::vector<vart::TensorBuffer*> tbufs;
   for (unsigned ti=0; ti < tensors.size(); ti++)
   {
     // allocate aligned host memory
-    const size_t dataSize = xir::vart::size_of(tensors[ti]->get_data_type());
+    const size_t dataSize 
+      = std::ceil(tensors[ti]->get_data_type().bit_width / 8.f);
     size_t size = tensors[ti]->get_element_num() * dataSize;
     void *data;
     if (posix_memalign(&data, getpagesize(), size))
       throw std::bad_alloc();
 
     // make TensorBuffer to hold host memory
-    std::unique_ptr<xir::vart::CpuFlatTensorBuffer> tbuf(
-      new xir::vart::CpuFlatTensorBuffer(data, tensors[ti]));
+    std::unique_ptr<vart::CpuFlatTensorBuffer> tbuf(
+      new vart::CpuFlatTensorBuffer(data, tensors[ti]));
     tbufs.emplace_back(tbuf.get());
     {
       std::unique_lock<std::mutex> lock(tbuf_mtx_);
@@ -308,7 +320,7 @@ DpuV3meController::get_inputs() {
  * override output alloc -- extend size to include
  * {output, input, intermediate}
  */
-std::vector<xir::vart::TensorBuffer*>
+std::vector<vart::TensorBuffer*>
 DpuV3meController::get_outputs() {
   return create_tensor_buffers(get_merged_io_tensors(), /*isInput*/false);
 }
@@ -322,14 +334,14 @@ DpuV3meController::get_outputs() {
 #define DPUREG_SAVE_START 0x9c
 #define DPUREG_LOAD_START 0xa0
 
-uint32_t read32_dpu_reg(xclDeviceHandle dpu_handle, uint64_t offset) {
+static uint32_t read32_dpu_reg(xclDeviceHandle dpu_handle, uint64_t offset) {
   uint32_t val;
   xclRead(dpu_handle, XCL_ADDR_KERNEL_CTRL, offset, (void *)(&val), 4);
   return val;
 }
 
-void DpuV3meController::run(const std::vector<xir::vart::TensorBuffer*> &inputs,
-    const std::vector<xir::vart::TensorBuffer*> &outputs) {
+void DpuV3meController::run(const std::vector<vart::TensorBuffer*> &inputs,
+    const std::vector<vart::TensorBuffer*> &outputs) {
 
   Engine& engine = Engine::get_instance();
   const unsigned worker_id = engine.get_my_worker_id();
@@ -357,7 +369,7 @@ void DpuV3meController::run(const std::vector<xir::vart::TensorBuffer*> &inputs,
     // instead of uploading all {output, input, intermediate},
     // just upload input region
     // io_bufs[i]->upload();
-    if (xclUnmgdPwrite(xcl_handle, 0, inputs[i]->data().first, inSize,
+    if (xclUnmgdPwrite(xcl_handle, 0, (void*)inputs[i]->data().first, inSize,
       io_addrs[i] + XDPU_IO_INPUT_OFFSET))
       throw std::runtime_error("Error: upload failed");
   }
@@ -574,7 +586,7 @@ auto trigger_dpu_func = [&](){
     // instead of downloading all {output, input, intermediate},
     // just download output region
     // io_bufs[i]->download();
-    if (xclUnmgdPread(xcl_handle, 0, outputs[i]->data().first,
+    if (xclUnmgdPread(xcl_handle, 0, (void*)outputs[i]->data().first,
       outSize,
       io_addrs[i] + XDPU_IO_OUTPUT_OFFSET))
       throw std::runtime_error("Error: download failed");
