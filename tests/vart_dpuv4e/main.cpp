@@ -74,7 +74,7 @@ int main(int argc, char* argv[]) {
   std::unique_ptr<xir::Graph> graph0 = xir::Graph::deserialize(xmodel_filename);
   auto subgraph0 = graph0->get_root_subgraph();
   std::map<std::string, std::string> runset;
-  runset.emplace("run","./build/libengine.so");
+  runset.emplace("run","librt-engine.so");
   //subgraph0->children_topological_sort()[1]->set_attr<std::string>("kernel", "DPUCVDX8H");
   subgraph0->children_topological_sort()[1]->set_attr("runner", runset);
   subgraph0->children_topological_sort()[1]->set_attr<std::string>("xclbin", "/group/dphi_cloud/v4e_rel/20200923/v4e_8pe_300MHz_xilinx_vck5000-es1_gen3x16_1_202010_1_a29ff10_Sep16Wed1614.xclbin");
