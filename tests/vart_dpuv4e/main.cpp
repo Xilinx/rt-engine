@@ -65,8 +65,8 @@ int main(int argc, char* argv[]) {
   int numImgs = 4;
   int batchSz = 4; 
   string meta = argv[2];
-  bool goldenAvailable = 0;
-  bool verbose = 1;
+  //bool goldenAvailable = 0;
+  //bool verbose = 1;
   string img_dir = argv[3];
   assert((numImgs%batchSz)==0);
   const unsigned num_queries_ = numImgs/batchSz;
@@ -122,8 +122,8 @@ int main(int argc, char* argv[]) {
         auto output_file = "./output0" +to_string(t)+ to_string( bi) + ".bin";
         //auto output_file = "./output1" + to_string( bi) + ".bin";
         //auto output_file = "./output2" + to_string( bi) + ".bin";
-        void* outData;
-        size_t sz;
+        //void* outData;
+        //size_t sz;
         //std::tie(outData, sz) = outputs[bi*3+t]->data();
         //const char *out = (const char*)outData;
 
