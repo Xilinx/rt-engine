@@ -266,7 +266,9 @@ void cpuUtil::loadImages( std::string img_dir, unsigned num_queries){
   int image_channels = inCh;
   int imgSize = image_width*image_height*image_channels*batch_size;
   void *din_data;
-  posix_memalign(&din_data, 4096, imgSize);
+  int checkSize = posix_memalign(&din_data, 4096, imgSize);
+  if(checkSize==0)
+    std::cout<<"Error loading images"<<std::endl;
 
   path p(img_dir);
   for (auto i = directory_iterator(p); i != directory_iterator(); i++)
@@ -287,7 +289,7 @@ void cpuUtil::loadImages( std::string img_dir, unsigned num_queries){
     std::vector<cv::Mat> input_images(batch_size);
     std::vector<cv::Mat> resize_images;
     k=0;
-    for (int l = o*batch_size; l < (o*batch_size)+batch_size; l++)
+    for (uint32_t l = o*batch_size; l < (o*batch_size)+batch_size; l++)
     {
       input_images[k] = cv::imread(imgFileNames_[l], cv::IMREAD_COLOR);
       k=k+1;

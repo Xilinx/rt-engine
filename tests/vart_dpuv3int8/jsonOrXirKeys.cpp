@@ -80,10 +80,12 @@ bool jsonOrXirKeys::getBool(std::string name, json_object* jobj)
 {
   json_object *obj = NULL;
   if (!json_object_object_get_ex(jobj, name.c_str(), &obj))
+  {
     if(name=="usexmodel")
       return false;
     else
       throw std::runtime_error("Error: missing "+name+" field in meta.json");
+  }
   return json_object_get_boolean(obj);
 
 }

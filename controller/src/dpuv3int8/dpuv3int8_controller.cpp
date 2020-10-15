@@ -318,7 +318,7 @@ void Dpuv3Int8Controller::preprocess(vart::TensorBuffer* stdbuf, vart::TensorBuf
   
     void* std_data = (void*)stdbuf->data().first;
     std::vector<uint8_t> flattenedData(xmodel_->getInW()*xmodel_->getInH()*xmodel_->getInCh()*BATCH_SIZE,0);
-    for(int i=0; i<flattenedData.size(); i++)
+    for(uint32_t i=0; i<flattenedData.size(); i++)
     {
       flattenedData[i]=*(int8_t *)((long long) std_data+i);
     }
@@ -327,7 +327,7 @@ void Dpuv3Int8Controller::preprocess(vart::TensorBuffer* stdbuf, vart::TensorBuf
 
     int j=0;
     
-    for(int i=0; i<flattenedData.size(); i=i+BATCH_SIZE)
+    for(uint32_t i=0; i<flattenedData.size(); i=i+BATCH_SIZE)
     {
       uint8_t *ptr = (uint8_t*)&(hwDinVector[j]);
       for(int o=0; o<BATCH_SIZE; o++)
@@ -351,8 +351,8 @@ void Dpuv3Int8Controller::postprocess(vart::TensorBuffer* stdbuf, vart::TensorBu
 void Dpuv3Int8Controller::run(const std::vector<vart::TensorBuffer*> &inputs, 
                         const std::vector<vart::TensorBuffer*> &outputs) {
   
-  XclDeviceBuffer* inbuf = dynamic_cast<XclDeviceBuffer*>(get_device_buffer(inputs[0]));
-  XclDeviceBuffer* outbuf = dynamic_cast<XclDeviceBuffer*>(get_device_buffer(outputs[0]));
+//  XclDeviceBuffer* inbuf = dynamic_cast<XclDeviceBuffer*>(get_device_buffer(inputs[0]));
+//  XclDeviceBuffer* outbuf = dynamic_cast<XclDeviceBuffer*>(get_device_buffer(outputs[0]));
 
   vart::TensorBuffer* inHwTbuf = get_hw_buffer(inputs[0]);
   vart::TensorBuffer* outHwTbuf = get_hw_buffer(outputs[0]);

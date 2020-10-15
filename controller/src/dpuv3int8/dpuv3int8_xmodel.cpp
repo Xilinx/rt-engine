@@ -104,7 +104,7 @@ void Xmodel::loadParamsSubgraph(const xir::Subgraph *subgraph, bool isDebugMode)
   std::vector<std::string> machineCode = subgraph->get_attr<std::vector<std::string>>("mc_code");
   std::ofstream oFile;
   oFile.open(instr_filename_);
-  for(int i=0; i<machineCode.size(); i++)
+  for(uint32_t i=0; i<machineCode.size(); i++)
   {
     oFile<<machineCode[i]<<"\n";
   }
@@ -112,7 +112,7 @@ void Xmodel::loadParamsSubgraph(const xir::Subgraph *subgraph, bool isDebugMode)
   std::vector<std::string> paramsMachineFormat = subgraph->get_attr<std::vector<std::string>>("params");
   std::ofstream oFile1;
   oFile1.open(params_filename_);
-  for(int i=0; i<paramsMachineFormat.size(); i++)
+  for(uint32_t i=0; i<paramsMachineFormat.size(); i++)
   {
     oFile1<<paramsMachineFormat[i]<<"\n";
   }

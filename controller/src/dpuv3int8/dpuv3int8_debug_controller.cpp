@@ -101,7 +101,7 @@ void Dpuv3Int8DebugController::preprocess(vart::TensorBuffer* stdbuf, vart::Tens
     {
       void* std_data = (void*)stdbuf->data().first;
       std::vector<uint8_t> flattenedData(xmodel_->getInW()*xmodel_->getInH()*xmodel_->getInCh()*BATCH_SIZE,0);
-      for(int i=0; i<flattenedData.size(); i++)
+      for(uint32_t i=0; i<flattenedData.size(); i++)
       {
         flattenedData[i]=*(int8_t *)((long long) std_data+i);
       }
@@ -110,7 +110,7 @@ void Dpuv3Int8DebugController::preprocess(vart::TensorBuffer* stdbuf, vart::Tens
   
       int j=0;
       
-      for(int i=0; i<flattenedData.size(); i=i+BATCH_SIZE)
+      for(uint32_t i=0; i<flattenedData.size(); i=i+BATCH_SIZE)
       {
         uint8_t *ptr = (uint8_t*)&(hwDinVector[j]);
         for(int o=0; o<BATCH_SIZE; o++)
@@ -261,12 +261,16 @@ void Dpuv3Int8DebugController::convert2DmemFormat(std::vector<int8_t> &flattened
   int p=0;
   int baseAddr = 0;
   if(dataName!="input")
+  {  
     if(dataName!="inputBatchInterleaved")
+    {
       if(dataName=="params")
         baseAddr = 805306368;
       else
         baseAddr = 268435456;//basically we use dmem conversion only for inputs and outputs, for inputs we set base addr as 0x0 and for outputs we want to set base addr as 0x10000000, since 0x10000000 is what is used in simulation reference model
-  for(int i=0; i<flattenedData.size(); i=i+64)
+    }
+  }
+  for(uint32_t i=0; i<flattenedData.size(); i=i+64)
   {
     data_s = "";
     for(int j=0; j<64; j++)
@@ -284,7 +288,7 @@ void Dpuv3Int8DebugController::convert2DmemFormat(std::vector<int8_t> &flattened
 
   oFile<<"dmem format of "<<dataName<<"\n";
 
-  for(int k=0; k<dwData.size(); k++)
+  for(uint32_t k=0; k<dwData.size(); k++)
   {
     oFile<<dwData[k]<<"\n";
   }
@@ -311,7 +315,7 @@ void Dpuv3Int8DebugController::loadBinFile(std::string binFileName, bool isInput
     debugGolden_=contents;
     
     debug_dumpvals_.open(xmodel_->getDebugDumpdir()+"goldenFlattened.txt");
-    for(int p=0; p<debugGolden_.size(); p++)
+    for(uint32_t p=0; p<debugGolden_.size(); p++)
     {
       debug_dumpvals_<<"idx: "<<p<<" int8 val: "<<(int32_t)debugGolden_[p]<<"\n";
     }
@@ -333,7 +337,7 @@ void Dpuv3Int8DebugController::compareAgainstGolden(void *outData)
       debug_dumpvals_<<"This section prints whether or not outputs in standard NHWC format match the golden binary file provided, it also prints out int8 values along with indices, of results that mismatch\n";
 
     
-    int outSize = xmodel_->getOutSize()*BATCH_SIZE;
+    uint32_t outSize = xmodel_->getOutSize()*BATCH_SIZE;
 //    void *outData = (void*)tbuf->data().first;
     
     if(debugGolden_.size()!=outSize)
@@ -346,7 +350,7 @@ void Dpuv3Int8DebugController::compareAgainstGolden(void *outData)
     
     int counter = 0;
     long double difference = 0;
-    for(int j=0; j<outSize; j++)
+    for(uint32_t j=0; j<outSize; j++)
     {
          
       if((int32_t)*(int8_t *)((long long)outData+j)!=(int32_t)debugGolden_[j])
@@ -383,7 +387,7 @@ void Dpuv3Int8DebugController::batchInterleave()
   if(xmodel_->getChannelAugmentationMode())
   {
     debug_dumpvals_<<"This section contains int8 input values before batch interleave, after channel augmentation\n";
-    for(int i=0; i<debugChAug_.size(); i++)
+    for(uint32_t i=0; i<debugChAug_.size(); i++)
     {
       debug_dumpvals_<<"idx: "<<i<<" int8 val: "<<(int32_t)debugChAug_[i]<<"\n";
     }
@@ -391,7 +395,7 @@ void Dpuv3Int8DebugController::batchInterleave()
   else
   {
     debug_dumpvals_<<"This section contains int8 input values before batch interleave\n";
-    for(int i=0; i<debugInput_.size(); i++)
+    for(uint32_t i=0; i<debugInput_.size(); i++)
     {
       debug_dumpvals_<<"idx: "<<i<<" int8 val: "<<(int32_t)debugInput_[i]<<"\n";
     }
@@ -424,7 +428,6 @@ void Dpuv3Int8DebugController::batchInterleave()
   int dummyMode = dpuCfgDummy;
   int dst_c = 0;
   int dst_c_grp = 0;
-  int ddr_size = 0;
   int dst_c_idx = 0;
   int8_t data = 0;
 
@@ -434,7 +437,7 @@ void Dpuv3Int8DebugController::batchInterleave()
     dst_c = (std::floor(src_c/prllIch)+1)*prllIch;
 
   dst_c_grp = std::floor(dst_c/prllIch);
-  ddr_size = src_b*dst_c*src_w*src_h;
+//  int ddr_size = src_b*dst_c*src_w*src_h;
   for(int h_idx=0; h_idx<src_h; h_idx++)
   {
     for(int w_idx=0; w_idx<src_w; w_idx++)
@@ -502,7 +505,7 @@ void Dpuv3Int8DebugController::batchInterleave()
     }
   }
   
-  for(int i=0; i<debugBatchInterleaved_.size(); i++)
+  for(uint32_t i=0; i<debugBatchInterleaved_.size(); i++)
   {
     debug_dumpvals_<<"idx: "<<i<<" int8 val: "<<(int32_t)debugBatchInterleaved_[i]<<"\n";
   }
