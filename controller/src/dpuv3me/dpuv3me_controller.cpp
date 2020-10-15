@@ -15,7 +15,7 @@
 #include <sys/stat.h>
 #include <sys/types.h>
 #include <iomanip>
-
+#include <math.h>
 #include "engine.hpp"
 #include "dpuv3me_controller.hpp"
 #include "xir/xir.h"
@@ -24,8 +24,15 @@
 #include "json-c/json.h"
 
 #include "dpu_runner.hpp"
+#include "xir/tensor/tensor.hpp"
+#include "vart/tensor_buffer.hpp"
 
+
+#include "vitis/ai/env_config.hpp"
+#include "vitis/ai/profiling.hpp"
+#include "device_handle.hpp"
 using namespace std;
+using namespace chrono;
 #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
 #define BIT(nr) (1 << (nr))
 
@@ -46,6 +53,12 @@ using namespace std;
 #define XDPU_CONTROL_ADDR_1_L 0x108 // input1
 #define XDPU_CONTROL_ADDR_1_H 0x10C
 
+#define BATCHSIZE 1
+
+DEF_ENV_PARAM(DPU_IP_LATENCY, "0");
+DEF_ENV_PARAM(DPU_DEBUG_DUMP, "0");
+DEF_ENV_PARAM(DEEPHI_PROFILINE, "0");
+DEF_ENV_PARAM(ENABLE_TB_CREATE, "0");
 /*
  * a contiguous memory block is allocated for each requests' I/O
  * layout:
@@ -56,12 +69,12 @@ using namespace std;
 //#define XDPU_IO_INPUT_OFFSET      3071
 //#define XDPU_IO_OUTPUT_OFFSET        0
 //#define XDPU_IO_TOTAL_SIZE    11018751
-static size_t XDPU_IO_INPUT_OFFSET;
-static size_t XDPU_IO_OUTPUT_OFFSET;
-static size_t XDPU_IO_TOTAL_SIZE;
+//static size_t XDPU_IO_INPUT_OFFSET;
+//static size_t XDPU_IO_OUTPUT_OFFSET;
+//static size_t XDPU_IO_TOTAL_SIZE;
 
 DpuV3meController::DpuV3meController(std::string meta)
-  : XclDpuController<XrtDeviceHandle, XrtDeviceBuffer, XrtDeviceBuffer>(meta) {
+  : XclDpuController<XrtDeviceHandle, XrtDeviceBuffer, XrtDeviceBuffer>(meta),dump_mode_(false),debug_mode_(false) {
   // assign many contexts -- one for each worker thread
   // threads cannot share contexts (or xclExecWait may miss the 'done' signal)
   Engine& engine = Engine::get_instance();
@@ -72,19 +85,50 @@ DpuV3meController::DpuV3meController(std::string meta)
 }
 
 DpuV3meController::DpuV3meController(const xir::Subgraph *subgraph) 
-  : XclDpuController<XrtDeviceHandle, XrtDeviceBuffer, XrtDeviceBuffer>(subgraph) {
+  : XclDpuController<XrtDeviceHandle, XrtDeviceBuffer, XrtDeviceBuffer>(subgraph),dump_mode_(false),debug_mode_(false) {
+  Engine& engine = Engine::get_instance();
+  for (unsigned i=0; i < engine.get_num_workers(); i++)
+    contexts_.emplace_back(new XrtContext(*handle_));
 
-  /**************************
-   * TODO
-   **************************/
+  init(subgraph);
 }
-
 DpuV3meController::~DpuV3meController() {
 }
+std::vector<vart::TensorBuffer*> DpuV3meController::init_tensor_buffer(std::vector<const xir::Tensor*> tensors) {
+ std::vector<vart::TensorBuffer*>  tbufs;
+ for (unsigned bs=0; bs < BATCHSIZE; bs++) {
+    for (unsigned ti=0; ti < tensors.size(); ti++)
+    {
+      // allocate aligned host memory
+      const size_t dataSize = 1;//vart::size_of(tensors[ti]->get_data_type());
+      size_t size = tensors[ti]->get_element_num() * dataSize;
+      void *data;
+      if (posix_memalign(&data, getpagesize(), size))
+        throw std::bad_alloc();
 
+      // make TensorBuffer to hold host memory
+      std::unique_ptr<vart::CpuFlatTensorBuffer> tbuf(
+        new vart::CpuFlatTensorBuffer(data, tensors[ti]));
+      tbufs.emplace_back(tbuf.get());
+      {
+        std::unique_lock<std::mutex> lock(tbuf_mtx_);
+        tbufs_.emplace_back(std::move(tbuf));
+        //if(isInput)
+        //  input_tensor_buffers_.emplace_back(std::move(tbuf));
+        //else
+        //  output_tensor_buffers_.emplace_back(std::move(tbuf));
+      }
+    }
+  }
+  return tbufs;
+
+}
+
+void DpuV3meController::init(const xir::Subgraph *subgraph) {
+  init_graph(subgraph);
+
+}
 void DpuV3meController::init(const std::string &meta) {
-  auto handle = contexts_[0]->get_dev_handle();
-
   //initialize all code and parameter addr to zero
   code_addr_ = 0x0;
   reg0_addr_ = 0x0;
@@ -107,7 +151,6 @@ void DpuV3meController::init(const std::string &meta) {
   std::string modelName = json_object_get_string(modelObj);
   const string xmodel = dirpath + "/" +modelName;
   cout << xmodel<< endl;
-  xclBOProperties boProp;
 
   if (json_object_object_get_ex(jobj, "dump_mode", &modelObj)) {
     dump_mode_ = json_object_get_boolean(modelObj);
@@ -135,8 +178,15 @@ void DpuV3meController::init(const std::string &meta) {
       subgraph.emplace_back(c);
     }
   }
+  init_graph(subgraph[0]);
+}
+void DpuV3meController::init_graph(const xir::Subgraph* subgraph) {
+  auto handle = contexts_[0]->get_dev_handle();
+  xclBOProperties boProp;
+
+  auto graph = subgraph->get_graph();
   // Get one subgraph
-  const xir::Subgraph* subgraph_ = subgraph[0]; // check subgraph_->get_name()
+  const xir::Subgraph* subgraph_ = subgraph; // check subgraph_->get_name()
   // Load parameter
   size_t parameter_size = 0;
   const char * parameter_value = NULL;
@@ -161,7 +211,7 @@ void DpuV3meController::init(const std::string &meta) {
       total_io_size += reg_id_to_size.at(r.first);
     }
   }
-  XDPU_IO_TOTAL_SIZE = total_io_size;
+  xdpu_io_total_size = total_io_size;
 
   layer_info layer(subgraph_->get_name());
   // Get input offset
@@ -169,9 +219,23 @@ void DpuV3meController::init(const std::string &meta) {
   for (auto &in_name : input_ops_name) {
     auto op = graph->get_op(in_name);
     auto out = op->get_output_tensor();
-    XDPU_IO_INPUT_OFFSET = out->get_attr<std::int32_t>("ddr_addr");
+    xdpu_io_input_offset.emplace_back(out->get_attr<std::int32_t>("ddr_addr"));
+    input_scales_.push_back(pow(2,out->get_attr<std::int32_t>("fix_point")));
     input_dims.emplace_back(out->get_shape());
-    layer.inputs.emplace_back(address_info{XDPU_IO_INPUT_OFFSET, out->get_data_size()});
+    layer.inputs.emplace_back(address_info{out->get_attr<std::int32_t>("ddr_addr"), out->get_data_size()});
+    input_dims.emplace_back(out->get_shape());
+    
+    xir::Tensor *tensor = xir::Tensor::create(in_name, out->get_shape(), xir::DataType{xir::DataType::INT, 8}).release();
+      //std::unique_ptr<xir::Tensor> tensor(
+      //  new xir::Tensor(in_name, out->get_shape(),xir::Tensor::DataType::INT8));
+    //input_tensors_.emplace_back(tensor.get());
+    //auto tensor = out;
+    input_tensors_.emplace_back(tensor);
+      //{
+      //  std::unique_lock<std::mutex> lock(tbuf_mtx_);
+      //  tensors_.emplace_back(std::move(tensor));
+      //}
+
   }
 
   // Get output offset
@@ -179,9 +243,20 @@ void DpuV3meController::init(const std::string &meta) {
   for(auto &out_name : output_ops_name) {
     auto op = graph->get_op(out_name);
     auto out = op->get_output_tensor();
-    XDPU_IO_OUTPUT_OFFSET = out->get_attr<std::int32_t>("ddr_addr");
-    output_dims.emplace_back(out->get_shape());
-    layer.outputs.emplace_back(address_info{XDPU_IO_OUTPUT_OFFSET, out->get_data_size()});
+    xdpu_io_output_offset.emplace_back(out->get_attr<std::int32_t>("ddr_addr"));
+    output_scales_.push_back(pow(2,out->get_attr<std::int32_t>("fix_point")));
+    output_dims.emplace_back(out->get_shape()); 
+    layer.outputs.emplace_back(address_info{out->get_attr<std::int32_t>("ddr_addr"), out->get_data_size()});
+    //std::unique_ptr<xir::Tensor> tensor(
+    //  new xir::Tensor(out_name, out->get_shape(),xir::Tensor::DataType::INT8));
+    xir::Tensor *tensor = xir::Tensor::create(out_name, out->get_shape(), xir::DataType{xir::DataType::INT, 8}).release();
+    //auto tensor = out;
+    output_tensors_.emplace_back(tensor);
+    //{
+    //  std::unique_lock<std::mutex> lock(tbuf_mtx_);
+    //  tensors_.emplace_back(std::move(tensor));
+    //}
+
   }
 
   //in release mode: using dbg_layers_ to store first inputs and final outputs information
@@ -253,77 +328,65 @@ void DpuV3meController::init(const std::string &meta) {
   reg0_addr_ = boProp.paddr;
   free(reg0Ptr);
 
-  printf("preload_code_addr_: %llx\n", preload_code_addr_);
-  printf("preload_reg0_addr_: %llx\n", preload_reg0_addr_);
-  printf("code_addr_: %llx\n", code_addr_);
-  printf("reg0_addr_: %llx\n", reg0_addr_);
-
+  cout << "preload_code_addr_: " << preload_code_addr_ << endl;
+  cout << "preload_reg0_addr_: " << preload_reg0_addr_ << endl;
+  cout << "code_addr_: " << code_addr_ << endl;
+  cout << "reg0_addr_: " << reg0_addr_ << endl;
   program_once_complete = 0;
 }
 
-//FIXME, both the input and output tensor info should come from xmodel
-std::vector<const xir::Tensor*>
-DpuV3meController::get_input_tensors() const {
-  // TODO get from compiler
-  static std::unique_ptr<xir::Tensor> tensor(xir::Tensor::create("input", input_dims[0], xir::DataType{xir::DataType::INT, 8}));
-  return std::vector<const xir::Tensor*>(8, tensor.get());
+std::vector<float> DpuV3meController::get_input_scale() {
+  return input_scales_;
 }
 
-std::vector<const xir::Tensor*>
+std::vector<float> DpuV3meController::get_output_scale() {
+  return output_scales_;
+}
+std::vector<const xir::Tensor*> 
+DpuV3meController::get_input_tensors() const {
+  return input_tensors_;
+}
+
+std::vector<const xir::Tensor*> 
 DpuV3meController::get_output_tensors() const {
-  // TODO get from compiler
-  static std::unique_ptr<xir::Tensor> tensor(xir::Tensor::create("output", output_dims[0], xir::DataType{xir::DataType::INT, 8}));
-  return std::vector<const xir::Tensor*>(8, tensor.get());
+  return output_tensors_;
 }
 
 std::vector<const xir::Tensor*>
 DpuV3meController::get_merged_io_tensors() const {
-  // TODO get from compiler
-  static const std::vector<std::int32_t> dims = { 1, 1, 1, (int)XDPU_IO_TOTAL_SIZE };
-  static std::unique_ptr<xir::Tensor> tensor(xir::Tensor::create("inout", dims, xir::DataType{xir::DataType::INT, 8}));
-  return std::vector<const xir::Tensor*>(8, tensor.get());
+  static const std::vector<std::int32_t> dims = { 1, 1, 1, xdpu_io_total_size };
+  xir::Tensor *tensor = xir::Tensor::create("inout", dims, xir::DataType{xir::DataType::INT, 8}).release();
+  //static xir::Tensor tensor("inout", dims, xir::Tensor::DataType::INT8); 
+  return std::vector<const xir::Tensor*>(8, tensor);
 }
 
-/*
- * override input alloc -- don't allocate any device buffer
- * (because we used merged {output, input, intermediate}
- *  that is mapped to output TensorBuffer)
- */
-std::vector<vart::TensorBuffer*>
-DpuV3meController::get_inputs() {
-  const auto &tensors = get_input_tensors();
-  std::vector<vart::TensorBuffer*> tbufs;
-  for (unsigned ti=0; ti < tensors.size(); ti++)
-  {
-    // allocate aligned host memory
-    const size_t dataSize 
-      = std::ceil(tensors[ti]->get_data_type().bit_width / 8.f);
-    size_t size = tensors[ti]->get_element_num() * dataSize;
-    void *data;
-    if (posix_memalign(&data, getpagesize(), size))
-      throw std::bad_alloc();
+/*static std::vector<vart::TensorBuffer*> get_tensor_buffer_pointer(
+    std::vector<std::unique_ptr<vart::TensorBuffer>>& tensor_buffers) {
+  auto ret = std::vector<vart::TensorBuffer*>();
+  ret.reserve(tensor_buffers.size());
+  std::transform(tensor_buffers.begin(), tensor_buffers.end(),
+                 std::back_inserter(ret),
+                 [](auto& tensor_buffer) { return tensor_buffer.get(); });
+  return ret;
+}*/
 
-    // make TensorBuffer to hold host memory
-    std::unique_ptr<vart::CpuFlatTensorBuffer> tbuf(
-      new vart::CpuFlatTensorBuffer(data, tensors[ti]));
-    tbufs.emplace_back(tbuf.get());
-    {
-      std::unique_lock<std::mutex> lock(tbuf_mtx_);
-      tbufs_.emplace_back(std::move(tbuf));
-    }
+std::vector<vart::TensorBuffer*> DpuV3meController::get_inputs() {
+//  return get_tensor_buffer_pointer(input_tensor_buffers_);
+  return init_tensor_buffer(input_tensors_);
+}
+
+std::vector<vart::TensorBuffer*> DpuV3meController::get_outputs() {
+//  return get_tensor_buffer_pointer(output_tensor_buffers_);
+  auto tbufs = init_tensor_buffer(output_tensors_);
+  auto hwbufs = create_tensor_buffers(get_merged_io_tensors(),false);
+  for (int i=0;i<BATCHSIZE; i++) {
+    std::unique_lock<std::mutex> lock(hwbuf_mtx_);
+    tbuf2hwbuf_.emplace(tbufs[i*output_tensors_.size()], hwbufs[i]);
+    
   }
-
   return tbufs;
 }
 
-/*
- * override output alloc -- extend size to include
- * {output, input, intermediate}
- */
-std::vector<vart::TensorBuffer*>
-DpuV3meController::get_outputs() {
-  return create_tensor_buffers(get_merged_io_tensors(), /*isInput*/false);
-}
 
 #define DPUREG_MISC_END 0x84
 #define DPUREG_CONV_END 0x88
@@ -333,7 +396,7 @@ DpuV3meController::get_outputs() {
 #define DPUREG_CONV_START 0x98
 #define DPUREG_SAVE_START 0x9c
 #define DPUREG_LOAD_START 0xa0
-
+#define DPUREG_CYCLE_COUNTER 0xa8
 static uint32_t read32_dpu_reg(xclDeviceHandle dpu_handle, uint64_t offset) {
   uint32_t val;
   xclRead(dpu_handle, XCL_ADDR_KERNEL_CTRL, offset, (void *)(&val), 4);
@@ -342,6 +405,45 @@ static uint32_t read32_dpu_reg(xclDeviceHandle dpu_handle, uint64_t offset) {
 
 void DpuV3meController::run(const std::vector<vart::TensorBuffer*> &inputs,
     const std::vector<vart::TensorBuffer*> &outputs) {
+  std::vector<vart::TensorBuffer*> input_tensor_buffers;
+  std::vector<vart::TensorBuffer*> output_tensor_buffers;
+  if(inputs.size()%input_tensors_.size())
+    throw std::runtime_error("Error: input tensorbuffers error");
+  unsigned bs = inputs[0]->get_tensor()->get_shape()[0];
+  unsigned obs = outputs[0]->get_tensor()->get_shape()[0];
+  unsigned inputBs;
+  if ((inputs.size()/input_tensors_.size())>1)
+    inputBs = inputs.size()/input_tensors_.size();
+  else
+    inputBs = bs;
+  if ((bs != obs) || (inputBs > BATCHSIZE) )
+    throw std::runtime_error("Error: size of tensorbuffer not supported");
+
+  if(ENV_PARAM(ENABLE_TB_CREATE)) {
+    input_tensor_buffers = get_inputs();
+    output_tensor_buffers = get_outputs();
+    unsigned cnt=0;
+    for (unsigned i=0; i < input_tensors_.size(); i++ ) {
+      for (unsigned j=0; j < inputs.size(); j++) {
+        if (inputs[j]->get_tensor()->get_name() == input_tensors_[i]->get_name()) {
+          if (bs == inputBs) {
+            for (unsigned b=0; b < bs; b++) {
+              memcpy((void*)input_tensor_buffers[b*input_tensors_.size()+i]->data().first,(char*)inputs[j]->data().first+b*input_tensors_[i]->get_element_num(),inputs[j]->get_tensor()->get_element_num());
+            }
+          }
+          else {
+            memcpy((char*)input_tensor_buffers[floor(cnt/input_tensors_.size())*input_tensors_.size()+i]->data().first,(void *)inputs[j]->data().first,inputs[j]->get_tensor()->get_element_num());
+            cnt++;
+          }
+
+        }
+      }
+    }
+  }
+  else {
+    input_tensor_buffers = inputs;
+    output_tensor_buffers = outputs;
+  }
 
   Engine& engine = Engine::get_instance();
   const unsigned worker_id = engine.get_my_worker_id();
@@ -354,26 +456,45 @@ void DpuV3meController::run(const std::vector<vart::TensorBuffer*> &inputs,
   auto bo_addr = context.get_bo_addr();
 
   // get device buffers for input TensorBuffers
-  std::vector<XrtDeviceBuffer*> io_bufs(outputs.size());
-  std::vector<uint64_t> io_addrs(io_bufs.size());
-  for (unsigned i=0; i < outputs.size(); i++)
+  std::vector<XrtDeviceBuffer*> io_bufs(inputBs);
+  std::vector<uint64_t> io_addrs(inputBs);
+  for (unsigned i=0; i < inputBs; i++)
   {
-    io_bufs[i] = dynamic_cast<XrtDeviceBuffer*>(get_device_buffer(outputs[i]));
-    io_addrs[i] = io_bufs[i]->get_phys_addr();
+    vart::TensorBuffer* hwbuf;
+    {
+      std::unique_lock<std::mutex> lock(hwbuf_mtx_);
+      auto it = tbuf2hwbuf_.find(output_tensor_buffers[i*output_tensors_.size()]);
+      if (it == tbuf2hwbuf_.end())
+        throw std::runtime_error("TensorBuffer not found");
+      hwbuf = it->second;
+
+    }
+    io_bufs[i] = dynamic_cast<XrtDeviceBuffer*>(get_device_buffer(hwbuf));
+    io_addrs[i] = io_bufs[i]->get_phys_addr(); 
   }
 
   // upload batch of inputs
-  const auto inSize = get_input_tensors()[0]->get_element_num();
-  for (unsigned i=0; i < io_bufs.size() && i < inputs.size(); i++)
+  //const auto inSize = get_input_tensors()[0]->get_element_num();
+  __TIC__(INPUT_H2D)
+  for (unsigned i=0; i < io_bufs.size() && i < (inputs.size()/xdpu_io_input_offset.size()); i++)
   {
-    // instead of uploading all {output, input, intermediate},
+    // instead of uploading all {output, input, intermediate}, 
     // just upload input region
     // io_bufs[i]->upload();
-    if (xclUnmgdPwrite(xcl_handle, 0, (void*)inputs[i]->data().first, inSize,
-      io_addrs[i] + XDPU_IO_INPUT_OFFSET))
-      throw std::runtime_error("Error: upload failed");
-  }
+   //const auto mode = std::ios_base::out | std::ios_base::binary | std::ios_base::trunc;
+   //  auto input_file = "./input"+ to_string(i)+".bin";
+   //  std::ofstream(input_file, mode).write((char*)inputs[i]->data().first,inSize);
 
+    for (unsigned j=0; j < xdpu_io_input_offset.size(); j++) {
+      const auto inSize = get_input_tensors()[j]->get_element_num();
+      if (xclUnmgdPwrite(xcl_handle, 0, (void *)input_tensor_buffers[i*xdpu_io_input_offset.size()+j]->data().first, inSize,
+      //if (xclUnmgdPwrite(xcl_handle, 0, inputs[i]->data().first, inSize,
+        io_addrs[i] + xdpu_io_input_offset[j]))
+        throw std::runtime_error("Error: upload failed");
+    }
+ 
+  }
+  __TOC__(INPUT_H2D)
   int p;
   int exec_buf_result;
   auto ecmd = reinterpret_cast<ert_start_kernel_cmd*>(bo_addr);
@@ -444,13 +565,13 @@ auto trigger_dpu_func = [&](){
 
   // program DPU input/output addrs
   // io_addrs.size should be 1 with v3me dpu
-  for (unsigned i=0; i < 1; i++)
-  {
-    auto lowOffset = (XDPU_CONTROL_ADDR_1_L + (i*0x100)) / 4;
-    auto highOffset = (XDPU_CONTROL_ADDR_1_H + (i*0x100)) / 4;
-    regVals.push_back({ lowOffset, 0x190000000ULL & 0xFFFFFFFF });
-    regVals.push_back({ highOffset, (0x190000000ULL >> 32) & 0xFFFFFFFF });
-  }
+  for (unsigned i=0; i < 1; i++) {
+      auto lowOffset = (XDPU_CONTROL_ADDR_1_L + (i*0x100)) / 4;
+      auto highOffset = (XDPU_CONTROL_ADDR_1_H + (i*0x100)) / 4;
+      regVals.push_back({ lowOffset, io_addrs[i] & 0xFFFFFFFF });
+      regVals.push_back({ highOffset, (io_addrs[i] >> 32) & 0xFFFFFFFF });
+    }
+
 
   p = 6;
   for (unsigned i=0; i < regVals.size(); i++)
@@ -482,6 +603,8 @@ auto trigger_dpu_func = [&](){
     std::cout << "MISC END  :" << read32_dpu_reg(xcl_handle,  0+ DPUREG_MISC_END) << std::endl;
     throw std::runtime_error("Error: CU timeout " + std::to_string(handle_->get_device_info().cu_index));
   }
+    if(ENV_PARAM(DPU_IP_LATENCY))
+      std::cout << "IP COUNTER:" << read32_dpu_reg(xcl_handle, 0+DPUREG_CYCLE_COUNTER) <<std::endl;
 };
   // program DPU request
   if(!debug_mode_) { //=== run release instructions
@@ -578,18 +701,50 @@ auto trigger_dpu_func = [&](){
       }
     }
   }
-
   // download results into output TensorBuffers
-  const auto outSize = get_output_tensors()[0]->get_element_num();
+ __TIC__(OUTPUT_D2H)
   for (unsigned i=0; i < io_bufs.size(); i++)
   {
     // instead of downloading all {output, input, intermediate},
     // just download output region
     // io_bufs[i]->download();
-    if (xclUnmgdPread(xcl_handle, 0, (void*)outputs[i]->data().first,
-      outSize,
-      io_addrs[i] + XDPU_IO_OUTPUT_OFFSET))
-      throw std::runtime_error("Error: download failed");
+    int sumSize=0;
+    for (unsigned j=0; j< xdpu_io_output_offset.size(); j++) {
+      const auto outSize = get_output_tensors()[j]->get_element_num();
+      //__TIC_PROFILING__(OUTPUT)
+      if (xclUnmgdPread(xcl_handle, 0, (void*)output_tensor_buffers[i*xdpu_io_output_offset.size()+j]->data().first,
+        outSize,
+        io_addrs[i] + xdpu_io_output_offset[j]))
+        throw std::runtime_error("Error: download failed");
+      //__TOC_PROFILING__(OUTPUT)
+      if(ENV_PARAM(DPU_DEBUG_DUMP)) {
+        const auto mode = std::ios_base::out | std::ios_base::binary | std::ios_base::trunc;
+        auto output_file = "./output"+ to_string(j) + to_string(i)+".bin";
+          std::ofstream(output_file, mode).write((char*)output_tensor_buffers[i*xdpu_io_output_offset.size()+j]->data().first,outSize);
+      }
+      sumSize += outSize;
+    }
   }
+  __TOC__(OUTPUT_D2H)
+  if(ENV_PARAM(ENABLE_TB_CREATE)) {
+    unsigned cnt=0;
+    for (unsigned i=0; i < output_tensors_.size(); i++  ) {
+      for (unsigned j=0; j < outputs.size(); j++) {
+        if (outputs[j]->get_tensor()->get_name() == output_tensors_[i]->get_name()) {
+          if (bs == inputBs) {
+            for (unsigned b=0; b < obs; b++) {
+              memcpy((char*)outputs[j]->data().first+b*output_tensors_[i]->get_element_num(), (void*)output_tensor_buffers[b*output_tensors_.size()+i]->data().first,outputs[j]->get_tensor()->get_element_num());
+            }
+          }
+          else {
 
+            memcpy((char*)outputs[j]->data().first,(void*)output_tensor_buffers[floor(cnt/output_tensors_.size())*output_tensors_.size()+i]->data().first,outputs[j]->get_tensor()->get_element_num());
+            cnt++;
+
+          }
+
+        }
+      }
+    }
+  }
 }
