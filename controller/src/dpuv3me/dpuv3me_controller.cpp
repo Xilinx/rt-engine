@@ -126,15 +126,9 @@ std::vector<vart::TensorBuffer*> DpuV3meController::init_tensor_buffer(std::vect
 
 void DpuV3meController::init(const xir::Subgraph *subgraph) {
   init_graph(subgraph);
-
 }
-void DpuV3meController::init(const std::string &meta) {
-  //initialize all code and parameter addr to zero
-  code_addr_ = 0x0;
-  reg0_addr_ = 0x0;
-  preload_code_addr_ = 0x0;
-  preload_reg0_addr_ =0x0;
 
+void DpuV3meController::init(const std::string &meta) {
   // get directory of meta.json
   size_t slash = meta.find_last_of("/");
   auto dirpath = meta.substr(0, slash);
@@ -183,6 +177,12 @@ void DpuV3meController::init(const std::string &meta) {
 void DpuV3meController::init_graph(const xir::Subgraph* subgraph) {
   auto handle = contexts_[0]->get_dev_handle();
   xclBOProperties boProp;
+
+  code_addr_ = 0x0ul;
+  reg0_addr_ = 0x0ul;
+  preload_code_addr_ = 0x0ul;
+  preload_reg0_addr_ = 0x0ul;
+  program_once_complete = 0;
 
   auto graph = subgraph->get_graph();
   // Get one subgraph
@@ -327,12 +327,6 @@ void DpuV3meController::init_graph(const xir::Subgraph* subgraph) {
   xclGetBOProperties(handle, reg0Mem, &boProp);
   reg0_addr_ = boProp.paddr;
   free(reg0Ptr);
-
-  cout << "preload_code_addr_: " << preload_code_addr_ << endl;
-  cout << "preload_reg0_addr_: " << preload_reg0_addr_ << endl;
-  cout << "code_addr_: " << code_addr_ << endl;
-  cout << "reg0_addr_: " << reg0_addr_ << endl;
-  program_once_complete = 0;
 }
 
 std::vector<float> DpuV3meController::get_input_scale() {
