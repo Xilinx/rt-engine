@@ -7,6 +7,8 @@
 #include "dpuv3int8_controller.hpp"
 #include "dpuv3me_controller.hpp"
 #include "dpuv4e_controller.hpp"
+#include "vitis/ai/target_factory.hpp"
+
 namespace vart{
 
 DpuRunner::DpuRunner(const xir::Subgraph* subgraph) : exec_core_idx_(0) {
@@ -17,24 +19,7 @@ DpuRunner::DpuRunner(const xir::Subgraph* subgraph) : exec_core_idx_(0) {
   std::string kernel;
   if (subgraph->has_attr("dpu_fingerprint")) {
     const uint64_t fingerprint = subgraph->get_attr<std::uint64_t>("dpu_fingerprint");
-    const uint8_t type = fingerprint >> 56;
-    switch (type) {
-      case 0x03: // DPUCAHX8L - DPUv3me - 0x03
-        kernel = "DPUCAHX8L";
-        break;
-      case 0x05: // DPUCVDX8H - DPUv4e - 0x05
-        kernel = "DPUCVDX8H";
-        break;
-      case 0x01: // DPUCZDX8G - DPUv2 - 0x01
-      case 0x02: // DPUCAHX8H - DPUv3e - 0x02
-      case 0x04: // DPUCZDI4G - DPU4f - 0x04
-      case 0x06: // DPUCVDX8G - XVDPU - 0x06
-        throw std::runtime_error("Error: load runtime library error for DPU type " + std::to_string(type));
-        break;
-      default:
-        throw std::runtime_error("Error: not support DPU type " + std::to_string(type));
-        break;
-    }
+    kernel = vitis::ai::target_factory()->create(fingerprint).type();
   } else {
     kernel = subgraph->get_attr<std::string>("kernel");
   }
