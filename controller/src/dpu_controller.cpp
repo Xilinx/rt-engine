@@ -16,7 +16,7 @@
 #include "dpu_controller.hpp"
 #include "dpu_runner.hpp"
 #include "json-c/json.h"
-
+#include "vitis/ai/target_factory.hpp"
 
 template <class Dhandle, class DbufIn, class DbufOut>
 XclDpuController<Dhandle, DbufIn, DbufOut>::XclDpuController(std::string meta) 
@@ -46,8 +46,14 @@ XclDpuController<Dhandle, DbufIn, DbufOut>::XclDpuController(std::string meta)
 template <class Dhandle, class DbufIn, class DbufOut>
 XclDpuController<Dhandle, DbufIn, DbufOut>::XclDpuController(const xir::Subgraph *subgraph) 
 : DpuController(subgraph) {
-  
-  std::string kernelName = subgraph->get_attr<std::string>("kernel");
+
+  std::string kernelName;
+  if (subgraph->has_attr("dpu_fingerprint")) {
+    const uint64_t fingerprint = subgraph->get_attr<std::uint64_t>("dpu_fingerprint");
+    kernelName = vitis::ai::target_factory()->create(fingerprint).type();
+  } else {
+    kernelName = subgraph->get_attr<std::string>("kernel");
+  }
   // get xclbin path and acquire handle
   const char* xclbinPath = std::getenv("XLNX_VART_FIRMWARE");
   
