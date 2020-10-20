@@ -25,8 +25,8 @@ ifndef XILINX_VART
 endif
 
 XILINX_XRT := /opt/xilinx/xrt
-VITIS_INCLUDES := -I $(XILINX_XRT)/include -I$(CONDA_PREFIX)/include/xip/butler -I$(CONDA_PREFIX)/include -I$(XILINX_VART)/include
-VITIS_LIBS := -L$(BUILD_DIR) -L$(CONDA_PREFIX)/lib -L$(XILINX_XRT)/lib -L$(XILINX_VART)/lib
+VITIS_INCLUDES := -I $(XILINX_XRT)/include -I$(CONDA_PREFIX)/include/xip/butler -I$(CONDA_PREFIX)/include -I$(XILINX_VART)/include -I/usr/include
+VITIS_LIBS := -L$(BUILD_DIR) -L$(CONDA_PREFIX)/lib -L$(XILINX_XRT)/lib -L$(XILINX_VART)/lib -L/usr/lib
 
 XILINX_XRM := /opt/xilinx/xrm
 ifneq "$(wildcard $(XILINX_XRM))" ""
