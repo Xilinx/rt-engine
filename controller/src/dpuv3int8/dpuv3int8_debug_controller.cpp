@@ -21,6 +21,25 @@ Dpuv3Int8DebugController::Dpuv3Int8DebugController(std::string meta) : Dpuv3Int8
 
 }
 
+Dpuv3Int8DebugController::Dpuv3Int8DebugController(const xir::Subgraph *subgraph) : Dpuv3Int8Controller(subgraph)
+{
+
+  xmodel_.reset(new Xmodel(subgraph, true));
+  loadBinFile(xmodel_->getDebugDinFilename(), true);
+  loadBinFile(xmodel_->getDebugGoldenFilename(), false);
+  
+  if(not xmodel_->getSinglePoolDebug())
+  {
+    debugDumpParams((void*)params_.data(), params_.size()*BATCH_SIZE);
+    debugDumpParamsDdrFormat();
+  }
+
+  debugDumpInstr();
+  debugDumpInstrAcCode(); 
+ 
+}
+
+
 void Dpuv3Int8DebugController::debugDumpInstrAcCode()
 {
   debug_dumpvals_.open(xmodel_->getDebugDumpdir()+"instrasmUsed.asm");

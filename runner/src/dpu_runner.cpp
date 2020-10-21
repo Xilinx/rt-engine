@@ -32,7 +32,7 @@ DpuRunner::DpuRunner(const xir::Subgraph* subgraph) : exec_core_idx_(0) {
         std::getenv("DPUV3INT8_DEBUGMODE") ? atoi(std::getenv("DPUV3INT8_DEBUGMODE")) == 1 : false;
  
     if(DPUV3INT8_DEBUGMODE==1) 
-        dpu_controller_.emplace_back(new Dpuv3Int8DebugController("meta.json"));
+        dpu_controller_.emplace_back(new Dpuv3Int8DebugController(subgraph));
     else 
         dpu_controller_.emplace_back(new Dpuv3Int8Controller(subgraph));
   }

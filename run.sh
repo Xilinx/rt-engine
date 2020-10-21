@@ -24,4 +24,14 @@ export DPUV3INT8_DEBUGMODE=0
 # dpuv3int8 - vart resnet50 sample
 ./build/tests/vart_dpuv3int8.exe tests/dpuv3int8/models/dpuv3int8_xir/resnet50_handwritten.xmodel tests/dpuv3int8/models/dpuv3int8_xir/meta.json tests/dpuv3int8/models/commonImgLabelDir/imageDir/
 
+#single thread
+build/tests/dpuv3int8.exe -r tests/dpuv3int8/models/dpuv3int8_xir/resnet50_handwritten.xmodel -t tc -d tests/dpuv3int8/models/commonImgLabelDir/imageDir100 -n 100 -s 4 -g true
+
+#multi thread
+build/tests/dpuv3int8.exe -r tests/dpuv3int8/models/dpuv3int8_xir/resnet50_handwritten.xmodel -t tcmt -d tests/dpuv3int8/models/commonImgLabelDir/imageDir100 -n 100 -s 4 -g true
+#build/tests/dpuv3int8.exe -r tests/dpuv3int8/models/dpuv3int8_xir/resnet50_handwritten.xmodel -t tcmt -d tests/dpuv3int8/models/commonImgLabelDir/imageDir10000 -n 10000 -s 4 -g true
+
+export DPUV3INT8_DEBUGMODE=1
+build/tests/dpuv3int8.exe -r tests/dpuv3int8/models/dpuv3int8_debugTestCases/xirdebugCase/resnet50_case2_compiled_1008.xmodel -t tc -p
+
 #build/tests/engine.exe

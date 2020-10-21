@@ -102,6 +102,7 @@ class Dpuv3Int8DebugController : public Dpuv3Int8Controller {
 
   public:
     Dpuv3Int8DebugController(std::string meta);
+    Dpuv3Int8DebugController(const xir::Subgraph *subgraph);
 
   private:
     virtual void preprocess(vart::TensorBuffer*, vart::TensorBuffer*);

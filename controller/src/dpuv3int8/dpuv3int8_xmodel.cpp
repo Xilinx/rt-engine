@@ -173,8 +173,7 @@ Xmodel::Xmodel(std::string meta, bool isDebugMode)
 
 Xmodel::Xmodel(const xir::Subgraph *subgraph, bool isDebugMode)
 {
-  runner_dir_ = "tests/dpuv3int8/models/dpuv3int8_xir/";//subgraph->get_attr<std::string>("runner_dir");
-  std::cout<<"Runner dir is hardcoded right now, xir subgraph has ot be annotated with runner dir"<<std::endl;
+  runner_dir_ = subgraph->get_attr<std::string>("runner_dir");
   instr_asm_filename_ = runner_dir_+"instr.asm";
   instr_filename_ = runner_dir_+"instr.txt";
   params_filename_ = runner_dir_+"params.txt";
