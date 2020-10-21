@@ -1,0 +1,51 @@
+{
+    "inputs": {
+        "resnet_v1_50/block1/unit_2/bottleneck_v1/add": {
+            "name": "resnet_v1_50/block1/unit_2/bottleneck_v1/add",
+            "shape": [
+                4,
+                56,
+                56,
+                256
+            ],
+            "address": 0
+        }
+    },
+    "outputs": {
+        "resnet_v1_50/block1/unit_3/bottleneck_v1/shortcut/MaxPool": {
+            "name": "resnet_v1_50/block1/unit_3/bottleneck_v1/shortcut/MaxPool",
+            "shape": [
+                4,
+                28,
+                28,
+                256
+            ],
+            "address": 25690112
+        }
+    },
+    "cmd": [
+        "SC/HwAbstraction/code_generation.py -o SC/work/manasa/tf/all/12/out.asm --params SC/work/manasa/tf/all/12/params.txt -n examples/tf_resnetv1_50_imagenet_224_224_6.97G/quantized/quantize_eval_model.pb -f tensorflow --json SC/meta.json -swpipe true -opfus true -opfuse true --biaspatch true --quant examples/tf_resnetv1_50_imagenet_224_224_6.97G/quantized/temp_fix.txt --forwardcut resnet_v1_50/block1/unit_3/bottleneck_v1/shortcut/MaxPool --backwardcut resnet_v1_50/block1/unit_3/bottleneck_v1/shortcut/MaxPool"
+    ],
+    "paramsFile": "controller/src/dpuv3int8/params.txt",
+    "channelAugmentationMode": false,
+    "swapBufSize": 16777216,
+    "inDDRSize": 150528,
+    "druSrcBufSize": 16777216,
+    "druDstBufSize": 16777216,
+    "druMode": true,
+    "model": "res50",
+    "kernel": "dpdpuv3_wrapper",
+    "xclbin": "tests/app/models/dpuv3int8_resnet50",
+    "instrFile": "controller/src/dpuv3int8/instr.txt",
+    "dInFile": "controller/src/dpuv3int8/din.txt",
+    "dOutFile": "controller/src/dpuv3int8/dout.txt",
+    "resultFile": "controller/src/dpuv3int8/result.txt",
+    "inKernelW": 1,
+    "inStrdW": 2,
+    "inCh": 256,
+    "inH": 56,
+    "inW": 56,
+    "outW": 28,
+    "padLft": 0,
+    "padRt": 0
+}

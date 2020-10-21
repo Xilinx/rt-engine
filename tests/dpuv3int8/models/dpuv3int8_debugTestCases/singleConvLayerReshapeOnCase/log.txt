@@ -1,0 +1,1719 @@
+[INFO] parse raw model     :  0%|          | 0/271 [00:00<?, ?it/s]                          [INFO] parse raw model     :100%|██████████| 271/271 [00:00<00:00, 31519.50it/s]             
+[INFO] infer shape (NHWC)  :  0%|          | 0/220 [00:00<?, ?it/s]                          [INFO] infer shape (NHWC)  :100%|██████████| 220/220 [00:00<00:00, 4619.62it/s]              
+[INFO] generate xmodel     :  0%|          | 0/220 [00:00<?, ?it/s]                          [INFO] generate xmodel     : 52%|█████▏    | 115/220 [00:00<00:00, 1139.62it/s]              [INFO] generate xmodel     : 80%|███████▉  | 175/220 [00:00<00:00, 838.90it/s]               [INFO] generate xmodel     : 98%|█████████▊| 215/220 [00:00<00:00, 376.70it/s]               [INFO] generate xmodel     :100%|██████████| 220/220 [00:00<00:00, 476.40it/s]               ['/proj/xsjhdstaff3/paolod/perforce/RDI_paolod_Dev_work/src/DeepLearning/xilinx/gitlab/vai-toolchain/SC/HwAbstraction', '/wrk/hdstaff/paolod/perforce/RDI_paolod_Dev_work/src/DeepLearning/xilinx/gitlab/vai-toolchain', '/wrk/hdstaff/paolod/perforce/RDI_paolod_Dev_work/temp/anaconda2/envs/XIR2/lib/python37.zip', '/wrk/hdstaff/paolod/perforce/RDI_paolod_Dev_work/temp/anaconda2/envs/XIR2/lib/python3.7', '/wrk/hdstaff/paolod/perforce/RDI_paolod_Dev_work/temp/anaconda2/envs/XIR2/lib/python3.7/lib-dynload', '/wrk/hdstaff/paolod/perforce/RDI_paolod_Dev_work/temp/anaconda2/envs/XIR2/lib/python3.7/site-packages', '/proj/xsjhdstaff3/paolod/perforce/RDI_paolod_Dev_work/temp/anaconda2/envs/XIR2/lib/python3.7/site-packages/xir']
+[INFO] ignore pretty_errors package
+no wait
+proto examples/tf_resnetv1_50_imagenet_224_224_6.97G/quantized/quantize_eval_model.pb
+caffe None
+[INFO] tensorflow model: examples/tf_resnetv1_50_imagenet_224_224_6.97G/quantized/quantize_eval_model.pb
+<bound method Op.get_name of <op.Op object at 0x7f5dc948cfd0>> [256, 3, 3, 256]
+<bound method Op.get_name of <op.Op object at 0x7f5dc948cf90>> [4, 14, 14, 256]
+<bound method Op.get_name of <op.Op object at 0x7f5dc948cf50>> [256]
+<bound method Op.get_name of <op.Op object at 0x7f5dc948cf10>> [4, 14, 14, 256]
+<bound method Op.get_name of <op.Op object at 0x7f5dc948cc50>> [256]
+<bound method Op.get_name of <op.Op object at 0x7f5dc948ce90>> [256]
+<bound method Op.get_name of <op.Op object at 0x7f5dc948ce50>> [4, 56, 56, 64]
+<bound method Op.get_name of <op.Op object at 0x7f5dc948ce10>> [4, 28, 28, 512]
+<bound method Op.get_name of <op.Op object at 0x7f5dc948c890>> [4, 28, 28, 64]
+<bound method Op.get_name of <op.Op object at 0x7f5dc948ced0>> [4, 28, 28, 512]
+<bound method Op.get_name of <op.Op object at 0x7f5dc948cdd0>> [4, 56, 56, 256]
+<bound method Op.get_name of <op.Op object at 0x7f5dc948cd90>> [1024]
+<bound method Op.get_name of <op.Op object at 0x7f5dc948cd50>> [4, 28, 28, 512]
+<bound method Op.get_name of <op.Op object at 0x7f5dc948cc90>> [4, 28, 28, 512]
+<bound method Op.get_name of <op.Op object at 0x7f5dc948ccd0>> [64, 1, 1, 256]
+<bound method Op.get_name of <op.Op object at 0x7f5dc948cc10>> [4, 28, 28, 512]
+<bound method Op.get_name of <op.Op object at 0x7f5dc948cbd0>> [4, 56, 56, 256]
+<bound method Op.get_name of <op.Op object at 0x7f5dc948cb90>> [1024, 1, 1, 256]
+<bound method Op.get_name of <op.Op object at 0x7f5dc948cb50>> [4, 28, 28, 64]
+<bound method Op.get_name of <op.Op object at 0x7f5dc948cb10>> [4, 28, 28, 512]
+<bound method Op.get_name of <op.Op object at 0x7f5dc948cad0>> [64]
+<bound method Op.get_name of <op.Op object at 0x7f5dc948ca90>> [4, 14, 14, 1024]
+<bound method Op.get_name of <op.Op object at 0x7f5dc948c7d0>> [4, 56, 56, 64]
+<bound method Op.get_name of <op.Op object at 0x7f5dc948ca50>> [4, 14, 14, 1024]
+<bound method Op.get_name of <op.Op object at 0x7f5dc948ca10>> [64, 1, 1, 256]
+<bound method Op.get_name of <op.Op object at 0x7f5dc948c9d0>> [1024, 1, 1, 256]
+<bound method Op.get_name of <op.Op object at 0x7f5dc948c990>> [256, 1, 1, 64]
+<bound method Op.get_name of <op.Op object at 0x7f5dc948c510>> [1024, 1, 1, 256]
+<bound method Op.get_name of <op.Op object at 0x7f5dc948c950>> [4, 14, 14, 256]
+<bound method Op.get_name of <op.Op object at 0x7f5dc948c910>> [4, 28, 28, 512]
+<bound method Op.get_name of <op.Op object at 0x7f5dc948c8d0>> [4, 14, 14, 256]
+<bound method Op.get_name of <op.Op object at 0x7f5dc948c810>> [4, 56, 56, 256]
+<bound method Op.get_name of <op.Op object at 0x7f5dc948c850>> [4, 14, 14, 256]
+<bound method Op.get_name of <op.Op object at 0x7f5dc948c790>> [4, 28, 28, 512]
+<bound method Op.get_name of <op.Op object at 0x7f5dc948c750>> [256]
+<bound method Op.get_name of <op.Op object at 0x7f5dc948c710>> [256]
+<bound method Op.get_name of <op.Op object at 0x7f5dc948c450>> [4, 28, 28, 128]
+<bound method Op.get_name of <op.Op object at 0x7f5dc948c6d0>> [256, 3, 3, 256]
+<bound method Op.get_name of <op.Op object at 0x7f5dc948c690>> [256, 3, 3, 256]
+<bound method Op.get_name of <op.Op object at 0x7f5dc948c650>> [4, 56, 56, 64]
+<bound method Op.get_name of <op.Op object at 0x7f5dc948c610>> [4, 14, 14, 256]
+<bound method Op.get_name of <op.Op object at 0x7f5dc948c190>> [4, 14, 14, 256]
+<bound method Op.get_name of <op.Op object at 0x7f5dc948c5d0>> [4, 28, 28, 128]
+<bound method Op.get_name of <op.Op object at 0x7f5dc948c590>> [4, 56, 56, 256]
+<bound method Op.get_name of <op.Op object at 0x7f5dc948c550>> [4, 28, 28, 512]
+<bound method Op.get_name of <op.Op object at 0x7f5dc948c490>> [256]
+<bound method Op.get_name of <op.Op object at 0x7f5dc948c4d0>> [512]
+<bound method Op.get_name of <op.Op object at 0x7f5dc948c410>> [4, 14, 14, 256]
+<bound method Op.get_name of <op.Op object at 0x7f5dc948c3d0>> [256]
+<bound method Op.get_name of <op.Op object at 0x7f5dc948c390>> [256, 1, 1, 64]
+<bound method Op.get_name of <op.Op object at 0x7f5dc948c350>> [256]
+<bound method Op.get_name of <op.Op object at 0x7f5dc948c310>> [256, 1, 1, 64]
+<bound method Op.get_name of <op.Op object at 0x7f5dc948c2d0>> [256, 1, 1, 1024]
+<bound method Op.get_name of <op.Op object at 0x7f5dc948c290>> [256, 1, 1, 64]
+<bound method Op.get_name of <op.Op object at 0x7f5dc948c0d0>> [256, 1, 1, 1024]
+<bound method Op.get_name of <op.Op object at 0x7f5dc948c250>> [4, 56, 56, 64]
+<bound method Op.get_name of <op.Op object at 0x7f5dc948c210>> [1024, 1, 1, 256]
+<bound method Op.get_name of <op.Op object at 0x7f5dc948c1d0>> [64]
+<bound method Op.get_name of <op.Op object at 0x7f5dc948c110>> [4, 14, 14, 256]
+<bound method Op.get_name of <op.Op object at 0x7f5dc948c150>> [64, 3, 3, 64]
+<bound method Op.get_name of <op.Op object at 0x7f5dc948c090>> [4, 14, 14, 256]
+<bound method Op.get_name of <op.Op object at 0x7f5dc948c050>> [512, 1, 1, 256]
+<bound method Op.get_name of <op.Op object at 0x7f5dc948ed90>> [4, 14, 14, 256]
+<bound method Op.get_name of <op.Op object at 0x7f5dc948efd0>> [4, 28, 28, 256]
+<bound method Op.get_name of <op.Op object at 0x7f5dc948ef90>> [256]
+<bound method Op.get_name of <op.Op object at 0x7f5dc948ecd0>> [4, 28, 28, 256]
+<bound method Op.get_name of <op.Op object at 0x7f5dc948ef50>> [256]
+<bound method Op.get_name of <op.Op object at 0x7f5dc948ef10>> [4, 28, 28, 256]
+<bound method Op.get_name of <op.Op object at 0x7f5dc948eed0>> [4, 56, 56, 64]
+<bound method Op.get_name of <op.Op object at 0x7f5dc948ee90>> [4, 56, 56, 64]
+<bound method Op.get_name of <op.Op object at 0x7f5dc948ea10>> [256, 3, 3, 256]
+<bound method Op.get_name of <op.Op object at 0x7f5dc948ee50>> [512, 1, 1, 128]
+<bound method Op.get_name of <op.Op object at 0x7f5dc948ee10>> [4, 56, 56, 64]
+<bound method Op.get_name of <op.Op object at 0x7f5dc948edd0>> [4, 28, 28, 128]
+<bound method Op.get_name of <op.Op object at 0x7f5dc948ed10>> [1]
+<bound method Op.get_name of <op.Op object at 0x7f5dc948ed50>> [4, 28, 28, 128]
+<bound method Op.get_name of <op.Op object at 0x7f5dc948ec90>> [256, 1, 1, 512]
+<bound method Op.get_name of <op.Op object at 0x7f5dc948ec50>> [4, 56, 56, 256]
+<bound method Op.get_name of <op.Op object at 0x7f5dc948ec10>> [4, 56, 56, 64]
+<bound method Op.get_name of <op.Op object at 0x7f5dc948e950>> [128, 3, 3, 128]
+<bound method Op.get_name of <op.Op object at 0x7f5dc948ebd0>> [64]
+<bound method Op.get_name of <op.Op object at 0x7f5dc948eb90>> [64, 3, 3, 64]
+<bound method Op.get_name of <op.Op object at 0x7f5dc948eb50>> [256]
+<bound method Op.get_name of <op.Op object at 0x7f5dc948eb10>> [4, 56, 56, 256]
+<bound method Op.get_name of <op.Op object at 0x7f5dc948e490>> [4, 56, 56, 256]
+<bound method Op.get_name of <op.Op object at 0x7f5dc948ead0>> [4, 58, 58, 64]
+<bound method Op.get_name of <op.Op object at 0x7f5dc948ea90>> [256]
+<bound method Op.get_name of <op.Op object at 0x7f5dc948ea50>> [64, 1, 1, 64]
+<bound method Op.get_name of <op.Op object at 0x7f5dc948e990>> [4, 56, 56, 256]
+<bound method Op.get_name of <op.Op object at 0x7f5dc948e9d0>> [4, 56, 56, 64]
+<bound method Op.get_name of <op.Op object at 0x7f5dc948e910>> [256, 1, 1, 64]
+<bound method Op.get_name of <op.Op object at 0x7f5dc948e850>> [128, 1, 1, 512]
+<bound method Op.get_name of <op.Op object at 0x7f5dc948e8d0>> [256, 1, 1, 64]
+<bound method Op.get_name of <op.Op object at 0x7f5dc948e890>> [128, 1, 1, 512]
+<bound method Op.get_name of <op.Op object at 0x7f5dc948e810>> [4, 28, 28, 128]
+<bound method Op.get_name of <op.Op object at 0x7f5dc948e7d0>> [64, 3, 3, 64]
+<bound method Op.get_name of <op.Op object at 0x7f5dc948e790>> [4, 56, 56, 64]
+<bound method Op.get_name of <op.Op object at 0x7f5dc948e750>> [4, 14, 14, 256]
+<bound method Op.get_name of <op.Op object at 0x7f5dc948e710>> [4, 28, 28, 512]
+<bound method Op.get_name of <op.Op object at 0x7f5dc948e6d0>> [128, 3, 3, 128]
+<bound method Op.get_name of <op.Op object at 0x7f5dc948e690>> [256]
+<bound method Op.get_name of <op.Op object at 0x7f5dc948e650>> [4, 56, 56, 64]
+<bound method Op.get_name of <op.Op object at 0x7f5dc948e610>> [4, 14, 14, 256]
+<bound method Op.get_name of <op.Op object at 0x7f5dc948e5d0>> [4, 28, 28, 256]
+<bound method Op.get_name of <op.Op object at 0x7f5dc948e590>> [256]
+<bound method Op.get_name of <op.Op object at 0x7f5dc948e3d0>> [4, 14, 14, 256]
+<bound method Op.get_name of <op.Op object at 0x7f5dc948e550>> [4, 112, 112, 64]
+<bound method Op.get_name of <op.Op object at 0x7f5dc948e510>> [4, 56, 56, 64]
+<bound method Op.get_name of <op.Op object at 0x7f5dc948e4d0>> [4, 112, 112, 64]
+<bound method Op.get_name of <op.Op object at 0x7f5dc948e410>> [256]
+<bound method Op.get_name of <op.Op object at 0x7f5dc948e450>> [256]
+<bound method Op.get_name of <op.Op object at 0x7f5dc948e390>> [512, 1, 1, 128]
+<bound method Op.get_name of <op.Op object at 0x7f5dc948e350>> [64]
+<bound method Op.get_name of <op.Op object at 0x7f5dc948e310>> [4, 56, 56, 64]
+<bound method Op.get_name of <op.Op object at 0x7f5dc948e2d0>> [128, 3, 3, 128]
+<bound method Op.get_name of <op.Op object at 0x7f5dc948e290>> [4, 56, 56, 256]
+<bound method Op.get_name of <op.Op object at 0x7f5dc948e250>> [4, 30, 30, 128]
+<bound method Op.get_name of <op.Op object at 0x7f5dc948e210>> [256, 3, 3, 256]
+<bound method Op.get_name of <op.Op object at 0x7f5dc948e1d0>> [4, 56, 56, 64]
+<bound method Op.get_name of <op.Op object at 0x7f5dc948e190>> [4, 30, 30, 128]
+<bound method Op.get_name of <op.Op object at 0x7f5dc948e150>> [4, 28, 28, 512]
+<bound method Op.get_name of <op.Op object at 0x7f5dc948e110>> [64]
+<bound method Op.get_name of <op.Op object at 0x7f5dc948e0d0>> [4, 14, 14, 512]
+<bound method Op.get_name of <op.Op object at 0x7f5dc948e090>> [64, 3, 3, 64]
+<bound method Op.get_name of <op.Op object at 0x7f5dc948e050>> [4, 28, 28, 128]
+<bound method Op.get_name of <op.Op object at 0x7f5dc948acd0>> [512, 1, 1, 128]
+<bound method Op.get_name of <op.Op object at 0x7f5dc948afd0>> [4, 1000]
+<bound method Op.get_name of <op.Op object at 0x7f5dc948af90>> [4, 1000]
+<bound method Op.get_name of <op.Op object at 0x7f5dc948af50>> [4, 1000]
+<bound method Op.get_name of <op.Op object at 0x7f5dc948af10>> [4, 1000]
+<bound method Op.get_name of <op.Op object at 0x7f5dc948aed0>> [4, 1000]
+<bound method Op.get_name of <op.Op object at 0x7f5dc948ac10>> [4, 1000]
+<bound method Op.get_name of <op.Op object at 0x7f5dc948ae90>> [512]
+<bound method Op.get_name of <op.Op object at 0x7f5dc948ae50>> [4, 28, 28, 128]
+<bound method Op.get_name of <op.Op object at 0x7f5dc948ae10>> [4, 14, 14, 1024]
+<bound method Op.get_name of <op.Op object at 0x7f5dc948add0>> [1024]
+<bound method Op.get_name of <op.Op object at 0x7f5dc948a950>> [4, 14, 14, 1024]
+<bound method Op.get_name of <op.Op object at 0x7f5dc948ad90>> [4, 14, 14, 1024]
+<bound method Op.get_name of <op.Op object at 0x7f5dc948ad50>> [512]
+<bound method Op.get_name of <op.Op object at 0x7f5dc948ad10>> [4, 14, 14, 1024]
+<bound method Op.get_name of <op.Op object at 0x7f5dc948ac50>> [4, 14, 14, 1024]
+<bound method Op.get_name of <op.Op object at 0x7f5dc948ac90>> [1024]
+<bound method Op.get_name of <op.Op object at 0x7f5dc948abd0>> [2]
+<bound method Op.get_name of <op.Op object at 0x7f5dc948ab90>> [4, 112, 112, 64]
+<bound method Op.get_name of <op.Op object at 0x7f5dc948ab50>> [64]
+<bound method Op.get_name of <op.Op object at 0x7f5dc948a850>> [4, 56, 56, 256]
+<bound method Op.get_name of <op.Op object at 0x7f5dc948ab10>> [128, 3, 3, 128]
+<bound method Op.get_name of <op.Op object at 0x7f5dc948aad0>> [4, 28, 28, 128]
+<bound method Op.get_name of <op.Op object at 0x7f5dc948aa90>> [4, 28, 28, 128]
+<bound method Op.get_name of <op.Op object at 0x7f5dc948aa50>> [4, 28, 28, 128]
+<bound method Op.get_name of <op.Op object at 0x7f5dc948a5d0>> [64, 7, 7, 3]
+<bound method Op.get_name of <op.Op object at 0x7f5dc948aa10>> [64]
+<bound method Op.get_name of <op.Op object at 0x7f5dc948a9d0>> [64]
+<bound method Op.get_name of <op.Op object at 0x7f5dc948a990>> [512]
+<bound method Op.get_name of <op.Op object at 0x7f5dc948a8d0>> [4, 28, 28, 512]
+<bound method Op.get_name of <op.Op object at 0x7f5dc948a910>> [64, 7, 7, 3]
+<bound method Op.get_name of <op.Op object at 0x7f5dc948a510>> [512, 1, 1, 128]
+<bound method Op.get_name of <op.Op object at 0x7f5dc948a7d0>> [4, 28, 28, 128]
+<bound method Op.get_name of <op.Op object at 0x7f5dc948a810>> [512, 1, 1, 128]
+<bound method Op.get_name of <op.Op object at 0x7f5dc948a890>> [4, 28, 28, 128]
+<bound method Op.get_name of <op.Op object at 0x7f5dc948a790>> [128]
+<bound method Op.get_name of <op.Op object at 0x7f5dc948a750>> [4, 28, 28, 128]
+<bound method Op.get_name of <op.Op object at 0x7f5dc948a710>> [64, 3, 3, 64]
+<bound method Op.get_name of <op.Op object at 0x7f5dc948a6d0>> [64]
+<bound method Op.get_name of <op.Op object at 0x7f5dc948a150>> [64, 3, 3, 64]
+<bound method Op.get_name of <op.Op object at 0x7f5dc948a690>> [4, 230, 230, 3]
+<bound method Op.get_name of <op.Op object at 0x7f5dc948a650>> [4, 28, 28, 128]
+<bound method Op.get_name of <op.Op object at 0x7f5dc948a610>> [4, 7, 7, 2048]
+<bound method Op.get_name of <op.Op object at 0x7f5dc948a550>> [4, 230, 230, 3]
+<bound method Op.get_name of <op.Op object at 0x7f5dc948a590>> [4, 28, 28, 128]
+<bound method Op.get_name of <op.Op object at 0x7f5dc948a4d0>> [1024, 1, 1, 256]
+<bound method Op.get_name of <op.Op object at 0x7f5dc948a490>> [4, 28, 28, 512]
+<bound method Op.get_name of <op.Op object at 0x7f5dc948a450>> [512]
+<bound method Op.get_name of <op.Op object at 0x7f5dc948a410>> [4, 7, 7, 2048]
+<bound method Op.get_name of <op.Op object at 0x7f5dc948a3d0>> [4, 56, 56, 64]
+<bound method Op.get_name of <op.Op object at 0x7f5dc948a390>> [4, 224, 224, 3]
+<bound method Op.get_name of <op.Op object at 0x7f5dc948a350>> [4, 28, 28, 512]
+<bound method Op.get_name of <op.Op object at 0x7f5dc948a310>> [128]
+<bound method Op.get_name of <op.Op object at 0x7f5dc948a2d0>> [128, 3, 3, 128]
+<bound method Op.get_name of <op.Op object at 0x7f5dc948a290>> [128]
+<bound method Op.get_name of <op.Op object at 0x7f5dc948a250>> [128]
+<bound method Op.get_name of <op.Op object at 0x7f5dc948a090>> [1024, 1, 1, 256]
+<bound method Op.get_name of <op.Op object at 0x7f5dc948a210>> [512, 1, 1, 256]
+<bound method Op.get_name of <op.Op object at 0x7f5dc948a1d0>> [512]
+<bound method Op.get_name of <op.Op object at 0x7f5dc948a190>> [4, 28, 28, 256]
+<bound method Op.get_name of <op.Op object at 0x7f5dc948a0d0>> [128, 1, 1, 256]
+<bound method Op.get_name of <op.Op object at 0x7f5dc948a110>> [4, 28, 28, 512]
+<bound method Op.get_name of <op.Op object at 0x7f5dc948a050>> [4, 14, 14, 256]
+<bound method Op.get_name of <op.Op object at 0x7f5dc9488050>> [4, 16, 16, 256]
+<bound method Op.get_name of <op.Op object at 0x7f5dc9488090>> [512]
+<bound method Op.get_name of <op.Op object at 0x7f5dc94880d0>> [256, 3, 3, 256]
+<bound method Op.get_name of <op.Op object at 0x7f5dc9488110>> [1024]
+<bound method Op.get_name of <op.Op object at 0x7f5dc9488150>> [4, 16, 16, 256]
+<bound method Op.get_name of <op.Op object at 0x7f5dc9488190>> [64, 1, 1, 256]
+<bound method Op.get_name of <op.Op object at 0x7f5dc94881d0>> [4, 14, 14, 256]
+<bound method Op.get_name of <op.Op object at 0x7f5dc9488210>> [4, 7, 7, 1024]
+<bound method Op.get_name of <op.Op object at 0x7f5dc9488250>> [4, 7, 7, 1024]
+<bound method Op.get_name of <op.Op object at 0x7f5dc9488290>> [4, 14, 14, 256]
+<bound method Op.get_name of <op.Op object at 0x7f5dc94882d0>> [256]
+<bound method Op.get_name of <op.Op object at 0x7f5dc9488310>> [256]
+<bound method Op.get_name of <op.Op object at 0x7f5dc9488350>> [256, 1, 1, 1024]
+<bound method Op.get_name of <op.Op object at 0x7f5dc9488390>> [256, 1, 1, 1024]
+<bound method Op.get_name of <op.Op object at 0x7f5dc94883d0>> [4, 14, 14, 1024]
+<bound method Op.get_name of <op.Op object at 0x7f5dc9488410>> [4, 14, 14, 256]
+<bound method Op.get_name of <op.Op object at 0x7f5dc9488450>> [4, 14, 14, 1024]
+<bound method Op.get_name of <op.Op object at 0x7f5dc9488490>> [4, 14, 14, 1024]
+<bound method Op.get_name of <op.Op object at 0x7f5dc94884d0>> [2048]
+<bound method Op.get_name of <op.Op object at 0x7f5dc9488510>> [1024]
+<bound method Op.get_name of <op.Op object at 0x7f5dc9488550>> [4, 14, 14, 1024]
+<bound method Op.get_name of <op.Op object at 0x7f5dc9488590>> [4, 14, 14, 1024]
+<bound method Op.get_name of <op.Op object at 0x7f5dc94885d0>> [1024, 1, 1, 256]
+<bound method Op.get_name of <op.Op object at 0x7f5dc9488610>> [1024, 1, 1, 256]
+<bound method Op.get_name of <op.Op object at 0x7f5dc9488650>> [4, 14, 14, 256]
+<bound method Op.get_name of <op.Op object at 0x7f5dc9488690>> [4, 14, 14, 256]
+<bound method Op.get_name of <op.Op object at 0x7f5dc94886d0>> [256]
+<bound method Op.get_name of <op.Op object at 0x7f5dc9488710>> [256]
+<bound method Op.get_name of <op.Op object at 0x7f5dc9488750>> [256, 3, 3, 256]
+<bound method Op.get_name of <op.Op object at 0x7f5dc9488790>> [512]
+<bound method Op.get_name of <op.Op object at 0x7f5dc94887d0>> [4, 14, 14, 256]
+<bound method Op.get_name of <op.Op object at 0x7f5dc9488810>> [256, 3, 3, 256]
+<bound method Op.get_name of <op.Op object at 0x7f5dc9488850>> [4, 58, 58, 64]
+<bound method Op.get_name of <op.Op object at 0x7f5dc9488890>> [4, 7, 7, 2048]
+<bound method Op.get_name of <op.Op object at 0x7f5dc94888d0>> [2048]
+<bound method Op.get_name of <op.Op object at 0x7f5dc9488910>> [4, 7, 7, 2048]
+<bound method Op.get_name of <op.Op object at 0x7f5dc9488950>> [2048, 1, 1, 512]
+<bound method Op.get_name of <op.Op object at 0x7f5dc9488990>> [2048, 1, 1, 512]
+<bound method Op.get_name of <op.Op object at 0x7f5dc94889d0>> [4, 7, 7, 512]
+<bound method Op.get_name of <op.Op object at 0x7f5dc9488a10>> [4, 7, 7, 512]
+<bound method Op.get_name of <op.Op object at 0x7f5dc9488a50>> [4, 7, 7, 512]
+<bound method Op.get_name of <op.Op object at 0x7f5dc9488a90>> [512]
+<bound method Op.get_name of <op.Op object at 0x7f5dc9488ad0>> [512, 3, 3, 512]
+<bound method Op.get_name of <op.Op object at 0x7f5dc9488b10>> [4, 7, 7, 2048]
+<bound method Op.get_name of <op.Op object at 0x7f5dc9488b50>> [512, 3, 3, 512]
+<bound method Op.get_name of <op.Op object at 0x7f5dc9488b90>> [4, 7, 7, 512]
+<bound method Op.get_name of <op.Op object at 0x7f5dc9488bd0>> [4, 7, 7, 2048]
+<bound method Op.get_name of <op.Op object at 0x7f5dc9488c10>> [256]
+<bound method Op.get_name of <op.Op object at 0x7f5dc9488c50>> [4, 28, 28, 256]
+<bound method Op.get_name of <op.Op object at 0x7f5dc9488c90>> [4, 7, 7, 512]
+<bound method Op.get_name of <op.Op object at 0x7f5dc9488cd0>> [256, 3, 3, 256]
+<bound method Op.get_name of <op.Op object at 0x7f5dc9488d10>> [4, 56, 56, 64]
+<bound method Op.get_name of <op.Op object at 0x7f5dc9488d50>> [4, 28, 28, 256]
+<bound method Op.get_name of <op.Op object at 0x7f5dc9488d90>> [64]
+<bound method Op.get_name of <op.Op object at 0x7f5dc9488dd0>> [64]
+<bound method Op.get_name of <op.Op object at 0x7f5dc9488e10>> [4, 56, 56, 64]
+<bound method Op.get_name of <op.Op object at 0x7f5dc9488e50>> [4, 28, 28, 64]
+<bound method Op.get_name of <op.Op object at 0x7f5dc9488e90>> [128, 3, 3, 128]
+<bound method Op.get_name of <op.Op object at 0x7f5dc9488ed0>> [128, 3, 3, 128]
+<bound method Op.get_name of <op.Op object at 0x7f5dc9488f10>> [128]
+<bound method Op.get_name of <op.Op object at 0x7f5dc9488f50>> [128]
+<bound method Op.get_name of <op.Op object at 0x7f5dc9488f90>> [64]
+<bound method Op.get_name of <op.Op object at 0x7f5dc9488fd0>> [256]
+<bound method Op.get_name of <op.Op object at 0x7f5dc9484050>> [64]
+<bound method Op.get_name of <op.Op object at 0x7f5dc9484090>> [4, 56, 56, 256]
+<bound method Op.get_name of <op.Op object at 0x7f5dc94840d0>> [4, 1, 1, 2048]
+<bound method Op.get_name of <op.Op object at 0x7f5dc9484110>> [4, 14, 14, 256]
+<bound method Op.get_name of <op.Op object at 0x7f5dc9484150>> [64]
+<bound method Op.get_name of <op.Op object at 0x7f5dc9484190>> [1000, 1, 1, 2048]
+<bound method Op.get_name of <op.Op object at 0x7f5dc94841d0>> [256, 3, 3, 256]
+<bound method Op.get_name of <op.Op object at 0x7f5dc9484210>> [4, 7, 7, 512]
+<bound method Op.get_name of <op.Op object at 0x7f5dc9484250>> [1000, 1, 1, 2048]
+<bound method Op.get_name of <op.Op object at 0x7f5dc9484290>> [4, 7, 7, 1024]
+<bound method Op.get_name of <op.Op object at 0x7f5dc94842d0>> [2048]
+<bound method Op.get_name of <op.Op object at 0x7f5dc9484310>> [4, 1, 1, 2048]
+<bound method Op.get_name of <op.Op object at 0x7f5dc9484350>> [4, 14, 14, 1024]
+<bound method Op.get_name of <op.Op object at 0x7f5dc9484390>> [2048]
+<bound method Op.get_name of <op.Op object at 0x7f5dc94843d0>> [4, 1, 1, 2048]
+<bound method Op.get_name of <op.Op object at 0x7f5dc9484410>> [4, 7, 7, 1024]
+<bound method Op.get_name of <op.Op object at 0x7f5dc9484450>> [2048, 1, 1, 1024]
+<bound method Op.get_name of <op.Op object at 0x7f5dc9484490>> [4, 7, 7, 2048]
+<bound method Op.get_name of <op.Op object at 0x7f5dc94844d0>> [4, 7, 7, 1024]
+<bound method Op.get_name of <op.Op object at 0x7f5dc9484510>> [512]
+<bound method Op.get_name of <op.Op object at 0x7f5dc9484550>> [4, 7, 7, 2048]
+<bound method Op.get_name of <op.Op object at 0x7f5dc9484590>> [4, 7, 7, 1024]
+<bound method Op.get_name of <op.Op object at 0x7f5dc94845d0>> [2048, 1, 1, 1024]
+<bound method Op.get_name of <op.Op object at 0x7f5dc9484610>> [4, 7, 7, 2048]
+<bound method Op.get_name of <op.Op object at 0x7f5dc9484650>> [4, 28, 28, 512]
+<bound method Op.get_name of <op.Op object at 0x7f5dc9484690>> [512]
+<bound method Op.get_name of <op.Op object at 0x7f5dc94846d0>> [4, 7, 7, 2048]
+<bound method Op.get_name of <op.Op object at 0x7f5dc9484710>> [128]
+<bound method Op.get_name of <op.Op object at 0x7f5dc9484750>> [512, 1, 1, 1024]
+<bound method Op.get_name of <op.Op object at 0x7f5dc9484790>> [4, 7, 7, 2048]
+<bound method Op.get_name of <op.Op object at 0x7f5dc94847d0>> [128]
+<bound method Op.get_name of <op.Op object at 0x7f5dc9484810>> [512, 1, 1, 1024]
+<bound method Op.get_name of <op.Op object at 0x7f5dc9484850>> [2048]
+<bound method Op.get_name of <op.Op object at 0x7f5dc9484890>> [64, 1, 1, 64]
+<bound method Op.get_name of <op.Op object at 0x7f5dc94848d0>> [4, 7, 7, 1024]
+<bound method Op.get_name of <op.Op object at 0x7f5dc9484910>> [2048, 1, 1, 512]
+<bound method Op.get_name of <op.Op object at 0x7f5dc9484950>> [1024]
+<bound method Op.get_name of <op.Op object at 0x7f5dc9484990>> [1024]
+<bound method Op.get_name of <op.Op object at 0x7f5dc94849d0>> [2048, 1, 1, 512]
+<bound method Op.get_name of <op.Op object at 0x7f5dc9484a10>> [4, 14, 14, 1024]
+<bound method Op.get_name of <op.Op object at 0x7f5dc9484a50>> [128]
+<bound method Op.get_name of <op.Op object at 0x7f5dc9484a90>> [2048, 1, 1, 512]
+<bound method Op.get_name of <op.Op object at 0x7f5dc9484ad0>> [4, 14, 14, 256]
+<bound method Op.get_name of <op.Op object at 0x7f5dc9484b10>> [4, 28, 28, 512]
+<bound method Op.get_name of <op.Op object at 0x7f5dc9484b50>> [1024]
+<bound method Op.get_name of <op.Op object at 0x7f5dc9484b90>> [1024]
+<bound method Op.get_name of <op.Op object at 0x7f5dc9484bd0>> [2048]
+<bound method Op.get_name of <op.Op object at 0x7f5dc9484c10>> [1024, 1, 1, 512]
+<bound method Op.get_name of <op.Op object at 0x7f5dc9484c50>> [4, 14, 14, 128]
+<bound method Op.get_name of <op.Op object at 0x7f5dc9484c90>> [2048]
+<bound method Op.get_name of <op.Op object at 0x7f5dc9484cd0>> [1024, 1, 1, 512]
+<bound method Op.get_name of <op.Op object at 0x7f5dc9484d10>> [512]
+<bound method Op.get_name of <op.Op object at 0x7f5dc9484d50>> [2048, 1, 1, 512]
+<bound method Op.get_name of <op.Op object at 0x7f5dc9484d90>> [4, 14, 14, 1024]
+<bound method Op.get_name of <op.Op object at 0x7f5dc9484dd0>> [4, 28, 28, 128]
+<bound method Op.get_name of <op.Op object at 0x7f5dc9484e10>> [4, 7, 7, 512]
+<bound method Op.get_name of <op.Op object at 0x7f5dc9484e50>> [256]
+<bound method Op.get_name of <op.Op object at 0x7f5dc9484e90>> [128]
+<bound method Op.get_name of <op.Op object at 0x7f5dc9484ed0>> [4, 7, 7, 512]
+<bound method Op.get_name of <op.Op object at 0x7f5dc9484f10>> [4, 14, 14, 256]
+<bound method Op.get_name of <op.Op object at 0x7f5dc9484f50>> [256]
+<bound method Op.get_name of <op.Op object at 0x7f5dc9484f90>> [512]
+<bound method Op.get_name of <op.Op object at 0x7f5dc9484fd0>> [4, 14, 14, 256]
+<bound method Op.get_name of <op.Op object at 0x7f5dc9483d10>> [256, 1, 1, 512]
+<bound method Op.get_name of <op.Op object at 0x7f5dc9483fd0>> [4, 7, 7, 512]
+<bound method Op.get_name of <op.Op object at 0x7f5dc9483f90>> [256, 1, 1, 1024]
+<bound method Op.get_name of <op.Op object at 0x7f5dc9483f50>> [2048]
+<bound method Op.get_name of <op.Op object at 0x7f5dc9483f10>> [512]
+<bound method Op.get_name of <op.Op object at 0x7f5dc9483c50>> [256, 1, 1, 1024]
+<bound method Op.get_name of <op.Op object at 0x7f5dc9483ed0>> [4, 14, 14, 512]
+<bound method Op.get_name of <op.Op object at 0x7f5dc9483e90>> [512, 3, 3, 512]
+<bound method Op.get_name of <op.Op object at 0x7f5dc9483e50>> [4, 14, 14, 1024]
+<bound method Op.get_name of <op.Op object at 0x7f5dc9483e10>> [4, 14, 14, 512]
+<bound method Op.get_name of <op.Op object at 0x7f5dc9483790>> [512, 3, 3, 512]
+<bound method Op.get_name of <op.Op object at 0x7f5dc9483dd0>> [4, 14, 14, 1024]
+<bound method Op.get_name of <op.Op object at 0x7f5dc9483d90>> [4, 14, 14, 512]
+<bound method Op.get_name of <op.Op object at 0x7f5dc9483d50>> [4, 7, 7, 512]
+<bound method Op.get_name of <op.Op object at 0x7f5dc9483c90>> [1024]
+<bound method Op.get_name of <op.Op object at 0x7f5dc9483cd0>> [128, 1, 1, 512]
+<bound method Op.get_name of <op.Op object at 0x7f5dc9483c10>> [4, 7, 7, 512]
+<bound method Op.get_name of <op.Op object at 0x7f5dc9483b50>> [4, 14, 14, 1024]
+<bound method Op.get_name of <op.Op object at 0x7f5dc9483bd0>> [128, 1, 1, 512]
+<bound method Op.get_name of <op.Op object at 0x7f5dc9483b90>> [512]
+<bound method Op.get_name of <op.Op object at 0x7f5dc9483b10>> [4, 14, 14, 1024]
+<bound method Op.get_name of <op.Op object at 0x7f5dc9483ad0>> [256]
+<bound method Op.get_name of <op.Op object at 0x7f5dc9483a90>> [4, 7, 7, 512]
+<bound method Op.get_name of <op.Op object at 0x7f5dc9483a50>> [1024, 1, 1, 256]
+<bound method Op.get_name of <op.Op object at 0x7f5dc9483a10>> [256, 1, 1, 1024]
+<bound method Op.get_name of <op.Op object at 0x7f5dc94839d0>> [512, 1, 1, 2048]
+<bound method Op.get_name of <op.Op object at 0x7f5dc9483990>> [1024]
+<bound method Op.get_name of <op.Op object at 0x7f5dc94836d0>> [256, 1, 1, 1024]
+<bound method Op.get_name of <op.Op object at 0x7f5dc9483950>> [512]
+<bound method Op.get_name of <op.Op object at 0x7f5dc9483910>> [4, 56, 56, 256]
+<bound method Op.get_name of <op.Op object at 0x7f5dc94838d0>> [4, 28, 28, 128]
+<bound method Op.get_name of <op.Op object at 0x7f5dc9483890>> [512, 1, 1, 2048]
+<bound method Op.get_name of <op.Op object at 0x7f5dc9483310>> [256, 1, 1, 64]
+<bound method Op.get_name of <op.Op object at 0x7f5dc9483850>> [4, 14, 14, 1024]
+<bound method Op.get_name of <op.Op object at 0x7f5dc9483810>> [4, 7, 7, 512]
+<bound method Op.get_name of <op.Op object at 0x7f5dc94837d0>> [128, 1, 1, 256]
+<bound method Op.get_name of <op.Op object at 0x7f5dc9483710>> [4, 14, 14, 1024]
+<bound method Op.get_name of <op.Op object at 0x7f5dc9483750>> [512, 1, 1, 2048]
+<bound method Op.get_name of <op.Op object at 0x7f5dc9483690>> [4, 14, 14, 256]
+<bound method Op.get_name of <op.Op object at 0x7f5dc9483650>> [128]
+<bound method Op.get_name of <op.Op object at 0x7f5dc9483610>> [4, 7, 7, 2048]
+<bound method Op.get_name of <op.Op object at 0x7f5dc94835d0>> [256]
+<bound method Op.get_name of <op.Op object at 0x7f5dc9483590>> [4, 14, 14, 1024]
+<bound method Op.get_name of <op.Op object at 0x7f5dc9483550>> [4, 7, 7, 512]
+<bound method Op.get_name of <op.Op object at 0x7f5dc9483510>> [256]
+<bound method Op.get_name of <op.Op object at 0x7f5dc94834d0>> [1024]
+<bound method Op.get_name of <op.Op object at 0x7f5dc9483490>> [4, 7, 7, 512]
+<bound method Op.get_name of <op.Op object at 0x7f5dc9483450>> [256, 1, 1, 1024]
+<bound method Op.get_name of <op.Op object at 0x7f5dc9483410>> [4, 14, 14, 128]
+<bound method Op.get_name of <op.Op object at 0x7f5dc9483250>> [4, 14, 14, 256]
+<bound method Op.get_name of <op.Op object at 0x7f5dc94833d0>> [1024, 1, 1, 256]
+<bound method Op.get_name of <op.Op object at 0x7f5dc9483390>> [256, 1, 1, 1024]
+<bound method Op.get_name of <op.Op object at 0x7f5dc9483350>> [4, 14, 14, 128]
+<bound method Op.get_name of <op.Op object at 0x7f5dc9483290>> [4, 7, 7, 512]
+<bound method Op.get_name of <op.Op object at 0x7f5dc94832d0>> [4, 14, 14, 1024]
+<bound method Op.get_name of <op.Op object at 0x7f5dc9483210>> [128]
+<bound method Op.get_name of <op.Op object at 0x7f5dc94831d0>> [512]
+<bound method Op.get_name of <op.Op object at 0x7f5dc9483190>> [4, 14, 14, 1024]
+<bound method Op.get_name of <op.Op object at 0x7f5dc9483150>> [128]
+<bound method Op.get_name of <op.Op object at 0x7f5dc9483110>> [4, 14, 14, 1024]
+<bound method Op.get_name of <op.Op object at 0x7f5dc94830d0>> [128, 3, 3, 128]
+<bound method Op.get_name of <op.Op object at 0x7f5dc9483090>> [512]
+<bound method Op.get_name of <op.Op object at 0x7f5dc9483050>> [1024]
+<bound method Op.get_name of <op.Op object at 0x7f5dc4a8e050>> [4, 28, 28, 128]
+<bound method Op.get_name of <op.Op object at 0x7f5dc4a8e090>> [512, 3, 3, 512]
+<bound method Op.get_name of <op.Op object at 0x7f5dc4a8e0d0>> [4, 14, 14, 1024]
+<bound method Op.get_name of <op.Op object at 0x7f5dc4a8e110>> [4, 28, 28, 128]
+<bound method Op.get_name of <op.Op object at 0x7f5dc4a8e150>> [512, 3, 3, 512]
+<bound method Op.get_name of <op.Op object at 0x7f5dc4a8e190>> [256]
+<bound method Op.get_name of <op.Op object at 0x7f5dc4a8e1d0>> [4, 28, 28, 128]
+<bound method Op.get_name of <op.Op object at 0x7f5dc4a8e210>> [4, 7, 7, 512]
+<bound method Op.get_name of <op.Op object at 0x7f5dc94bc410>> [1024]
+<bound method Op.get_name of <op.Op object at 0x7f5dc94bc210>> [128]
+<bound method Op.get_name of <op.Op object at 0x7f5dc9decd50>> [512]
+<bound method Op.get_name of <op.Op object at 0x7f5dc948dfd0>> [4, 14, 14, 1024]
+<bound method Op.get_name of <op.Op object at 0x7f5dc948dc50>> [128]
+<bound method Op.get_name of <op.Op object at 0x7f5dc4a8e250>> [4, 7, 7, 512]
+<bound method Op.get_name of <op.Op object at 0x7f5dc4a8e290>> [1000]
+<bound method Op.get_name of <op.Op object at 0x7f5dc4a8e2d0>> [128]
+<bound method Op.get_name of <op.Op object at 0x7f5dc4a8e310>> [512]
+<bound method Op.get_name of <op.Op object at 0x7f5dc4a8e350>> [2]
+<bound method Op.get_name of <op.Op object at 0x7f5dc4a8e390>> [512, 1, 1, 2048]
+<bound method Op.get_name of <op.Op object at 0x7f5dc4a8e3d0>> [256, 1, 1, 64]
+<bound method Op.get_name of <op.Op object at 0x7f5dc4a8e410>> [4, 14, 14, 512]
+<bound method Op.get_name of <op.Op object at 0x7f5dc4a8e450>> [4, 7, 7, 2048]
+<bound method Op.get_name of <op.Op object at 0x7f5dc4a8e490>> [512, 1, 1, 128]
+<bound method Op.get_name of <op.Op object at 0x7f5dc4a8e4d0>> [4, 14, 14, 512]
+<bound method Op.get_name of <op.Op object at 0x7f5dc4a8e510>> [4, 7, 7, 2048]
+<bound method Op.get_name of <op.Op object at 0x7f5dc4a8e550>> [1024, 1, 1, 256]
+<bound method Op.get_name of <op.Op object at 0x7f5dc4a8e590>> [4, 28, 28, 128]
+<bound method Op.get_name of <op.Op object at 0x7f5dc4a8e5d0>> [4, 7, 7, 2048]
+<bound method Op.get_name of <op.Op object at 0x7f5dc4a8e610>> [4, 14, 14, 256]
+<bound method Op.get_name of <op.Op object at 0x7f5dc4a8e650>> [4, 14, 14, 512]
+<bound method Op.get_name of <op.Op object at 0x7f5dc4a8e690>> [4, 7, 7, 2048]
+<bound method Op.get_name of <op.Op object at 0x7f5dc4a8e6d0>> [4, 14, 14, 256]
+<bound method Op.get_name of <op.Op object at 0x7f5dc4a8e710>> [512]
+<bound method Op.get_name of <op.Op object at 0x7f5dc4a8e750>> [4, 7, 7, 2048]
+<bound method Op.get_name of <op.Op object at 0x7f5dc4a8e790>> [4, 14, 14, 256]
+<bound method Op.get_name of <op.Op object at 0x7f5dc4a8e7d0>> [512, 1, 1, 128]
+<bound method Op.get_name of <op.Op object at 0x7f5dc4a8e810>> [4, 7, 7, 256]
+<bound method Op.get_name of <op.Op object at 0x7f5dc4a8e850>> [256]
+<bound method Op.get_name of <op.Op object at 0x7f5dc4a8e890>> [512, 1, 1, 128]
+<bound method Op.get_name of <op.Op object at 0x7f5dc4a8e8d0>> [1024, 1, 1, 256]
+<bound method Op.get_name of <op.Op object at 0x7f5dc4a8e910>> [256, 3, 3, 256]
+<bound method Op.get_name of <op.Op object at 0x7f5dc4a8e950>> [128, 1, 1, 512]
+<bound method Op.get_name of <op.Op object at 0x7f5dc4a8e990>> [4, 1, 1, 1000]
+<bound method Op.get_name of <op.Op object at 0x7f5dc4a8e9d0>> [256, 3, 3, 256]
+<bound method Op.get_name of <op.Op object at 0x7f5dc4a8ea10>> [128, 1, 1, 512]
+<bound method Op.get_name of <op.Op object at 0x7f5dc4a8ea50>> [1000]
+<bound method Op.get_name of <op.Op object at 0x7f5dc4a8ea90>> [4, 1000]
+<bound method Op.get_name of <op.Op object at 0x7f5dc4a8ead0>> [512]
+<bound method Op.get_name of <op.Op object at 0x7f5dc4a8eb10>> [4, 14, 14, 256]
+<bound method Op.get_name of <op.Op object at 0x7f5dc4a8eb50>> [4, 7, 7, 256]
+<bound method Op.get_name of <op.Op object at 0x7f5dc4a8eb90>> [4, 14, 14, 256]
+<bound method Op.get_name of <op.Op object at 0x7f5dc4a8ebd0>> [64, 1, 1, 256]
+<bound method Op.get_name of <op.Op object at 0x7f5dc4a8ec10>> [4, 7, 7, 256]
+<bound method Op.get_name of <op.Op object at 0x7f5dc4a8ec50>> [4, 1, 1, 1000]
+<bound method Op.get_name of <op.Op object at 0x7f5dc4a8ec90>> [4, 224, 224, 3]
+<bound method Op.get_name of <op.Op object at 0x7f5dc4a8ecd0>> [256]
+<bound method Op.get_name of <op.Op object at 0x7f5dc4a8ed10>> [4, 14, 14, 256]
+<bound method Op.get_name of <op.Op object at 0x7f5dc4a8ed50>> [256]
+<bound method Op.get_name of <op.Op object at 0x7f5dc4a8ed90>> [256]
+ ############################################# 
+ ######  Graph Construction 
+ ############################################# 
+ ############################################# 
+ ######  Hyper Graph Construction
+ ############################################# 
+XIR OP name resnet_v1_50/block4/unit_1/bottleneck_v1/conv1/Conv2D_bias const
+XIR ATT dict_keys(['data', 'shape', 'data_type'])
+XIR OP name resnet_v1_50/block4/unit_1/bottleneck_v1/conv1/Conv2D_bias_fixneuron fix
+XIR ATT dict_keys(['if_signed', 'round_mode', 'fix_point', 'bit_width'])
+XIR OP name resnet_v1_50/block4/unit_1/bottleneck_v1/shortcut/Conv2D_weights const
+XIR ATT dict_keys(['data', 'shape', 'data_type'])
+XIR OP name resnet_v1_50/block4/unit_1/bottleneck_v1/shortcut/Conv2D_weights_fixneuron fix
+XIR ATT dict_keys(['if_signed', 'round_mode', 'fix_point', 'bit_width'])
+XIR OP name resnet_v1_50/block4/unit_1/bottleneck_v1/conv1/Conv2D conv2d
+XIR ATT dict_keys(['quant_out_signed', 'quant_in_signed', 'dilation', 'kernel', 'stride', 'pad_mode', 'pad'])
+XIR OP name resnet_v1_50/block1/unit_3/bottleneck_v1/conv1/Conv2D_weights const
+XIR ATT dict_keys(['data', 'shape', 'data_type'])
+XIR OP name resnet_v1_50/block4/unit_1/bottleneck_v1/shortcut/Conv2D_bias_fixneuron fix
+XIR ATT dict_keys(['if_signed', 'round_mode', 'fix_point', 'bit_width'])
+XIR OP name resnet_v1_50/block4/unit_1/bottleneck_v1/shortcut/Conv2D_bias const
+XIR ATT dict_keys(['data', 'shape', 'data_type'])
+XIR OP name input data
+XIR ATT dict_keys(['quant_out_signed', 'quant_in_signed', 'shape', 'data_type'])
+XIR OP name resnet_v1_50/block1/unit_1/bottleneck_v1/conv1/Conv2D_bias_fixneuron fix
+XIR ATT dict_keys(['if_signed', 'round_mode', 'fix_point', 'bit_width'])
+XIR OP name resnet_v1_50/block1/unit_3/bottleneck_v1/conv1/Conv2D_weights_fixneuron fix
+XIR ATT dict_keys(['if_signed', 'round_mode', 'fix_point', 'bit_width'])
+XIR OP name resnet_v1_50/block1/unit_1/bottleneck_v1/conv3/Conv2D conv2d
+XIR ATT dict_keys(['quant_out_signed', 'quant_in_signed', 'dilation', 'kernel', 'stride', 'pad_mode', 'pad'])
+XIR OP name resnet_v1_50/block2/unit_4/bottleneck_v1/conv3/Conv2D_weights_fixneuron fix
+XIR ATT dict_keys(['if_signed', 'round_mode', 'fix_point', 'bit_width'])
+XIR OP name resnet_v1_50/block2/unit_4/bottleneck_v1/shortcut/MaxPool/aquant fix
+XIR ATT dict_keys(['quant_in_bit_width', 'round_mode', 'bit_width', 'fix_point', 'quant_out_signed', 'quant_in_quantize_pos', 'quant_in_signed', 'quant_out_bit_width', 'quant_out_round_mode', 'if_signed', 'quant_in_round_mode', 'quant_out_quantize_pos'])
+XIR OP name resnet_v1_50/block2/unit_4/bottleneck_v1/conv3/Conv2D_weights const
+XIR ATT dict_keys(['data', 'shape', 'data_type'])
+XIR OP name resnet_v1_50/block2/unit_4/bottleneck_v1/conv1/Relu relu
+XIR ATT dict_keys(['quant_out_signed', 'quant_in_signed'])
+XIR OP name resnet_v1_50/block2/unit_4/bottleneck_v1/conv3/BatchNorm/FusedBatchNorm/add/aquant fix
+XIR ATT dict_keys(['quant_in_bit_width', 'round_mode', 'bit_width', 'fix_point', 'quant_out_signed', 'quant_in_quantize_pos', 'quant_in_signed', 'quant_out_bit_width', 'quant_out_round_mode', 'if_signed', 'quant_in_round_mode', 'quant_out_quantize_pos'])
+XIR OP name resnet_v1_50/block2/unit_4/bottleneck_v1/Pad pad
+XIR ATT dict_keys(['quant_out_signed', 'constant_values', 'paddings', 'quant_in_signed', 'mode'])
+XIR OP name resnet_v1_50/block2/unit_4/bottleneck_v1/conv3/Conv2D_bias const
+XIR ATT dict_keys(['data', 'shape', 'data_type'])
+XIR OP name resnet_v1_50/block2/unit_4/bottleneck_v1/conv1/Relu/aquant fix
+XIR ATT dict_keys(['quant_in_bit_width', 'round_mode', 'bit_width', 'fix_point', 'quant_out_signed', 'quant_in_quantize_pos', 'quant_in_signed', 'quant_out_bit_width', 'quant_out_round_mode', 'if_signed', 'quant_in_round_mode', 'quant_out_quantize_pos'])
+XIR OP name resnet_v1_50/block2/unit_2/bottleneck_v1/conv2/Conv2D_bias_fixneuron fix
+XIR ATT dict_keys(['if_signed', 'round_mode', 'fix_point', 'bit_width'])
+XIR OP name resnet_v1_50/block2/unit_4/bottleneck_v1/conv2/Conv2D_weights const
+XIR ATT dict_keys(['data', 'shape', 'data_type'])
+XIR OP name resnet_v1_50/block2/unit_4/bottleneck_v1/Pad/aquant fix
+XIR ATT dict_keys(['quant_in_bit_width', 'round_mode', 'bit_width', 'fix_point', 'quant_out_signed', 'quant_in_quantize_pos', 'quant_in_signed', 'quant_out_bit_width', 'quant_out_round_mode', 'if_signed', 'quant_in_round_mode', 'quant_out_quantize_pos'])
+XIR OP name resnet_v1_50/block2/unit_4/bottleneck_v1/conv3/Conv2D conv2d
+XIR ATT dict_keys(['quant_out_signed', 'quant_in_signed', 'dilation', 'kernel', 'stride', 'pad_mode', 'pad'])
+XIR OP name resnet_v1_50/block1/unit_1/bottleneck_v1/conv2/Conv2D conv2d
+XIR ATT dict_keys(['quant_out_signed', 'quant_in_signed', 'dilation', 'kernel', 'stride', 'pad_mode', 'pad'])
+XIR OP name resnet_v1_50/block2/unit_4/bottleneck_v1/conv3/Conv2D_bias_fixneuron fix
+XIR ATT dict_keys(['if_signed', 'round_mode', 'fix_point', 'bit_width'])
+XIR OP name resnet_v1_50/block1/unit_1/bottleneck_v1/conv2/Conv2D_bias_fixneuron fix
+XIR ATT dict_keys(['if_signed', 'round_mode', 'fix_point', 'bit_width'])
+XIR OP name resnet_v1_50/block2/unit_4/bottleneck_v1/conv1/Conv2D_weights_fixneuron fix
+XIR ATT dict_keys(['if_signed', 'round_mode', 'fix_point', 'bit_width'])
+XIR OP name resnet_v1_50/block1/unit_1/bottleneck_v1/conv2/Relu relu
+XIR ATT dict_keys(['quant_out_signed', 'quant_in_signed'])
+XIR OP name resnet_v1_50/block1/unit_2/bottleneck_v1/conv3/Conv2D_bias const
+XIR ATT dict_keys(['data', 'shape', 'data_type'])
+XIR OP name resnet_v1_50/block2/unit_4/bottleneck_v1/conv1/Conv2D_weights const
+XIR ATT dict_keys(['data', 'shape', 'data_type'])
+XIR OP name resnet_v1_50/block1/unit_1/bottleneck_v1/conv2/Relu/aquant fix
+XIR ATT dict_keys(['quant_in_bit_width', 'round_mode', 'bit_width', 'fix_point', 'quant_out_signed', 'quant_in_quantize_pos', 'quant_in_signed', 'quant_out_bit_width', 'quant_out_round_mode', 'if_signed', 'quant_in_round_mode', 'quant_out_quantize_pos'])
+XIR OP name resnet_v1_50/block1/unit_2/bottleneck_v1/conv3/Conv2D_bias_fixneuron fix
+XIR ATT dict_keys(['if_signed', 'round_mode', 'fix_point', 'bit_width'])
+XIR OP name resnet_v1_50/block2/unit_4/bottleneck_v1/conv1/Conv2D_bias_fixneuron fix
+XIR ATT dict_keys(['if_signed', 'round_mode', 'fix_point', 'bit_width'])
+XIR OP name resnet_v1_50/block1/unit_1/bottleneck_v1/conv3/Conv2D_weights const
+XIR ATT dict_keys(['data', 'shape', 'data_type'])
+XIR OP name resnet_v1_50/block2/unit_1/bottleneck_v1/conv2/Conv2D_weights_fixneuron fix
+XIR ATT dict_keys(['if_signed', 'round_mode', 'fix_point', 'bit_width'])
+XIR OP name resnet_v1_50/block2/unit_4/bottleneck_v1/conv1/Conv2D_bias const
+XIR ATT dict_keys(['data', 'shape', 'data_type'])
+XIR OP name resnet_v1_50/block1/unit_2/bottleneck_v1/conv3/Conv2D conv2d
+XIR ATT dict_keys(['quant_out_signed', 'quant_in_signed', 'dilation', 'kernel', 'stride', 'pad_mode', 'pad'])
+XIR OP name resnet_v1_50/block2/unit_4/bottleneck_v1/shortcut/MaxPool maxpool2d
+XIR ATT dict_keys(['quant_out_signed', 'quant_in_signed', 'kernel', 'stride', 'global', 'pad_mode', 'pad'])
+XIR OP name resnet_v1_50/block1/unit_1/bottleneck_v1/conv3/Conv2D_weights_fixneuron fix
+XIR ATT dict_keys(['if_signed', 'round_mode', 'fix_point', 'bit_width'])
+XIR OP name resnet_v1_50/block2/unit_4/bottleneck_v1/conv1/Conv2D conv2d
+XIR ATT dict_keys(['quant_out_signed', 'quant_in_signed', 'dilation', 'kernel', 'stride', 'pad_mode', 'pad'])
+XIR OP name resnet_v1_50/block1/unit_2/bottleneck_v1/conv3/BatchNorm/FusedBatchNorm/add/aquant fix
+XIR ATT dict_keys(['quant_in_bit_width', 'round_mode', 'bit_width', 'fix_point', 'quant_out_signed', 'quant_in_quantize_pos', 'quant_in_signed', 'quant_out_bit_width', 'quant_out_round_mode', 'if_signed', 'quant_in_round_mode', 'quant_out_quantize_pos'])
+XIR OP name resnet_v1_50/block2/unit_2/bottleneck_v1/conv2/Conv2D_bias const
+XIR ATT dict_keys(['data', 'shape', 'data_type'])
+XIR OP name resnet_v1_50/block1/unit_1/bottleneck_v1/conv3/Conv2D_bias const
+XIR ATT dict_keys(['data', 'shape', 'data_type'])
+XIR OP name resnet_v1_50/block1/unit_1/bottleneck_v1/shortcut/Conv2D_bias_fixneuron fix
+XIR ATT dict_keys(['if_signed', 'round_mode', 'fix_point', 'bit_width'])
+XIR OP name resnet_v1_50/block2/unit_2/bottleneck_v1/conv1/Conv2D conv2d
+XIR ATT dict_keys(['quant_out_signed', 'quant_in_signed', 'dilation', 'kernel', 'stride', 'pad_mode', 'pad'])
+XIR OP name resnet_v1_50/block1/unit_2/bottleneck_v1/add add
+XIR ATT dict_keys(['quant_out_signed', 'quant_in_signed'])
+XIR OP name resnet_v1_50/block2/unit_2/bottleneck_v1/conv2/Conv2D conv2d
+XIR ATT dict_keys(['quant_out_signed', 'quant_in_signed', 'dilation', 'kernel', 'stride', 'pad_mode', 'pad'])
+XIR OP name resnet_v1_50/block1/unit_3/bottleneck_v1/conv1/Conv2D conv2d
+XIR ATT dict_keys(['quant_out_signed', 'quant_in_signed', 'dilation', 'kernel', 'stride', 'pad_mode', 'pad'])
+XIR OP name resnet_v1_50/block2/unit_2/bottleneck_v1/conv1/Relu/aquant fix
+XIR ATT dict_keys(['quant_in_bit_width', 'round_mode', 'bit_width', 'fix_point', 'quant_out_signed', 'quant_in_quantize_pos', 'quant_in_signed', 'quant_out_bit_width', 'quant_out_round_mode', 'if_signed', 'quant_in_round_mode', 'quant_out_quantize_pos'])
+XIR OP name resnet_v1_50/block1/unit_3/bottleneck_v1/conv1/Conv2D_bias_fixneuron fix
+XIR ATT dict_keys(['if_signed', 'round_mode', 'fix_point', 'bit_width'])
+XIR OP name resnet_v1_50/block2/unit_2/bottleneck_v1/conv1/Relu relu
+XIR ATT dict_keys(['quant_out_signed', 'quant_in_signed'])
+XIR OP name resnet_v1_50/block1/unit_3/bottleneck_v1/conv3/Conv2D_weights const
+XIR ATT dict_keys(['data', 'shape', 'data_type'])
+XIR OP name resnet_v1_50/block2/unit_4/bottleneck_v1/conv2/Conv2D_bias const
+XIR ATT dict_keys(['data', 'shape', 'data_type'])
+XIR OP name resnet_v1_50/block3/unit_1/bottleneck_v1/conv1/Conv2D_weights const
+XIR ATT dict_keys(['data', 'shape', 'data_type'])
+XIR OP name resnet_v1_50/block2/unit_4/bottleneck_v1/conv2/Conv2D_weights_fixneuron fix
+XIR ATT dict_keys(['if_signed', 'round_mode', 'fix_point', 'bit_width'])
+XIR OP name resnet_v1_50/block1/unit_3/bottleneck_v1/conv1/Relu relu
+XIR ATT dict_keys(['quant_out_signed', 'quant_in_signed'])
+XIR OP name resnet_v1_50/block2/unit_4/bottleneck_v1/conv2/Conv2D conv2d
+XIR ATT dict_keys(['quant_out_signed', 'quant_in_signed', 'dilation', 'kernel', 'stride', 'pad_mode', 'pad'])
+XIR OP name resnet_v1_50/pool5/scale_value_const const
+XIR ATT dict_keys(['quant_out_signed', 'quant_in_signed', 'data', 'shape', 'data_type'])
+XIR OP name resnet_v1_50/block2/unit_4/bottleneck_v1/conv2/Conv2D_bias_fixneuron fix
+XIR ATT dict_keys(['if_signed', 'round_mode', 'fix_point', 'bit_width'])
+XIR OP name resnet_v1_50/block3/unit_1/bottleneck_v1/conv2/Conv2D_bias const
+XIR ATT dict_keys(['data', 'shape', 'data_type'])
+XIR OP name resnet_v1_50/block2/unit_4/bottleneck_v1/conv2/Relu/aquant fix
+XIR ATT dict_keys(['quant_in_bit_width', 'round_mode', 'bit_width', 'fix_point', 'quant_out_signed', 'quant_in_quantize_pos', 'quant_in_signed', 'quant_out_bit_width', 'quant_out_round_mode', 'if_signed', 'quant_in_round_mode', 'quant_out_quantize_pos'])
+XIR OP name resnet_v1_50/block3/unit_1/bottleneck_v1/conv2/Conv2D_weights_fixneuron fix
+XIR ATT dict_keys(['if_signed', 'round_mode', 'fix_point', 'bit_width'])
+XIR OP name resnet_v1_50/block2/unit_4/bottleneck_v1/conv2/Relu relu
+XIR ATT dict_keys(['quant_out_signed', 'quant_in_signed'])
+XIR OP name resnet_v1_50/block3/unit_1/bottleneck_v1/conv2/Conv2D conv2d
+XIR ATT dict_keys(['quant_out_signed', 'quant_in_signed', 'dilation', 'kernel', 'stride', 'pad_mode', 'pad'])
+XIR OP name resnet_v1_50/block3/unit_2/bottleneck_v1/conv3/Conv2D conv2d
+XIR ATT dict_keys(['quant_out_signed', 'quant_in_signed', 'dilation', 'kernel', 'stride', 'pad_mode', 'pad'])
+XIR OP name resnet_v1_50/block3/unit_1/bottleneck_v1/conv2/Conv2D_bias_fixneuron fix
+XIR ATT dict_keys(['if_signed', 'round_mode', 'fix_point', 'bit_width'])
+XIR OP name resnet_v1_50/block3/unit_2/bottleneck_v1/conv3/Conv2D_bias_fixneuron fix
+XIR ATT dict_keys(['if_signed', 'round_mode', 'fix_point', 'bit_width'])
+XIR OP name resnet_v1_50/block3/unit_1/bottleneck_v1/conv2/Relu/aquant fix
+XIR ATT dict_keys(['quant_in_bit_width', 'round_mode', 'bit_width', 'fix_point', 'quant_out_signed', 'quant_in_quantize_pos', 'quant_in_signed', 'quant_out_bit_width', 'quant_out_round_mode', 'if_signed', 'quant_in_round_mode', 'quant_out_quantize_pos'])
+XIR OP name resnet_v1_50/block3/unit_2/bottleneck_v1/Relu/aquant fix
+XIR ATT dict_keys(['quant_in_bit_width', 'round_mode', 'bit_width', 'fix_point', 'quant_out_signed', 'quant_in_quantize_pos', 'quant_in_signed', 'quant_out_bit_width', 'quant_out_round_mode', 'if_signed', 'quant_in_round_mode', 'quant_out_quantize_pos'])
+XIR OP name resnet_v1_50/block3/unit_1/bottleneck_v1/conv2/Relu relu
+XIR ATT dict_keys(['quant_out_signed', 'quant_in_signed'])
+XIR OP name resnet_v1_50/block3/unit_2/bottleneck_v1/Relu relu
+XIR ATT dict_keys(['quant_out_signed', 'quant_in_signed'])
+XIR OP name resnet_v1_50/block3/unit_1/bottleneck_v1/conv3/Conv2D_weights_fixneuron fix
+XIR ATT dict_keys(['if_signed', 'round_mode', 'fix_point', 'bit_width'])
+XIR OP name resnet_v1_50/block3/unit_3/bottleneck_v1/conv1/Conv2D_weights_fixneuron fix
+XIR ATT dict_keys(['if_signed', 'round_mode', 'fix_point', 'bit_width'])
+XIR OP name resnet_v1_50/block3/unit_1/bottleneck_v1/conv3/Conv2D_weights const
+XIR ATT dict_keys(['data', 'shape', 'data_type'])
+XIR OP name resnet_v1_50/block3/unit_3/bottleneck_v1/conv1/Conv2D_weights const
+XIR ATT dict_keys(['data', 'shape', 'data_type'])
+XIR OP name resnet_v1_50/block3/unit_2/bottleneck_v1/conv1/Conv2D_weights_fixneuron fix
+XIR ATT dict_keys(['if_signed', 'round_mode', 'fix_point', 'bit_width'])
+XIR OP name resnet_v1_50/block2/unit_2/bottleneck_v1/conv1/Conv2D_weights const
+XIR ATT dict_keys(['data', 'shape', 'data_type'])
+XIR OP name resnet_v1_50/block3/unit_2/bottleneck_v1/conv1/Conv2D_weights const
+XIR ATT dict_keys(['data', 'shape', 'data_type'])
+XIR OP name resnet_v1_50/block3/unit_3/bottleneck_v1/conv1/Conv2D_bias const
+XIR ATT dict_keys(['data', 'shape', 'data_type'])
+XIR OP name resnet_v1_50/block3/unit_2/bottleneck_v1/conv1/Conv2D_bias_fixneuron fix
+XIR ATT dict_keys(['if_signed', 'round_mode', 'fix_point', 'bit_width'])
+XIR OP name resnet_v1_50/block2/unit_4/bottleneck_v1/add add
+XIR ATT dict_keys(['quant_out_signed', 'quant_in_signed'])
+XIR OP name resnet_v1_50/block3/unit_2/bottleneck_v1/conv1/Conv2D_bias const
+XIR ATT dict_keys(['data', 'shape', 'data_type'])
+XIR OP name resnet_v1_50/block2/unit_2/bottleneck_v1/conv1/Conv2D_weights_fixneuron fix
+XIR ATT dict_keys(['if_signed', 'round_mode', 'fix_point', 'bit_width'])
+XIR OP name resnet_v1_50/block3/unit_2/bottleneck_v1/conv1/Relu relu
+XIR ATT dict_keys(['quant_out_signed', 'quant_in_signed'])
+XIR OP name resnet_v1_50/block2/unit_4/bottleneck_v1/Relu/aquant fix
+XIR ATT dict_keys(['quant_in_bit_width', 'round_mode', 'bit_width', 'fix_point', 'quant_out_signed', 'quant_in_quantize_pos', 'quant_in_signed', 'quant_out_bit_width', 'quant_out_round_mode', 'if_signed', 'quant_in_round_mode', 'quant_out_quantize_pos'])
+XIR OP name resnet_v1_50/block3/unit_2/bottleneck_v1/conv1/Conv2D conv2d
+XIR ATT dict_keys(['quant_out_signed', 'quant_in_signed', 'dilation', 'kernel', 'stride', 'pad_mode', 'pad'])
+XIR OP name resnet_v1_50/block2/unit_4/bottleneck_v1/Relu relu
+XIR ATT dict_keys(['quant_out_signed', 'quant_in_signed'])
+XIR OP name resnet_v1_50/block3/unit_2/bottleneck_v1/conv2/Conv2D_weights const
+XIR ATT dict_keys(['data', 'shape', 'data_type'])
+XIR OP name resnet_v1_50/block3/unit_1/bottleneck_v1/conv1/Conv2D_weights_fixneuron fix
+XIR ATT dict_keys(['if_signed', 'round_mode', 'fix_point', 'bit_width'])
+XIR OP name resnet_v1_50/block3/unit_2/bottleneck_v1/conv1/Relu/aquant fix
+XIR ATT dict_keys(['quant_in_bit_width', 'round_mode', 'bit_width', 'fix_point', 'quant_out_signed', 'quant_in_quantize_pos', 'quant_in_signed', 'quant_out_bit_width', 'quant_out_round_mode', 'if_signed', 'quant_in_round_mode', 'quant_out_quantize_pos'])
+XIR OP name resnet_v1_50/block4/unit_3/bottleneck_v1/conv3/Conv2D_bias_fixneuron fix
+XIR ATT dict_keys(['if_signed', 'round_mode', 'fix_point', 'bit_width'])
+XIR OP name resnet_v1_50/block3/unit_2/bottleneck_v1/conv2/Conv2D_bias const
+XIR ATT dict_keys(['data', 'shape', 'data_type'])
+XIR OP name resnet_v1_50/block2/unit_3/bottleneck_v1/conv1/Conv2D_bias const
+XIR ATT dict_keys(['data', 'shape', 'data_type'])
+XIR OP name resnet_v1_50/block3/unit_2/bottleneck_v1/conv2/Conv2D_weights_fixneuron fix
+XIR ATT dict_keys(['if_signed', 'round_mode', 'fix_point', 'bit_width'])
+XIR OP name resnet_v1_50/block3/unit_1/bottleneck_v1/conv1/Conv2D_bias const
+XIR ATT dict_keys(['data', 'shape', 'data_type'])
+XIR OP name resnet_v1_50/block2/unit_3/bottleneck_v1/conv1/Conv2D conv2d
+XIR ATT dict_keys(['quant_out_signed', 'quant_in_signed', 'dilation', 'kernel', 'stride', 'pad_mode', 'pad'])
+XIR OP name resnet_v1_50/block3/unit_2/bottleneck_v1/conv2/Conv2D conv2d
+XIR ATT dict_keys(['quant_out_signed', 'quant_in_signed', 'dilation', 'kernel', 'stride', 'pad_mode', 'pad'])
+XIR OP name resnet_v1_50/block2/unit_3/bottleneck_v1/conv1/Conv2D_bias_fixneuron fix
+XIR ATT dict_keys(['if_signed', 'round_mode', 'fix_point', 'bit_width'])
+XIR OP name resnet_v1_50/block3/unit_2/bottleneck_v1/conv2/Conv2D_bias_fixneuron fix
+XIR ATT dict_keys(['if_signed', 'round_mode', 'fix_point', 'bit_width'])
+XIR OP name resnet_v1_50/block2/unit_3/bottleneck_v1/conv3/Conv2D conv2d
+XIR ATT dict_keys(['quant_out_signed', 'quant_in_signed', 'dilation', 'kernel', 'stride', 'pad_mode', 'pad'])
+XIR OP name resnet_v1_50/block3/unit_2/bottleneck_v1/conv2/Relu/aquant fix
+XIR ATT dict_keys(['quant_in_bit_width', 'round_mode', 'bit_width', 'fix_point', 'quant_out_signed', 'quant_in_quantize_pos', 'quant_in_signed', 'quant_out_bit_width', 'quant_out_round_mode', 'if_signed', 'quant_in_round_mode', 'quant_out_quantize_pos'])
+XIR OP name resnet_v1_50/block2/unit_3/bottleneck_v1/conv3/Conv2D_bias_fixneuron fix
+XIR ATT dict_keys(['if_signed', 'round_mode', 'fix_point', 'bit_width'])
+XIR OP name resnet_v1_50/block3/unit_2/bottleneck_v1/conv2/Relu relu
+XIR ATT dict_keys(['quant_out_signed', 'quant_in_signed'])
+XIR OP name resnet_v1_50/block3/unit_6/bottleneck_v1/conv3/Conv2D_bias_fixneuron fix
+XIR ATT dict_keys(['if_signed', 'round_mode', 'fix_point', 'bit_width'])
+XIR OP name resnet_v1_50/block3/unit_2/bottleneck_v1/conv3/Conv2D_weights_fixneuron fix
+XIR ATT dict_keys(['if_signed', 'round_mode', 'fix_point', 'bit_width'])
+XIR OP name resnet_v1_50/block3/unit_6/bottleneck_v1/conv3/Conv2D_bias const
+XIR ATT dict_keys(['data', 'shape', 'data_type'])
+XIR OP name resnet_v1_50/block3/unit_2/bottleneck_v1/conv3/Conv2D_weights const
+XIR ATT dict_keys(['data', 'shape', 'data_type'])
+XIR OP name resnet_v1_50/block4/unit_1/bottleneck_v1/conv1/Conv2D_weights const
+XIR ATT dict_keys(['data', 'shape', 'data_type'])
+XIR OP name resnet_v1_50/block3/unit_2/bottleneck_v1/conv3/BatchNorm/FusedBatchNorm/add/aquant fix
+XIR ATT dict_keys(['quant_in_bit_width', 'round_mode', 'bit_width', 'fix_point', 'quant_out_signed', 'quant_in_quantize_pos', 'quant_in_signed', 'quant_out_bit_width', 'quant_out_round_mode', 'if_signed', 'quant_in_round_mode', 'quant_out_quantize_pos'])
+XIR OP name resnet_v1_50/block3/unit_2/bottleneck_v1/conv3/Conv2D_bias const
+XIR ATT dict_keys(['data', 'shape', 'data_type'])
+XIR OP name resnet_v1_50/block3/unit_6/bottleneck_v1/Relu/aquant fix
+XIR ATT dict_keys(['quant_in_bit_width', 'round_mode', 'bit_width', 'fix_point', 'quant_out_signed', 'quant_in_quantize_pos', 'quant_in_signed', 'quant_out_bit_width', 'quant_out_round_mode', 'if_signed', 'quant_in_round_mode', 'quant_out_quantize_pos'])
+XIR OP name resnet_v1_50/block3/unit_2/bottleneck_v1/add add
+XIR ATT dict_keys(['quant_out_signed', 'quant_in_signed'])
+XIR OP name resnet_v1_50/block4/unit_1/bottleneck_v1/conv1/Conv2D_weights_fixneuron fix
+XIR ATT dict_keys(['if_signed', 'round_mode', 'fix_point', 'bit_width'])
+XIR OP name resnet_v1_50/block2/unit_1/bottleneck_v1/add add
+XIR ATT dict_keys(['quant_out_signed', 'quant_in_signed'])
+XIR OP name resnet_v1_50/block2/unit_1/bottleneck_v1/Relu/aquant fix
+XIR ATT dict_keys(['quant_in_bit_width', 'round_mode', 'bit_width', 'fix_point', 'quant_out_signed', 'quant_in_quantize_pos', 'quant_in_signed', 'quant_out_bit_width', 'quant_out_round_mode', 'if_signed', 'quant_in_round_mode', 'quant_out_quantize_pos'])
+XIR OP name resnet_v1_50/block2/unit_1/bottleneck_v1/Relu relu
+XIR ATT dict_keys(['quant_out_signed', 'quant_in_signed'])
+XIR OP name resnet_v1_50/block3/unit_1/bottleneck_v1/shortcut/Conv2D_bias_fixneuron fix
+XIR ATT dict_keys(['if_signed', 'round_mode', 'fix_point', 'bit_width'])
+XIR OP name resnet_v1_50/block2/unit_3/bottleneck_v1/Relu/aquant fix
+XIR ATT dict_keys(['quant_in_bit_width', 'round_mode', 'bit_width', 'fix_point', 'quant_out_signed', 'quant_in_quantize_pos', 'quant_in_signed', 'quant_out_bit_width', 'quant_out_round_mode', 'if_signed', 'quant_in_round_mode', 'quant_out_quantize_pos'])
+XIR OP name resnet_v1_50/block3/unit_1/bottleneck_v1/shortcut/BatchNorm/FusedBatchNorm/add/aquant fix
+XIR ATT dict_keys(['quant_in_bit_width', 'round_mode', 'bit_width', 'fix_point', 'quant_out_signed', 'quant_in_quantize_pos', 'quant_in_signed', 'quant_out_bit_width', 'quant_out_round_mode', 'if_signed', 'quant_in_round_mode', 'quant_out_quantize_pos'])
+XIR OP name resnet_v1_50/block2/unit_3/bottleneck_v1/Relu relu
+XIR ATT dict_keys(['quant_out_signed', 'quant_in_signed'])
+XIR OP name resnet_v1_50/block2/unit_2/bottleneck_v1/conv1/Conv2D_bias_fixneuron fix
+XIR ATT dict_keys(['if_signed', 'round_mode', 'fix_point', 'bit_width'])
+XIR OP name resnet_v1_50/block3/unit_4/bottleneck_v1/conv1/Conv2D_bias_fixneuron fix
+XIR ATT dict_keys(['if_signed', 'round_mode', 'fix_point', 'bit_width'])
+XIR OP name resnet_v1_50/block3/unit_1/bottleneck_v1/conv1/Relu relu
+XIR ATT dict_keys(['quant_out_signed', 'quant_in_signed'])
+XIR OP name resnet_v1_50/block3/unit_4/bottleneck_v1/conv1/Conv2D_bias const
+XIR ATT dict_keys(['data', 'shape', 'data_type'])
+XIR OP name resnet_v1_50/block3/unit_6/bottleneck_v1/conv3/Conv2D conv2d
+XIR ATT dict_keys(['quant_out_signed', 'quant_in_signed', 'dilation', 'kernel', 'stride', 'pad_mode', 'pad'])
+XIR OP name resnet_v1_50/block3/unit_4/bottleneck_v1/conv1/Relu relu
+XIR ATT dict_keys(['quant_out_signed', 'quant_in_signed'])
+XIR OP name resnet_v1_50/block1/unit_1/bottleneck_v1/conv1/Conv2D_weights const
+XIR ATT dict_keys(['data', 'shape', 'data_type'])
+XIR OP name resnet_v1_50/block3/unit_4/bottleneck_v1/conv1/Conv2D conv2d
+XIR ATT dict_keys(['quant_out_signed', 'quant_in_signed', 'dilation', 'kernel', 'stride', 'pad_mode', 'pad'])
+XIR OP name resnet_v1_50/block3/unit_6/bottleneck_v1/add add
+XIR ATT dict_keys(['quant_out_signed', 'quant_in_signed'])
+XIR OP name resnet_v1_50/block3/unit_4/bottleneck_v1/conv2/Conv2D_weights const
+XIR ATT dict_keys(['data', 'shape', 'data_type'])
+XIR OP name resnet_v1_50/block2/unit_3/bottleneck_v1/add add
+XIR ATT dict_keys(['quant_out_signed', 'quant_in_signed'])
+XIR OP name resnet_v1_50/block3/unit_4/bottleneck_v1/conv1/Relu/aquant fix
+XIR ATT dict_keys(['quant_in_bit_width', 'round_mode', 'bit_width', 'fix_point', 'quant_out_signed', 'quant_in_quantize_pos', 'quant_in_signed', 'quant_out_bit_width', 'quant_out_round_mode', 'if_signed', 'quant_in_round_mode', 'quant_out_quantize_pos'])
+XIR OP name resnet_v1_50/block2/unit_2/bottleneck_v1/conv1/Conv2D_bias const
+XIR ATT dict_keys(['data', 'shape', 'data_type'])
+XIR OP name resnet_v1_50/block3/unit_4/bottleneck_v1/conv2/Conv2D_bias const
+XIR ATT dict_keys(['data', 'shape', 'data_type'])
+XIR OP name resnet_v1_50/block3/unit_6/bottleneck_v1/Relu relu
+XIR ATT dict_keys(['quant_out_signed', 'quant_in_signed'])
+XIR OP name resnet_v1_50/block3/unit_4/bottleneck_v1/conv2/Conv2D_weights_fixneuron fix
+XIR ATT dict_keys(['if_signed', 'round_mode', 'fix_point', 'bit_width'])
+XIR OP name resnet_v1_50/block3/unit_1/bottleneck_v1/shortcut/Conv2D conv2d
+XIR ATT dict_keys(['quant_out_signed', 'quant_in_signed', 'dilation', 'kernel', 'stride', 'pad_mode', 'pad'])
+XIR OP name resnet_v1_50/block3/unit_4/bottleneck_v1/conv2/Conv2D conv2d
+XIR ATT dict_keys(['quant_out_signed', 'quant_in_signed', 'dilation', 'kernel', 'stride', 'pad_mode', 'pad'])
+XIR OP name resnet_v1_50/block3/unit_6/bottleneck_v1/conv3/BatchNorm/FusedBatchNorm/add/aquant fix
+XIR ATT dict_keys(['quant_in_bit_width', 'round_mode', 'bit_width', 'fix_point', 'quant_out_signed', 'quant_in_quantize_pos', 'quant_in_signed', 'quant_out_bit_width', 'quant_out_round_mode', 'if_signed', 'quant_in_round_mode', 'quant_out_quantize_pos'])
+XIR OP name resnet_v1_50/block3/unit_4/bottleneck_v1/conv2/Conv2D_bias_fixneuron fix
+XIR ATT dict_keys(['if_signed', 'round_mode', 'fix_point', 'bit_width'])
+XIR OP name resnet_v1_50/block3/unit_1/bottleneck_v1/conv1/Relu/aquant fix
+XIR ATT dict_keys(['quant_in_bit_width', 'round_mode', 'bit_width', 'fix_point', 'quant_out_signed', 'quant_in_quantize_pos', 'quant_in_signed', 'quant_out_bit_width', 'quant_out_round_mode', 'if_signed', 'quant_in_round_mode', 'quant_out_quantize_pos'])
+XIR OP name resnet_v1_50/block3/unit_4/bottleneck_v1/conv2/Relu/aquant fix
+XIR ATT dict_keys(['quant_in_bit_width', 'round_mode', 'bit_width', 'fix_point', 'quant_out_signed', 'quant_in_quantize_pos', 'quant_in_signed', 'quant_out_bit_width', 'quant_out_round_mode', 'if_signed', 'quant_in_round_mode', 'quant_out_quantize_pos'])
+XIR OP name resnet_v1_50/block3/unit_1/bottleneck_v1/conv2/Conv2D_weights const
+XIR ATT dict_keys(['data', 'shape', 'data_type'])
+XIR OP name resnet_v1_50/block3/unit_4/bottleneck_v1/conv2/Relu relu
+XIR ATT dict_keys(['quant_out_signed', 'quant_in_signed'])
+XIR OP name resnet_v1_50/block3/unit_4/bottleneck_v1/conv3/Conv2D_weights_fixneuron fix
+XIR ATT dict_keys(['if_signed', 'round_mode', 'fix_point', 'bit_width'])
+XIR OP name resnet_v1_50/block1/unit_1/bottleneck_v1/conv1/Conv2D_bias const
+XIR ATT dict_keys(['data', 'shape', 'data_type'])
+XIR OP name resnet_v1_50/block3/unit_4/bottleneck_v1/conv3/Conv2D_weights const
+XIR ATT dict_keys(['data', 'shape', 'data_type'])
+XIR OP name resnet_v1_50/block1/unit_3/bottleneck_v1/shortcut/MaxPool maxpool2d
+XIR ATT dict_keys(['quant_out_signed', 'quant_in_signed', 'kernel', 'stride', 'global', 'pad_mode', 'pad'])
+XIR OP name resnet_v1_50/block2/unit_1/bottleneck_v1/conv1/Conv2D_weights_fixneuron fix
+XIR ATT dict_keys(['if_signed', 'round_mode', 'fix_point', 'bit_width'])
+XIR OP name resnet_v1_50/block2/unit_1/bottleneck_v1/shortcut/Conv2D_bias const
+XIR ATT dict_keys(['data', 'shape', 'data_type'])
+XIR OP name resnet_v1_50/block2/unit_1/bottleneck_v1/shortcut/Conv2D_weights_fixneuron fix
+XIR ATT dict_keys(['if_signed', 'round_mode', 'fix_point', 'bit_width'])
+XIR OP name resnet_v1_50/block2/unit_1/bottleneck_v1/conv1/Conv2D_bias_fixneuron fix
+XIR ATT dict_keys(['if_signed', 'round_mode', 'fix_point', 'bit_width'])
+XIR OP name resnet_v1_50/block2/unit_1/bottleneck_v1/conv1/Conv2D_bias const
+XIR ATT dict_keys(['data', 'shape', 'data_type'])
+XIR OP name resnet_v1_50/block2/unit_3/bottleneck_v1/conv2/Conv2D_bias const
+XIR ATT dict_keys(['data', 'shape', 'data_type'])
+XIR OP name resnet_v1_50/block2/unit_3/bottleneck_v1/conv2/Conv2D_weights_fixneuron fix
+XIR ATT dict_keys(['if_signed', 'round_mode', 'fix_point', 'bit_width'])
+XIR OP name resnet_v1_50/block2/unit_1/bottleneck_v1/conv3/Conv2D conv2d
+XIR ATT dict_keys(['quant_out_signed', 'quant_in_signed', 'dilation', 'kernel', 'stride', 'pad_mode', 'pad'])
+XIR OP name resnet_v1_50/block2/unit_3/bottleneck_v1/conv2/Conv2D_bias_fixneuron fix
+XIR ATT dict_keys(['if_signed', 'round_mode', 'fix_point', 'bit_width'])
+XIR OP name resnet_v1_50/block1/unit_2/bottleneck_v1/conv2/Relu/aquant fix
+XIR ATT dict_keys(['quant_in_bit_width', 'round_mode', 'bit_width', 'fix_point', 'quant_out_signed', 'quant_in_quantize_pos', 'quant_in_signed', 'quant_out_bit_width', 'quant_out_round_mode', 'if_signed', 'quant_in_round_mode', 'quant_out_quantize_pos'])
+XIR OP name input/aquant fix
+XIR ATT dict_keys(['quant_in_bit_width', 'round_mode', 'bit_width', 'fix_point', 'quant_out_signed', 'quant_in_quantize_pos', 'quant_in_signed', 'quant_out_bit_width', 'quant_out_round_mode', 'if_signed', 'quant_in_round_mode', 'quant_out_quantize_pos'])
+XIR OP name resnet_v1_50/block4/unit_1/bottleneck_v1/Relu relu
+XIR ATT dict_keys(['quant_out_signed', 'quant_in_signed'])
+XIR OP name resnet_v1_50/block4/unit_1/bottleneck_v1/add add
+XIR ATT dict_keys(['quant_out_signed', 'quant_in_signed'])
+XIR OP name resnet_v1_50/block2/unit_3/bottleneck_v1/conv3/BatchNorm/FusedBatchNorm/add/aquant fix
+XIR ATT dict_keys(['quant_in_bit_width', 'round_mode', 'bit_width', 'fix_point', 'quant_out_signed', 'quant_in_quantize_pos', 'quant_in_signed', 'quant_out_bit_width', 'quant_out_round_mode', 'if_signed', 'quant_in_round_mode', 'quant_out_quantize_pos'])
+XIR OP name resnet_v1_50/block2/unit_3/bottleneck_v1/conv3/Conv2D_bias const
+XIR ATT dict_keys(['data', 'shape', 'data_type'])
+XIR OP name resnet_v1_50/block2/unit_1/bottleneck_v1/conv2/Conv2D conv2d
+XIR ATT dict_keys(['quant_out_signed', 'quant_in_signed', 'dilation', 'kernel', 'stride', 'pad_mode', 'pad'])
+XIR OP name resnet_v1_50/Pad pad
+XIR ATT dict_keys(['quant_out_signed', 'constant_values', 'paddings', 'quant_in_signed', 'mode'])
+XIR OP name resnet_v1_50/Pad/aquant fix
+XIR ATT dict_keys(['quant_in_bit_width', 'round_mode', 'bit_width', 'fix_point', 'quant_out_signed', 'quant_in_quantize_pos', 'quant_in_signed', 'quant_out_bit_width', 'quant_out_round_mode', 'if_signed', 'quant_in_round_mode', 'quant_out_quantize_pos'])
+XIR OP name resnet_v1_50/block2/unit_1/bottleneck_v1/conv2/Relu relu
+XIR ATT dict_keys(['quant_out_signed', 'quant_in_signed'])
+XIR OP name resnet_v1_50/block1/unit_2/bottleneck_v1/conv2/Conv2D_bias const
+XIR ATT dict_keys(['data', 'shape', 'data_type'])
+XIR OP name resnet_v1_50/block1/unit_2/bottleneck_v1/conv2/Conv2D_weights_fixneuron fix
+XIR ATT dict_keys(['if_signed', 'round_mode', 'fix_point', 'bit_width'])
+XIR OP name resnet_v1_50/block2/unit_3/bottleneck_v1/conv2/Conv2D conv2d
+XIR ATT dict_keys(['quant_out_signed', 'quant_in_signed', 'dilation', 'kernel', 'stride', 'pad_mode', 'pad'])
+XIR OP name resnet_v1_50/block1/unit_2/bottleneck_v1/conv2/Conv2D_weights const
+XIR ATT dict_keys(['data', 'shape', 'data_type'])
+XIR OP name resnet_v1_50/block2/unit_3/bottleneck_v1/conv2/Relu/aquant fix
+XIR ATT dict_keys(['quant_in_bit_width', 'round_mode', 'bit_width', 'fix_point', 'quant_out_signed', 'quant_in_quantize_pos', 'quant_in_signed', 'quant_out_bit_width', 'quant_out_round_mode', 'if_signed', 'quant_in_round_mode', 'quant_out_quantize_pos'])
+XIR OP name resnet_v1_50/block2/unit_3/bottleneck_v1/conv2/Relu relu
+XIR ATT dict_keys(['quant_out_signed', 'quant_in_signed'])
+XIR OP name resnet_v1_50/block2/unit_1/bottleneck_v1/conv2/Relu/aquant fix
+XIR ATT dict_keys(['quant_in_bit_width', 'round_mode', 'bit_width', 'fix_point', 'quant_out_signed', 'quant_in_quantize_pos', 'quant_in_signed', 'quant_out_bit_width', 'quant_out_round_mode', 'if_signed', 'quant_in_round_mode', 'quant_out_quantize_pos'])
+XIR OP name resnet_v1_50/block2/unit_3/bottleneck_v1/conv3/Conv2D_weights const
+XIR ATT dict_keys(['data', 'shape', 'data_type'])
+XIR OP name resnet_v1_50/conv1/Conv2D_weights const
+XIR ATT dict_keys(['data', 'shape', 'data_type'])
+XIR OP name resnet_v1_50/block2/unit_1/bottleneck_v1/conv3/Conv2D_weights_fixneuron fix
+XIR ATT dict_keys(['if_signed', 'round_mode', 'fix_point', 'bit_width'])
+XIR OP name resnet_v1_50/block2/unit_1/bottleneck_v1/conv3/BatchNorm/FusedBatchNorm/add/aquant fix
+XIR ATT dict_keys(['quant_in_bit_width', 'round_mode', 'bit_width', 'fix_point', 'quant_out_signed', 'quant_in_quantize_pos', 'quant_in_signed', 'quant_out_bit_width', 'quant_out_round_mode', 'if_signed', 'quant_in_round_mode', 'quant_out_quantize_pos'])
+XIR OP name resnet_v1_50/block2/unit_1/bottleneck_v1/conv3/Conv2D_bias const
+XIR ATT dict_keys(['data', 'shape', 'data_type'])
+XIR OP name resnet_v1_50/block1/unit_2/bottleneck_v1/conv2/Conv2D_bias_fixneuron fix
+XIR ATT dict_keys(['if_signed', 'round_mode', 'fix_point', 'bit_width'])
+XIR OP name resnet_v1_50/block2/unit_1/bottleneck_v1/conv3/Conv2D_bias_fixneuron fix
+XIR ATT dict_keys(['if_signed', 'round_mode', 'fix_point', 'bit_width'])
+XIR OP name resnet_v1_50/conv1/Conv2D_bias const
+XIR ATT dict_keys(['data', 'shape', 'data_type'])
+XIR OP name resnet_v1_50/conv1/Conv2D_weights_fixneuron fix
+XIR ATT dict_keys(['if_signed', 'round_mode', 'fix_point', 'bit_width'])
+XIR OP name resnet_v1_50/block2/unit_3/bottleneck_v1/conv1/Relu/aquant fix
+XIR ATT dict_keys(['quant_in_bit_width', 'round_mode', 'bit_width', 'fix_point', 'quant_out_signed', 'quant_in_quantize_pos', 'quant_in_signed', 'quant_out_bit_width', 'quant_out_round_mode', 'if_signed', 'quant_in_round_mode', 'quant_out_quantize_pos'])
+XIR OP name resnet_v1_50/block2/unit_3/bottleneck_v1/conv1/Relu relu
+XIR ATT dict_keys(['quant_out_signed', 'quant_in_signed'])
+XIR OP name resnet_v1_50/block1/unit_1/bottleneck_v1/conv3/BatchNorm/FusedBatchNorm/add/aquant fix
+XIR ATT dict_keys(['quant_in_bit_width', 'round_mode', 'bit_width', 'fix_point', 'quant_out_signed', 'quant_in_quantize_pos', 'quant_in_signed', 'quant_out_bit_width', 'quant_out_round_mode', 'if_signed', 'quant_in_round_mode', 'quant_out_quantize_pos'])
+XIR OP name resnet_v1_50/block2/unit_3/bottleneck_v1/conv2/Conv2D_weights const
+XIR ATT dict_keys(['data', 'shape', 'data_type'])
+XIR OP name resnet_v1_50/conv1/Conv2D conv2d
+XIR ATT dict_keys(['quant_out_signed', 'quant_in_signed', 'dilation', 'kernel', 'stride', 'pad_mode', 'pad'])
+XIR OP name resnet_v1_50/conv1/Conv2D_bias_fixneuron fix
+XIR ATT dict_keys(['if_signed', 'round_mode', 'fix_point', 'bit_width'])
+XIR OP name resnet_v1_50/predictions/Shape_const_const const
+XIR ATT dict_keys(['quant_out_signed', 'quant_in_signed', 'data', 'shape', 'data_type'])
+XIR OP name resnet_v1_50/block3/unit_1/bottleneck_v1/Relu relu
+XIR ATT dict_keys(['quant_out_signed', 'quant_in_signed'])
+XIR OP name resnet_v1_50/block3/unit_1/bottleneck_v1/conv3/Conv2D conv2d
+XIR ATT dict_keys(['quant_out_signed', 'quant_in_signed', 'dilation', 'kernel', 'stride', 'pad_mode', 'pad'])
+XIR OP name resnet_v1_50/block3/unit_1/bottleneck_v1/conv3/Conv2D_bias const
+XIR ATT dict_keys(['data', 'shape', 'data_type'])
+XIR OP name resnet_v1_50/block3/unit_1/bottleneck_v1/Relu/aquant fix
+XIR ATT dict_keys(['quant_in_bit_width', 'round_mode', 'bit_width', 'fix_point', 'quant_out_signed', 'quant_in_quantize_pos', 'quant_in_signed', 'quant_out_bit_width', 'quant_out_round_mode', 'if_signed', 'quant_in_round_mode', 'quant_out_quantize_pos'])
+XIR OP name resnet_v1_50/block3/unit_1/bottleneck_v1/add add
+XIR ATT dict_keys(['quant_out_signed', 'quant_in_signed'])
+XIR OP name resnet_v1_50/block3/unit_1/bottleneck_v1/conv3/BatchNorm/FusedBatchNorm/add/aquant fix
+XIR ATT dict_keys(['quant_in_bit_width', 'round_mode', 'bit_width', 'fix_point', 'quant_out_signed', 'quant_in_quantize_pos', 'quant_in_signed', 'quant_out_bit_width', 'quant_out_round_mode', 'if_signed', 'quant_in_round_mode', 'quant_out_quantize_pos'])
+XIR OP name resnet_v1_50/block2/unit_1/bottleneck_v1/shortcut/Conv2D_bias_fixneuron fix
+XIR ATT dict_keys(['if_signed', 'round_mode', 'fix_point', 'bit_width'])
+XIR OP name resnet_v1_50/block2/unit_2/bottleneck_v1/conv3/Conv2D conv2d
+XIR ATT dict_keys(['quant_out_signed', 'quant_in_signed', 'dilation', 'kernel', 'stride', 'pad_mode', 'pad'])
+XIR OP name resnet_v1_50/block2/unit_1/bottleneck_v1/conv1/Relu relu
+XIR ATT dict_keys(['quant_out_signed', 'quant_in_signed'])
+XIR OP name resnet_v1_50/predictions/Reshape reshape
+XIR ATT dict_keys(['quant_out_signed', 'shape', 'quant_in_signed'])
+XIR OP name resnet_v1_50/block2/unit_2/bottleneck_v1/add add
+XIR ATT dict_keys(['quant_out_signed', 'quant_in_signed'])
+XIR OP name resnet_v1_50/SpatialSqueeze/aquant fix
+XIR ATT dict_keys(['quant_in_bit_width', 'round_mode', 'bit_width', 'fix_point', 'quant_out_signed', 'quant_in_quantize_pos', 'quant_in_signed', 'quant_out_bit_width', 'quant_out_round_mode', 'if_signed', 'quant_in_round_mode', 'quant_out_quantize_pos'])
+XIR OP name resnet_v1_50/predictions/Softmax softmax
+XIR ATT dict_keys(['quant_out_signed', 'axis', 'quant_in_signed'])
+XIR OP name resnet_v1_50/predictions/Reshape/aquant fix
+XIR ATT dict_keys(['quant_in_bit_width', 'round_mode', 'bit_width', 'fix_point', 'quant_out_signed', 'quant_in_quantize_pos', 'quant_in_signed', 'quant_out_bit_width', 'quant_out_round_mode', 'if_signed', 'quant_in_round_mode', 'quant_out_quantize_pos'])
+XIR OP name resnet_v1_50/block2/unit_2/bottleneck_v1/conv3/Conv2D_weights_fixneuron fix
+XIR ATT dict_keys(['if_signed', 'round_mode', 'fix_point', 'bit_width'])
+XIR OP name resnet_v1_50/predictions/Reshape_1 reshape
+XIR ATT dict_keys(['quant_out_signed', 'shape', 'quant_in_signed'])
+XIR OP name resnet_v1_50/block2/unit_2/bottleneck_v1/conv3/BatchNorm/FusedBatchNorm/add/aquant fix
+XIR ATT dict_keys(['quant_in_bit_width', 'round_mode', 'bit_width', 'fix_point', 'quant_out_signed', 'quant_in_quantize_pos', 'quant_in_signed', 'quant_out_bit_width', 'quant_out_round_mode', 'if_signed', 'quant_in_round_mode', 'quant_out_quantize_pos'])
+XIR OP name resnet_v1_50/block2/unit_2/bottleneck_v1/conv3/Conv2D_bias const
+XIR ATT dict_keys(['data', 'shape', 'data_type'])
+XIR OP name resnet_v1_50/block2/unit_1/bottleneck_v1/shortcut/Conv2D conv2d
+XIR ATT dict_keys(['quant_out_signed', 'quant_in_signed', 'dilation', 'kernel', 'stride', 'pad_mode', 'pad'])
+XIR OP name resnet_v1_50/block1/unit_1/bottleneck_v1/conv1/Relu relu
+XIR ATT dict_keys(['quant_out_signed', 'quant_in_signed'])
+XIR OP name resnet_v1_50/block1/unit_2/bottleneck_v1/conv1/Conv2D_weights_fixneuron fix
+XIR ATT dict_keys(['if_signed', 'round_mode', 'fix_point', 'bit_width'])
+XIR OP name resnet_v1_50/block1/unit_1/bottleneck_v1/conv1/Relu/aquant fix
+XIR ATT dict_keys(['quant_in_bit_width', 'round_mode', 'bit_width', 'fix_point', 'quant_out_signed', 'quant_in_quantize_pos', 'quant_in_signed', 'quant_out_bit_width', 'quant_out_round_mode', 'if_signed', 'quant_in_round_mode', 'quant_out_quantize_pos'])
+XIR OP name resnet_v1_50/block2/unit_1/bottleneck_v1/shortcut/BatchNorm/FusedBatchNorm/add/aquant fix
+XIR ATT dict_keys(['quant_in_bit_width', 'round_mode', 'bit_width', 'fix_point', 'quant_out_signed', 'quant_in_quantize_pos', 'quant_in_signed', 'quant_out_bit_width', 'quant_out_round_mode', 'if_signed', 'quant_in_round_mode', 'quant_out_quantize_pos'])
+XIR OP name resnet_v1_50/block1/unit_2/bottleneck_v1/conv1/Relu relu
+XIR ATT dict_keys(['quant_out_signed', 'quant_in_signed'])
+XIR OP name resnet_v1_50/block1/unit_2/bottleneck_v1/conv1/Conv2D conv2d
+XIR ATT dict_keys(['quant_out_signed', 'quant_in_signed', 'dilation', 'kernel', 'stride', 'pad_mode', 'pad'])
+XIR OP name resnet_v1_50/block2/unit_1/bottleneck_v1/conv2/Conv2D_weights const
+XIR ATT dict_keys(['data', 'shape', 'data_type'])
+XIR OP name resnet_v1_50/block2/unit_1/bottleneck_v1/conv1/Relu/aquant fix
+XIR ATT dict_keys(['quant_in_bit_width', 'round_mode', 'bit_width', 'fix_point', 'quant_out_signed', 'quant_in_quantize_pos', 'quant_in_signed', 'quant_out_bit_width', 'quant_out_round_mode', 'if_signed', 'quant_in_round_mode', 'quant_out_quantize_pos'])
+XIR OP name resnet_v1_50/block1/unit_1/bottleneck_v1/conv2/Conv2D_weights_fixneuron fix
+XIR ATT dict_keys(['if_signed', 'round_mode', 'fix_point', 'bit_width'])
+XIR OP name resnet_v1_50/block1/unit_1/bottleneck_v1/conv2/Conv2D_weights const
+XIR ATT dict_keys(['data', 'shape', 'data_type'])
+XIR OP name resnet_v1_50/block1/unit_2/bottleneck_v1/Relu relu
+XIR ATT dict_keys(['quant_out_signed', 'quant_in_signed'])
+XIR OP name resnet_v1_50/block1/unit_1/bottleneck_v1/conv2/Conv2D_bias const
+XIR ATT dict_keys(['data', 'shape', 'data_type'])
+XIR OP name resnet_v1_50/block1/unit_2/bottleneck_v1/conv2/Relu relu
+XIR ATT dict_keys(['quant_out_signed', 'quant_in_signed'])
+XIR OP name resnet_v1_50/block1/unit_2/bottleneck_v1/conv2/Conv2D conv2d
+XIR ATT dict_keys(['quant_out_signed', 'quant_in_signed', 'dilation', 'kernel', 'stride', 'pad_mode', 'pad'])
+XIR OP name resnet_v1_50/conv1/Relu relu
+XIR ATT dict_keys(['quant_out_signed', 'quant_in_signed'])
+XIR OP name resnet_v1_50/block2/unit_1/bottleneck_v1/conv3/Conv2D_weights const
+XIR ATT dict_keys(['data', 'shape', 'data_type'])
+XIR OP name resnet_v1_50/pool1/MaxPool maxpool2d
+XIR ATT dict_keys(['quant_out_signed', 'quant_in_signed', 'kernel', 'stride', 'global', 'pad_mode', 'pad'])
+XIR OP name resnet_v1_50/conv1/Relu/aquant fix
+XIR ATT dict_keys(['quant_in_bit_width', 'round_mode', 'bit_width', 'fix_point', 'quant_out_signed', 'quant_in_quantize_pos', 'quant_in_signed', 'quant_out_bit_width', 'quant_out_round_mode', 'if_signed', 'quant_in_round_mode', 'quant_out_quantize_pos'])
+XIR OP name resnet_v1_50/pool1/MaxPool/aquant fix
+XIR ATT dict_keys(['quant_in_bit_width', 'round_mode', 'bit_width', 'fix_point', 'quant_out_signed', 'quant_in_quantize_pos', 'quant_in_signed', 'quant_out_bit_width', 'quant_out_round_mode', 'if_signed', 'quant_in_round_mode', 'quant_out_quantize_pos'])
+XIR OP name resnet_v1_50/block1/unit_3/bottleneck_v1/Relu/aquant fix
+XIR ATT dict_keys(['quant_in_bit_width', 'round_mode', 'bit_width', 'fix_point', 'quant_out_signed', 'quant_in_quantize_pos', 'quant_in_signed', 'quant_out_bit_width', 'quant_out_round_mode', 'if_signed', 'quant_in_round_mode', 'quant_out_quantize_pos'])
+XIR OP name resnet_v1_50/block2/unit_3/bottleneck_v1/conv1/Conv2D_weights const
+XIR ATT dict_keys(['data', 'shape', 'data_type'])
+XIR OP name resnet_v1_50/block2/unit_2/bottleneck_v1/Relu/aquant fix
+XIR ATT dict_keys(['quant_in_bit_width', 'round_mode', 'bit_width', 'fix_point', 'quant_out_signed', 'quant_in_quantize_pos', 'quant_in_signed', 'quant_out_bit_width', 'quant_out_round_mode', 'if_signed', 'quant_in_round_mode', 'quant_out_quantize_pos'])
+XIR OP name resnet_v1_50/block1/unit_1/bottleneck_v1/conv1/Conv2D_weights_fixneuron fix
+XIR ATT dict_keys(['if_signed', 'round_mode', 'fix_point', 'bit_width'])
+XIR OP name resnet_v1_50/block2/unit_3/bottleneck_v1/conv1/Conv2D_weights_fixneuron fix
+XIR ATT dict_keys(['if_signed', 'round_mode', 'fix_point', 'bit_width'])
+XIR OP name resnet_v1_50/block1/unit_1/bottleneck_v1/add add
+XIR ATT dict_keys(['quant_out_signed', 'quant_in_signed'])
+XIR OP name resnet_v1_50/block1/unit_3/bottleneck_v1/Pad/aquant fix
+XIR ATT dict_keys(['quant_in_bit_width', 'round_mode', 'bit_width', 'fix_point', 'quant_out_signed', 'quant_in_quantize_pos', 'quant_in_signed', 'quant_out_bit_width', 'quant_out_round_mode', 'if_signed', 'quant_in_round_mode', 'quant_out_quantize_pos'])
+XIR OP name resnet_v1_50/block1/unit_1/bottleneck_v1/Relu relu
+XIR ATT dict_keys(['quant_out_signed', 'quant_in_signed'])
+XIR OP name resnet_v1_50/block1/unit_3/bottleneck_v1/conv2/Conv2D_weights const
+XIR ATT dict_keys(['data', 'shape', 'data_type'])
+XIR OP name resnet_v1_50/block2/unit_2/bottleneck_v1/conv2/Relu/aquant fix
+XIR ATT dict_keys(['quant_in_bit_width', 'round_mode', 'bit_width', 'fix_point', 'quant_out_signed', 'quant_in_quantize_pos', 'quant_in_signed', 'quant_out_bit_width', 'quant_out_round_mode', 'if_signed', 'quant_in_round_mode', 'quant_out_quantize_pos'])
+XIR OP name resnet_v1_50/block2/unit_2/bottleneck_v1/conv2/Relu relu
+XIR ATT dict_keys(['quant_out_signed', 'quant_in_signed'])
+XIR OP name resnet_v1_50/block1/unit_1/bottleneck_v1/conv1/Conv2D conv2d
+XIR ATT dict_keys(['quant_out_signed', 'quant_in_signed', 'dilation', 'kernel', 'stride', 'pad_mode', 'pad'])
+XIR OP name resnet_v1_50/block2/unit_2/bottleneck_v1/conv3/Conv2D_weights const
+XIR ATT dict_keys(['data', 'shape', 'data_type'])
+XIR OP name resnet_v1_50/block1/unit_3/bottleneck_v1/add add
+XIR ATT dict_keys(['quant_out_signed', 'quant_in_signed'])
+XIR OP name resnet_v1_50/block1/unit_3/bottleneck_v1/conv3/BatchNorm/FusedBatchNorm/add/aquant fix
+XIR ATT dict_keys(['quant_in_bit_width', 'round_mode', 'bit_width', 'fix_point', 'quant_out_signed', 'quant_in_quantize_pos', 'quant_in_signed', 'quant_out_bit_width', 'quant_out_round_mode', 'if_signed', 'quant_in_round_mode', 'quant_out_quantize_pos'])
+XIR OP name resnet_v1_50/block2/unit_1/bottleneck_v1/conv1/Conv2D conv2d
+XIR ATT dict_keys(['quant_out_signed', 'quant_in_signed', 'dilation', 'kernel', 'stride', 'pad_mode', 'pad'])
+XIR OP name resnet_v1_50/block1/unit_3/bottleneck_v1/Relu relu
+XIR ATT dict_keys(['quant_out_signed', 'quant_in_signed'])
+XIR OP name resnet_v1_50/block1/unit_3/bottleneck_v1/conv2/Conv2D_weights_fixneuron fix
+XIR ATT dict_keys(['if_signed', 'round_mode', 'fix_point', 'bit_width'])
+XIR OP name resnet_v1_50/block2/unit_1/bottleneck_v1/shortcut/Conv2D_weights const
+XIR ATT dict_keys(['data', 'shape', 'data_type'])
+XIR OP name resnet_v1_50/block1/unit_3/bottleneck_v1/conv2/Conv2D conv2d
+XIR ATT dict_keys(['quant_out_signed', 'quant_in_signed', 'dilation', 'kernel', 'stride', 'pad_mode', 'pad'])
+XIR OP name resnet_v1_50/block1/unit_1/bottleneck_v1/shortcut/Conv2D_weights const
+XIR ATT dict_keys(['data', 'shape', 'data_type'])
+XIR OP name resnet_v1_50/block1/unit_3/bottleneck_v1/conv2/Conv2D_bias const
+XIR ATT dict_keys(['data', 'shape', 'data_type'])
+XIR OP name resnet_v1_50/block2/unit_2/bottleneck_v1/conv3/Conv2D_bias_fixneuron fix
+XIR ATT dict_keys(['if_signed', 'round_mode', 'fix_point', 'bit_width'])
+XIR OP name resnet_v1_50/block1/unit_1/bottleneck_v1/shortcut/Conv2D_weights_fixneuron fix
+XIR ATT dict_keys(['if_signed', 'round_mode', 'fix_point', 'bit_width'])
+XIR OP name resnet_v1_50/block1/unit_3/bottleneck_v1/conv3/Conv2D_weights_fixneuron fix
+XIR ATT dict_keys(['if_signed', 'round_mode', 'fix_point', 'bit_width'])
+XIR OP name resnet_v1_50/block1/unit_1/bottleneck_v1/shortcut/Conv2D_bias const
+XIR ATT dict_keys(['data', 'shape', 'data_type'])
+XIR OP name resnet_v1_50/block1/unit_1/bottleneck_v1/shortcut/Conv2D conv2d
+XIR ATT dict_keys(['quant_out_signed', 'quant_in_signed', 'dilation', 'kernel', 'stride', 'pad_mode', 'pad'])
+XIR OP name resnet_v1_50/block1/unit_3/bottleneck_v1/conv3/Conv2D_bias const
+XIR ATT dict_keys(['data', 'shape', 'data_type'])
+XIR OP name resnet_v1_50/block1/unit_3/bottleneck_v1/conv2/Conv2D_bias_fixneuron fix
+XIR ATT dict_keys(['if_signed', 'round_mode', 'fix_point', 'bit_width'])
+XIR OP name resnet_v1_50/block1/unit_2/bottleneck_v1/conv1/Conv2D_weights const
+XIR ATT dict_keys(['data', 'shape', 'data_type'])
+XIR OP name resnet_v1_50/block4/unit_3/bottleneck_v1/Relu relu
+XIR ATT dict_keys(['quant_out_signed', 'quant_in_signed'])
+XIR OP name resnet_v1_50/block2/unit_2/bottleneck_v1/Relu relu
+XIR ATT dict_keys(['quant_out_signed', 'quant_in_signed'])
+XIR OP name resnet_v1_50/block4/unit_3/bottleneck_v1/add add
+XIR ATT dict_keys(['quant_out_signed', 'quant_in_signed'])
+XIR OP name resnet_v1_50/block1/unit_3/bottleneck_v1/conv2/Relu/aquant fix
+XIR ATT dict_keys(['quant_in_bit_width', 'round_mode', 'bit_width', 'fix_point', 'quant_out_signed', 'quant_in_quantize_pos', 'quant_in_signed', 'quant_out_bit_width', 'quant_out_round_mode', 'if_signed', 'quant_in_round_mode', 'quant_out_quantize_pos'])
+XIR OP name resnet_v1_50/block4/unit_3/bottleneck_v1/conv3/Conv2D conv2d
+XIR ATT dict_keys(['quant_out_signed', 'quant_in_signed', 'dilation', 'kernel', 'stride', 'pad_mode', 'pad'])
+XIR OP name resnet_v1_50/block1/unit_1/bottleneck_v1/Relu/aquant fix
+XIR ATT dict_keys(['quant_in_bit_width', 'round_mode', 'bit_width', 'fix_point', 'quant_out_signed', 'quant_in_quantize_pos', 'quant_in_signed', 'quant_out_bit_width', 'quant_out_round_mode', 'if_signed', 'quant_in_round_mode', 'quant_out_quantize_pos'])
+XIR OP name resnet_v1_50/block4/unit_3/bottleneck_v1/Relu/aquant fix
+XIR ATT dict_keys(['quant_in_bit_width', 'round_mode', 'bit_width', 'fix_point', 'quant_out_signed', 'quant_in_quantize_pos', 'quant_in_signed', 'quant_out_bit_width', 'quant_out_round_mode', 'if_signed', 'quant_in_round_mode', 'quant_out_quantize_pos'])
+XIR OP name resnet_v1_50/block1/unit_3/bottleneck_v1/conv3/Conv2D_bias_fixneuron fix
+XIR ATT dict_keys(['if_signed', 'round_mode', 'fix_point', 'bit_width'])
+XIR OP name resnet_v1_50/pool5/mul mul
+XIR ATT dict_keys(['quant_out_signed', 'quant_in_signed'])
+XIR OP name resnet_v1_50/block1/unit_1/bottleneck_v1/shortcut/BatchNorm/FusedBatchNorm/add/aquant fix
+XIR ATT dict_keys(['quant_in_bit_width', 'round_mode', 'bit_width', 'fix_point', 'quant_out_signed', 'quant_in_quantize_pos', 'quant_in_signed', 'quant_out_bit_width', 'quant_out_round_mode', 'if_signed', 'quant_in_round_mode', 'quant_out_quantize_pos'])
+XIR OP name resnet_v1_50/pool5 avgpool2d
+XIR ATT dict_keys(['quant_out_signed', 'quant_in_signed', 'count_include_invalid', 'count_include_pad', 'kernel', 'stride', 'global', 'pad', 'pad_mode'])
+XIR OP name resnet_v1_50/block1/unit_2/bottleneck_v1/conv1/Conv2D_bias_fixneuron fix
+XIR ATT dict_keys(['if_signed', 'round_mode', 'fix_point', 'bit_width'])
+XIR OP name resnet_v1_50/logits/Conv2D_weights const
+XIR ATT dict_keys(['data', 'shape', 'data_type'])
+XIR OP name resnet_v1_50/block1/unit_2/bottleneck_v1/conv1/Conv2D_bias const
+XIR ATT dict_keys(['data', 'shape', 'data_type'])
+XIR OP name resnet_v1_50/pool5/mul/aquant fix
+XIR ATT dict_keys(['quant_in_bit_width', 'round_mode', 'bit_width', 'fix_point', 'quant_out_signed', 'quant_in_quantize_pos', 'quant_in_signed', 'quant_out_bit_width', 'quant_out_round_mode', 'if_signed', 'quant_in_round_mode', 'quant_out_quantize_pos'])
+XIR OP name resnet_v1_50/block2/unit_1/bottleneck_v1/conv2/Conv2D_bias_fixneuron fix
+XIR ATT dict_keys(['if_signed', 'round_mode', 'fix_point', 'bit_width'])
+XIR OP name resnet_v1_50/logits/Conv2D_bias const
+XIR ATT dict_keys(['data', 'shape', 'data_type'])
+XIR OP name resnet_v1_50/block2/unit_1/bottleneck_v1/conv2/Conv2D_bias const
+XIR ATT dict_keys(['data', 'shape', 'data_type'])
+XIR OP name resnet_v1_50/logits/Conv2D_weights_fixneuron fix
+XIR ATT dict_keys(['if_signed', 'round_mode', 'fix_point', 'bit_width'])
+XIR OP name resnet_v1_50/block2/unit_2/bottleneck_v1/conv2/Conv2D_weights const
+XIR ATT dict_keys(['data', 'shape', 'data_type'])
+XIR OP name resnet_v1_50/SpatialSqueeze squeeze
+XIR ATT dict_keys(['quant_out_signed', 'axis', 'quant_in_signed'])
+XIR OP name resnet_v1_50/block1/unit_1/bottleneck_v1/conv3/Conv2D_bias_fixneuron fix
+XIR ATT dict_keys(['if_signed', 'round_mode', 'fix_point', 'bit_width'])
+XIR OP name resnet_v1_50/logits/BiasAdd/aquant fix
+XIR ATT dict_keys(['quant_in_bit_width', 'round_mode', 'bit_width', 'fix_point', 'quant_out_signed', 'quant_in_quantize_pos', 'quant_in_signed', 'quant_out_bit_width', 'quant_out_round_mode', 'if_signed', 'quant_in_round_mode', 'quant_out_quantize_pos'])
+XIR OP name resnet_v1_50/block1/unit_3/bottleneck_v1/conv2/Relu relu
+XIR ATT dict_keys(['quant_out_signed', 'quant_in_signed'])
+XIR OP name resnet_v1_50/logits/Conv2D conv2d
+XIR ATT dict_keys(['quant_out_signed', 'quant_in_signed', 'dilation', 'kernel', 'stride', 'pad_mode', 'pad'])
+XIR OP name resnet_v1_50/block2/unit_2/bottleneck_v1/conv2/Conv2D_weights_fixneuron fix
+XIR ATT dict_keys(['if_signed', 'round_mode', 'fix_point', 'bit_width'])
+XIR OP name resnet_v1_50/logits/Conv2D_bias_fixneuron fix
+XIR ATT dict_keys(['if_signed', 'round_mode', 'fix_point', 'bit_width'])
+XIR OP name resnet_v1_50/block1/unit_3/bottleneck_v1/Pad pad
+XIR ATT dict_keys(['quant_out_signed', 'constant_values', 'paddings', 'quant_in_signed', 'mode'])
+XIR OP name resnet_v1_50/block1/unit_3/bottleneck_v1/conv1/Relu/aquant fix
+XIR ATT dict_keys(['quant_in_bit_width', 'round_mode', 'bit_width', 'fix_point', 'quant_out_signed', 'quant_in_quantize_pos', 'quant_in_signed', 'quant_out_bit_width', 'quant_out_round_mode', 'if_signed', 'quant_in_round_mode', 'quant_out_quantize_pos'])
+XIR OP name resnet_v1_50/block3/unit_3/bottleneck_v1/conv1/Conv2D conv2d
+XIR ATT dict_keys(['quant_out_signed', 'quant_in_signed', 'dilation', 'kernel', 'stride', 'pad_mode', 'pad'])
+XIR OP name resnet_v1_50/block1/unit_3/bottleneck_v1/conv3/Conv2D conv2d
+XIR ATT dict_keys(['quant_out_signed', 'quant_in_signed', 'dilation', 'kernel', 'stride', 'pad_mode', 'pad'])
+XIR OP name resnet_v1_50/block3/unit_3/bottleneck_v1/conv1/Conv2D_bias_fixneuron fix
+XIR ATT dict_keys(['if_signed', 'round_mode', 'fix_point', 'bit_width'])
+XIR OP name resnet_v1_50/block1/unit_3/bottleneck_v1/conv1/Conv2D_bias const
+XIR ATT dict_keys(['data', 'shape', 'data_type'])
+XIR OP name resnet_v1_50/block3/unit_3/bottleneck_v1/conv1/Relu/aquant fix
+XIR ATT dict_keys(['quant_in_bit_width', 'round_mode', 'bit_width', 'fix_point', 'quant_out_signed', 'quant_in_quantize_pos', 'quant_in_signed', 'quant_out_bit_width', 'quant_out_round_mode', 'if_signed', 'quant_in_round_mode', 'quant_out_quantize_pos'])
+XIR OP name resnet_v1_50/block1/unit_3/bottleneck_v1/shortcut/MaxPool/aquant fix
+XIR ATT dict_keys(['quant_in_bit_width', 'round_mode', 'bit_width', 'fix_point', 'quant_out_signed', 'quant_in_quantize_pos', 'quant_in_signed', 'quant_out_bit_width', 'quant_out_round_mode', 'if_signed', 'quant_in_round_mode', 'quant_out_quantize_pos'])
+XIR OP name resnet_v1_50/block3/unit_3/bottleneck_v1/conv1/Relu relu
+XIR ATT dict_keys(['quant_out_signed', 'quant_in_signed'])
+XIR OP name resnet_v1_50/block1/unit_2/bottleneck_v1/conv1/Relu/aquant fix
+XIR ATT dict_keys(['quant_in_bit_width', 'round_mode', 'bit_width', 'fix_point', 'quant_out_signed', 'quant_in_quantize_pos', 'quant_in_signed', 'quant_out_bit_width', 'quant_out_round_mode', 'if_signed', 'quant_in_round_mode', 'quant_out_quantize_pos'])
+XIR OP name resnet_v1_50/block3/unit_3/bottleneck_v1/conv2/Conv2D_weights_fixneuron fix
+XIR ATT dict_keys(['if_signed', 'round_mode', 'fix_point', 'bit_width'])
+XIR OP name resnet_v1_50/block4/unit_1/bottleneck_v1/shortcut/BatchNorm/FusedBatchNorm/add/aquant fix
+XIR ATT dict_keys(['quant_in_bit_width', 'round_mode', 'bit_width', 'fix_point', 'quant_out_signed', 'quant_in_quantize_pos', 'quant_in_signed', 'quant_out_bit_width', 'quant_out_round_mode', 'if_signed', 'quant_in_round_mode', 'quant_out_quantize_pos'])
+XIR OP name resnet_v1_50/block3/unit_3/bottleneck_v1/conv2/Conv2D_weights const
+XIR ATT dict_keys(['data', 'shape', 'data_type'])
+XIR OP name resnet_v1_50/block4/unit_1/bottleneck_v1/conv1/Relu relu
+XIR ATT dict_keys(['quant_out_signed', 'quant_in_signed'])
+XIR OP name resnet_v1_50/block3/unit_3/bottleneck_v1/conv2/Conv2D_bias_fixneuron fix
+XIR ATT dict_keys(['if_signed', 'round_mode', 'fix_point', 'bit_width'])
+XIR OP name resnet_v1_50/block4/unit_1/bottleneck_v1/conv2/Conv2D_weights const
+XIR ATT dict_keys(['data', 'shape', 'data_type'])
+XIR OP name resnet_v1_50/block3/unit_3/bottleneck_v1/conv2/Conv2D_bias const
+XIR ATT dict_keys(['data', 'shape', 'data_type'])
+XIR OP name resnet_v1_50/block4/unit_1/bottleneck_v1/conv1/Relu/aquant fix
+XIR ATT dict_keys(['quant_in_bit_width', 'round_mode', 'bit_width', 'fix_point', 'quant_out_signed', 'quant_in_quantize_pos', 'quant_in_signed', 'quant_out_bit_width', 'quant_out_round_mode', 'if_signed', 'quant_in_round_mode', 'quant_out_quantize_pos'])
+XIR OP name resnet_v1_50/block3/unit_3/bottleneck_v1/conv2/Relu relu
+XIR ATT dict_keys(['quant_out_signed', 'quant_in_signed'])
+XIR OP name resnet_v1_50/block4/unit_1/bottleneck_v1/conv2/Conv2D_weights_fixneuron fix
+XIR ATT dict_keys(['if_signed', 'round_mode', 'fix_point', 'bit_width'])
+XIR OP name resnet_v1_50/block3/unit_3/bottleneck_v1/conv2/Conv2D conv2d
+XIR ATT dict_keys(['quant_out_signed', 'quant_in_signed', 'dilation', 'kernel', 'stride', 'pad_mode', 'pad'])
+XIR OP name resnet_v1_50/block4/unit_1/bottleneck_v1/shortcut/Conv2D conv2d
+XIR ATT dict_keys(['quant_out_signed', 'quant_in_signed', 'dilation', 'kernel', 'stride', 'pad_mode', 'pad'])
+XIR OP name resnet_v1_50/block3/unit_3/bottleneck_v1/conv3/Conv2D_weights const
+XIR ATT dict_keys(['data', 'shape', 'data_type'])
+XIR OP name resnet_v1_50/block4/unit_1/bottleneck_v1/conv2/Relu relu
+XIR ATT dict_keys(['quant_out_signed', 'quant_in_signed'])
+XIR OP name resnet_v1_50/block3/unit_3/bottleneck_v1/conv2/Relu/aquant fix
+XIR ATT dict_keys(['quant_in_bit_width', 'round_mode', 'bit_width', 'fix_point', 'quant_out_signed', 'quant_in_quantize_pos', 'quant_in_signed', 'quant_out_bit_width', 'quant_out_round_mode', 'if_signed', 'quant_in_round_mode', 'quant_out_quantize_pos'])
+XIR OP name resnet_v1_50/block4/unit_1/bottleneck_v1/conv2/Conv2D_bias const
+XIR ATT dict_keys(['data', 'shape', 'data_type'])
+XIR OP name resnet_v1_50/block2/unit_3/bottleneck_v1/conv3/Conv2D_weights_fixneuron fix
+XIR ATT dict_keys(['if_signed', 'round_mode', 'fix_point', 'bit_width'])
+XIR OP name resnet_v1_50/block4/unit_1/bottleneck_v1/conv2/Conv2D conv2d
+XIR ATT dict_keys(['quant_out_signed', 'quant_in_signed', 'dilation', 'kernel', 'stride', 'pad_mode', 'pad'])
+XIR OP name resnet_v1_50/block1/unit_2/bottleneck_v1/Relu/aquant fix
+XIR ATT dict_keys(['quant_in_bit_width', 'round_mode', 'bit_width', 'fix_point', 'quant_out_signed', 'quant_in_quantize_pos', 'quant_in_signed', 'quant_out_bit_width', 'quant_out_round_mode', 'if_signed', 'quant_in_round_mode', 'quant_out_quantize_pos'])
+XIR OP name resnet_v1_50/block4/unit_1/bottleneck_v1/conv2/Conv2D_bias_fixneuron fix
+XIR ATT dict_keys(['if_signed', 'round_mode', 'fix_point', 'bit_width'])
+XIR OP name resnet_v1_50/predictions/Reshape/shape_const const
+XIR ATT dict_keys(['quant_out_signed', 'quant_in_signed', 'data', 'shape', 'data_type'])
+XIR OP name resnet_v1_50/block4/unit_1/bottleneck_v1/conv3/Conv2D_weights const
+XIR ATT dict_keys(['data', 'shape', 'data_type'])
+XIR OP name resnet_v1_50/block1/unit_2/bottleneck_v1/conv3/Conv2D_weights_fixneuron fix
+XIR ATT dict_keys(['if_signed', 'round_mode', 'fix_point', 'bit_width'])
+XIR OP name resnet_v1_50/block4/unit_1/bottleneck_v1/conv2/Relu/aquant fix
+XIR ATT dict_keys(['quant_in_bit_width', 'round_mode', 'bit_width', 'fix_point', 'quant_out_signed', 'quant_in_quantize_pos', 'quant_in_signed', 'quant_out_bit_width', 'quant_out_round_mode', 'if_signed', 'quant_in_round_mode', 'quant_out_quantize_pos'])
+XIR OP name resnet_v1_50/block3/unit_4/bottleneck_v1/conv3/BatchNorm/FusedBatchNorm/add/aquant fix
+XIR ATT dict_keys(['quant_in_bit_width', 'round_mode', 'bit_width', 'fix_point', 'quant_out_signed', 'quant_in_quantize_pos', 'quant_in_signed', 'quant_out_bit_width', 'quant_out_round_mode', 'if_signed', 'quant_in_round_mode', 'quant_out_quantize_pos'])
+XIR OP name resnet_v1_50/block4/unit_1/bottleneck_v1/conv3/Conv2D_bias const
+XIR ATT dict_keys(['data', 'shape', 'data_type'])
+XIR OP name resnet_v1_50/block3/unit_4/bottleneck_v1/conv3/Conv2D_bias const
+XIR ATT dict_keys(['data', 'shape', 'data_type'])
+XIR OP name resnet_v1_50/block4/unit_1/bottleneck_v1/conv3/Conv2D_weights_fixneuron fix
+XIR ATT dict_keys(['if_signed', 'round_mode', 'fix_point', 'bit_width'])
+XIR OP name resnet_v1_50/block3/unit_4/bottleneck_v1/conv3/Conv2D_bias_fixneuron fix
+XIR ATT dict_keys(['if_signed', 'round_mode', 'fix_point', 'bit_width'])
+XIR OP name resnet_v1_50/block4/unit_1/bottleneck_v1/conv3/Conv2D_bias_fixneuron fix
+XIR ATT dict_keys(['if_signed', 'round_mode', 'fix_point', 'bit_width'])
+XIR OP name resnet_v1_50/block3/unit_4/bottleneck_v1/add add
+XIR ATT dict_keys(['quant_out_signed', 'quant_in_signed'])
+XIR OP name resnet_v1_50/block4/unit_1/bottleneck_v1/conv3/BatchNorm/FusedBatchNorm/add/aquant fix
+XIR ATT dict_keys(['quant_in_bit_width', 'round_mode', 'bit_width', 'fix_point', 'quant_out_signed', 'quant_in_quantize_pos', 'quant_in_signed', 'quant_out_bit_width', 'quant_out_round_mode', 'if_signed', 'quant_in_round_mode', 'quant_out_quantize_pos'])
+XIR OP name resnet_v1_50/block3/unit_4/bottleneck_v1/Relu relu
+XIR ATT dict_keys(['quant_out_signed', 'quant_in_signed'])
+XIR OP name resnet_v1_50/block3/unit_5/bottleneck_v1/conv1/Relu/aquant fix
+XIR ATT dict_keys(['quant_in_bit_width', 'round_mode', 'bit_width', 'fix_point', 'quant_out_signed', 'quant_in_quantize_pos', 'quant_in_signed', 'quant_out_bit_width', 'quant_out_round_mode', 'if_signed', 'quant_in_round_mode', 'quant_out_quantize_pos'])
+XIR OP name resnet_v1_50/block3/unit_4/bottleneck_v1/conv3/Conv2D conv2d
+XIR ATT dict_keys(['quant_out_signed', 'quant_in_signed', 'dilation', 'kernel', 'stride', 'pad_mode', 'pad'])
+XIR OP name resnet_v1_50/block3/unit_1/bottleneck_v1/conv3/Conv2D_bias_fixneuron fix
+XIR ATT dict_keys(['if_signed', 'round_mode', 'fix_point', 'bit_width'])
+XIR OP name resnet_v1_50/block4/unit_1/bottleneck_v1/conv3/Conv2D conv2d
+XIR ATT dict_keys(['quant_out_signed', 'quant_in_signed', 'dilation', 'kernel', 'stride', 'pad_mode', 'pad'])
+XIR OP name resnet_v1_50/block3/unit_5/bottleneck_v1/conv1/Conv2D_weights const
+XIR ATT dict_keys(['data', 'shape', 'data_type'])
+XIR OP name resnet_v1_50/block3/unit_5/bottleneck_v1/conv2/Conv2D_weights_fixneuron fix
+XIR ATT dict_keys(['if_signed', 'round_mode', 'fix_point', 'bit_width'])
+XIR OP name resnet_v1_50/block3/unit_4/bottleneck_v1/Relu/aquant fix
+XIR ATT dict_keys(['quant_in_bit_width', 'round_mode', 'bit_width', 'fix_point', 'quant_out_signed', 'quant_in_quantize_pos', 'quant_in_signed', 'quant_out_bit_width', 'quant_out_round_mode', 'if_signed', 'quant_in_round_mode', 'quant_out_quantize_pos'])
+XIR OP name resnet_v1_50/block3/unit_5/bottleneck_v1/conv2/Conv2D_weights const
+XIR ATT dict_keys(['data', 'shape', 'data_type'])
+XIR OP name resnet_v1_50/block3/unit_5/bottleneck_v1/conv1/Conv2D_bias const
+XIR ATT dict_keys(['data', 'shape', 'data_type'])
+XIR OP name resnet_v1_50/block3/unit_5/bottleneck_v1/conv2/Conv2D_bias_fixneuron fix
+XIR ATT dict_keys(['if_signed', 'round_mode', 'fix_point', 'bit_width'])
+XIR OP name resnet_v1_50/block3/unit_5/bottleneck_v1/conv2/Conv2D_bias const
+XIR ATT dict_keys(['data', 'shape', 'data_type'])
+XIR OP name resnet_v1_50/block3/unit_5/bottleneck_v1/conv1/Conv2D_weights_fixneuron fix
+XIR ATT dict_keys(['if_signed', 'round_mode', 'fix_point', 'bit_width'])
+XIR OP name resnet_v1_50/block3/unit_5/bottleneck_v1/conv2/Relu relu
+XIR ATT dict_keys(['quant_out_signed', 'quant_in_signed'])
+XIR OP name resnet_v1_50/block3/unit_5/bottleneck_v1/conv1/Conv2D conv2d
+XIR ATT dict_keys(['quant_out_signed', 'quant_in_signed', 'dilation', 'kernel', 'stride', 'pad_mode', 'pad'])
+XIR OP name resnet_v1_50/block3/unit_5/bottleneck_v1/conv2/Conv2D conv2d
+XIR ATT dict_keys(['quant_out_signed', 'quant_in_signed', 'dilation', 'kernel', 'stride', 'pad_mode', 'pad'])
+XIR OP name resnet_v1_50/block3/unit_5/bottleneck_v1/conv1/Conv2D_bias_fixneuron fix
+XIR ATT dict_keys(['if_signed', 'round_mode', 'fix_point', 'bit_width'])
+XIR OP name resnet_v1_50/block3/unit_5/bottleneck_v1/conv3/Conv2D_weights const
+XIR ATT dict_keys(['data', 'shape', 'data_type'])
+XIR OP name resnet_v1_50/block2/unit_1/bottleneck_v1/conv1/Conv2D_weights const
+XIR ATT dict_keys(['data', 'shape', 'data_type'])
+XIR OP name resnet_v1_50/block3/unit_5/bottleneck_v1/conv2/Relu/aquant fix
+XIR ATT dict_keys(['quant_in_bit_width', 'round_mode', 'bit_width', 'fix_point', 'quant_out_signed', 'quant_in_quantize_pos', 'quant_in_signed', 'quant_out_bit_width', 'quant_out_round_mode', 'if_signed', 'quant_in_round_mode', 'quant_out_quantize_pos'])
+XIR OP name resnet_v1_50/block3/unit_5/bottleneck_v1/conv1/Relu relu
+XIR ATT dict_keys(['quant_out_signed', 'quant_in_signed'])
+XIR OP name resnet_v1_50/block3/unit_5/bottleneck_v1/add add
+XIR ATT dict_keys(['quant_out_signed', 'quant_in_signed'])
+XIR OP name resnet_v1_50/block3/unit_3/bottleneck_v1/conv3/Conv2D_weights_fixneuron fix
+XIR ATT dict_keys(['if_signed', 'round_mode', 'fix_point', 'bit_width'])
+XIR OP name resnet_v1_50/block3/unit_5/bottleneck_v1/conv3/BatchNorm/FusedBatchNorm/add/aquant fix
+XIR ATT dict_keys(['quant_in_bit_width', 'round_mode', 'bit_width', 'fix_point', 'quant_out_signed', 'quant_in_quantize_pos', 'quant_in_signed', 'quant_out_bit_width', 'quant_out_round_mode', 'if_signed', 'quant_in_round_mode', 'quant_out_quantize_pos'])
+XIR OP name resnet_v1_50/block1/unit_2/bottleneck_v1/conv3/Conv2D_weights const
+XIR ATT dict_keys(['data', 'shape', 'data_type'])
+XIR OP name resnet_v1_50/block3/unit_5/bottleneck_v1/conv3/Conv2D_weights_fixneuron fix
+XIR ATT dict_keys(['if_signed', 'round_mode', 'fix_point', 'bit_width'])
+XIR OP name resnet_v1_50/block3/unit_3/bottleneck_v1/conv3/BatchNorm/FusedBatchNorm/add/aquant fix
+XIR ATT dict_keys(['quant_in_bit_width', 'round_mode', 'bit_width', 'fix_point', 'quant_out_signed', 'quant_in_quantize_pos', 'quant_in_signed', 'quant_out_bit_width', 'quant_out_round_mode', 'if_signed', 'quant_in_round_mode', 'quant_out_quantize_pos'])
+XIR OP name resnet_v1_50/block3/unit_5/bottleneck_v1/conv3/Conv2D conv2d
+XIR ATT dict_keys(['quant_out_signed', 'quant_in_signed', 'dilation', 'kernel', 'stride', 'pad_mode', 'pad'])
+XIR OP name resnet_v1_50/block3/unit_3/bottleneck_v1/conv3/Conv2D_bias const
+XIR ATT dict_keys(['data', 'shape', 'data_type'])
+XIR OP name resnet_v1_50/block3/unit_5/bottleneck_v1/conv3/Conv2D_bias_fixneuron fix
+XIR ATT dict_keys(['if_signed', 'round_mode', 'fix_point', 'bit_width'])
+XIR OP name resnet_v1_50/block3/unit_3/bottleneck_v1/conv3/Conv2D_bias_fixneuron fix
+XIR ATT dict_keys(['if_signed', 'round_mode', 'fix_point', 'bit_width'])
+XIR OP name resnet_v1_50/block3/unit_5/bottleneck_v1/Relu/aquant fix
+XIR ATT dict_keys(['quant_in_bit_width', 'round_mode', 'bit_width', 'fix_point', 'quant_out_signed', 'quant_in_quantize_pos', 'quant_in_signed', 'quant_out_bit_width', 'quant_out_round_mode', 'if_signed', 'quant_in_round_mode', 'quant_out_quantize_pos'])
+XIR OP name resnet_v1_50/block3/unit_3/bottleneck_v1/add add
+XIR ATT dict_keys(['quant_out_signed', 'quant_in_signed'])
+XIR OP name resnet_v1_50/block3/unit_5/bottleneck_v1/Relu relu
+XIR ATT dict_keys(['quant_out_signed', 'quant_in_signed'])
+XIR OP name resnet_v1_50/block3/unit_3/bottleneck_v1/Relu relu
+XIR ATT dict_keys(['quant_out_signed', 'quant_in_signed'])
+XIR OP name resnet_v1_50/block3/unit_6/bottleneck_v1/conv1/Conv2D_weights_fixneuron fix
+XIR ATT dict_keys(['if_signed', 'round_mode', 'fix_point', 'bit_width'])
+XIR OP name resnet_v1_50/block3/unit_3/bottleneck_v1/conv3/Conv2D conv2d
+XIR ATT dict_keys(['quant_out_signed', 'quant_in_signed', 'dilation', 'kernel', 'stride', 'pad_mode', 'pad'])
+XIR OP name resnet_v1_50/block3/unit_6/bottleneck_v1/conv1/Conv2D_weights const
+XIR ATT dict_keys(['data', 'shape', 'data_type'])
+XIR OP name resnet_v1_50/block3/unit_4/bottleneck_v1/conv1/Conv2D_weights const
+XIR ATT dict_keys(['data', 'shape', 'data_type'])
+XIR OP name resnet_v1_50/block3/unit_6/bottleneck_v1/conv1/Conv2D_bias_fixneuron fix
+XIR ATT dict_keys(['if_signed', 'round_mode', 'fix_point', 'bit_width'])
+XIR OP name resnet_v1_50/block3/unit_3/bottleneck_v1/Relu/aquant fix
+XIR ATT dict_keys(['quant_in_bit_width', 'round_mode', 'bit_width', 'fix_point', 'quant_out_signed', 'quant_in_quantize_pos', 'quant_in_signed', 'quant_out_bit_width', 'quant_out_round_mode', 'if_signed', 'quant_in_round_mode', 'quant_out_quantize_pos'])
+XIR OP name resnet_v1_50/block3/unit_6/bottleneck_v1/conv1/Conv2D_bias const
+XIR ATT dict_keys(['data', 'shape', 'data_type'])
+XIR OP name resnet_v1_50/block3/unit_1/bottleneck_v1/conv1/Conv2D_bias_fixneuron fix
+XIR ATT dict_keys(['if_signed', 'round_mode', 'fix_point', 'bit_width'])
+XIR OP name resnet_v1_50/block3/unit_6/bottleneck_v1/shortcut/MaxPool maxpool2d
+XIR ATT dict_keys(['quant_out_signed', 'quant_in_signed', 'kernel', 'stride', 'global', 'pad_mode', 'pad'])
+XIR OP name resnet_v1_50/block3/unit_4/bottleneck_v1/conv1/Conv2D_weights_fixneuron fix
+XIR ATT dict_keys(['if_signed', 'round_mode', 'fix_point', 'bit_width'])
+XIR OP name resnet_v1_50/block3/unit_6/bottleneck_v1/conv1/Conv2D conv2d
+XIR ATT dict_keys(['quant_out_signed', 'quant_in_signed', 'dilation', 'kernel', 'stride', 'pad_mode', 'pad'])
+XIR OP name resnet_v1_50/block3/unit_1/bottleneck_v1/shortcut/Conv2D_weights const
+XIR ATT dict_keys(['data', 'shape', 'data_type'])
+XIR OP name resnet_v1_50/block3/unit_6/bottleneck_v1/shortcut/MaxPool/aquant fix
+XIR ATT dict_keys(['quant_in_bit_width', 'round_mode', 'bit_width', 'fix_point', 'quant_out_signed', 'quant_in_quantize_pos', 'quant_in_signed', 'quant_out_bit_width', 'quant_out_round_mode', 'if_signed', 'quant_in_round_mode', 'quant_out_quantize_pos'])
+XIR OP name resnet_v1_50/block3/unit_1/bottleneck_v1/conv1/Conv2D conv2d
+XIR ATT dict_keys(['quant_out_signed', 'quant_in_signed', 'dilation', 'kernel', 'stride', 'pad_mode', 'pad'])
+XIR OP name resnet_v1_50/block3/unit_6/bottleneck_v1/conv1/Relu relu
+XIR ATT dict_keys(['quant_out_signed', 'quant_in_signed'])
+XIR OP name resnet_v1_50/block3/unit_1/bottleneck_v1/shortcut/Conv2D_bias const
+XIR ATT dict_keys(['data', 'shape', 'data_type'])
+XIR OP name resnet_v1_50/block3/unit_5/bottleneck_v1/conv3/Conv2D_bias const
+XIR ATT dict_keys(['data', 'shape', 'data_type'])
+XIR OP name resnet_v1_50/block3/unit_1/bottleneck_v1/shortcut/Conv2D_weights_fixneuron fix
+XIR ATT dict_keys(['if_signed', 'round_mode', 'fix_point', 'bit_width'])
+XIR OP name resnet_v1_50/block3/unit_6/bottleneck_v1/conv1/Relu/aquant fix
+XIR ATT dict_keys(['quant_in_bit_width', 'round_mode', 'bit_width', 'fix_point', 'quant_out_signed', 'quant_in_quantize_pos', 'quant_in_signed', 'quant_out_bit_width', 'quant_out_round_mode', 'if_signed', 'quant_in_round_mode', 'quant_out_quantize_pos'])
+XIR OP name resnet_v1_50/block3/unit_6/bottleneck_v1/conv2/Conv2D_weights const
+XIR ATT dict_keys(['data', 'shape', 'data_type'])
+XIR OP name resnet_v1_50/block3/unit_6/bottleneck_v1/Pad/aquant fix
+XIR ATT dict_keys(['quant_in_bit_width', 'round_mode', 'bit_width', 'fix_point', 'quant_out_signed', 'quant_in_quantize_pos', 'quant_in_signed', 'quant_out_bit_width', 'quant_out_round_mode', 'if_signed', 'quant_in_round_mode', 'quant_out_quantize_pos'])
+XIR OP name resnet_v1_50/block3/unit_6/bottleneck_v1/conv2/Conv2D_bias const
+XIR ATT dict_keys(['data', 'shape', 'data_type'])
+XIR OP name resnet_v1_50/block3/unit_6/bottleneck_v1/conv2/Conv2D_weights_fixneuron fix
+XIR ATT dict_keys(['if_signed', 'round_mode', 'fix_point', 'bit_width'])
+XIR OP name resnet_v1_50/block3/unit_6/bottleneck_v1/conv2/Conv2D conv2d
+XIR ATT dict_keys(['quant_out_signed', 'quant_in_signed', 'dilation', 'kernel', 'stride', 'pad_mode', 'pad'])
+XIR OP name resnet_v1_50/block3/unit_6/bottleneck_v1/conv2/Conv2D_bias_fixneuron fix
+XIR ATT dict_keys(['if_signed', 'round_mode', 'fix_point', 'bit_width'])
+XIR OP name resnet_v1_50/block3/unit_6/bottleneck_v1/conv2/Relu/aquant fix
+XIR ATT dict_keys(['quant_in_bit_width', 'round_mode', 'bit_width', 'fix_point', 'quant_out_signed', 'quant_in_quantize_pos', 'quant_in_signed', 'quant_out_bit_width', 'quant_out_round_mode', 'if_signed', 'quant_in_round_mode', 'quant_out_quantize_pos'])
+XIR OP name resnet_v1_50/block3/unit_6/bottleneck_v1/conv2/Relu relu
+XIR ATT dict_keys(['quant_out_signed', 'quant_in_signed'])
+XIR OP name resnet_v1_50/block3/unit_6/bottleneck_v1/conv3/Conv2D_weights_fixneuron fix
+XIR ATT dict_keys(['if_signed', 'round_mode', 'fix_point', 'bit_width'])
+XIR OP name resnet_v1_50/block3/unit_6/bottleneck_v1/conv3/Conv2D_weights const
+XIR ATT dict_keys(['data', 'shape', 'data_type'])
+XIR OP name resnet_v1_50/block4/unit_2/bottleneck_v1/add add
+XIR ATT dict_keys(['quant_out_signed', 'quant_in_signed'])
+XIR OP name resnet_v1_50/block4/unit_2/bottleneck_v1/conv3/BatchNorm/FusedBatchNorm/add/aquant fix
+XIR ATT dict_keys(['quant_in_bit_width', 'round_mode', 'bit_width', 'fix_point', 'quant_out_signed', 'quant_in_quantize_pos', 'quant_in_signed', 'quant_out_bit_width', 'quant_out_round_mode', 'if_signed', 'quant_in_round_mode', 'quant_out_quantize_pos'])
+XIR OP name resnet_v1_50/block4/unit_2/bottleneck_v1/Relu/aquant fix
+XIR ATT dict_keys(['quant_in_bit_width', 'round_mode', 'bit_width', 'fix_point', 'quant_out_signed', 'quant_in_quantize_pos', 'quant_in_signed', 'quant_out_bit_width', 'quant_out_round_mode', 'if_signed', 'quant_in_round_mode', 'quant_out_quantize_pos'])
+XIR OP name resnet_v1_50/block4/unit_2/bottleneck_v1/Relu relu
+XIR ATT dict_keys(['quant_out_signed', 'quant_in_signed'])
+XIR OP name resnet_v1_50/block4/unit_3/bottleneck_v1/conv1/Conv2D_weights const
+XIR ATT dict_keys(['data', 'shape', 'data_type'])
+XIR OP name resnet_v1_50/block4/unit_2/bottleneck_v1/conv3/Conv2D conv2d
+XIR ATT dict_keys(['quant_out_signed', 'quant_in_signed', 'dilation', 'kernel', 'stride', 'pad_mode', 'pad'])
+XIR OP name resnet_v1_50/block4/unit_3/bottleneck_v1/conv1/Conv2D_bias const
+XIR ATT dict_keys(['data', 'shape', 'data_type'])
+XIR OP name resnet_v1_50/block4/unit_3/bottleneck_v1/conv1/Conv2D_weights_fixneuron fix
+XIR ATT dict_keys(['if_signed', 'round_mode', 'fix_point', 'bit_width'])
+XIR OP name resnet_v1_50/block4/unit_3/bottleneck_v1/conv1/Conv2D_bias_fixneuron fix
+XIR ATT dict_keys(['if_signed', 'round_mode', 'fix_point', 'bit_width'])
+XIR OP name resnet_v1_50/block4/unit_3/bottleneck_v1/conv1/Relu relu
+XIR ATT dict_keys(['quant_out_signed', 'quant_in_signed'])
+XIR OP name resnet_v1_50/block4/unit_3/bottleneck_v1/conv1/Relu/aquant fix
+XIR ATT dict_keys(['quant_in_bit_width', 'round_mode', 'bit_width', 'fix_point', 'quant_out_signed', 'quant_in_quantize_pos', 'quant_in_signed', 'quant_out_bit_width', 'quant_out_round_mode', 'if_signed', 'quant_in_round_mode', 'quant_out_quantize_pos'])
+XIR OP name resnet_v1_50/block4/unit_3/bottleneck_v1/conv1/Conv2D conv2d
+XIR ATT dict_keys(['quant_out_signed', 'quant_in_signed', 'dilation', 'kernel', 'stride', 'pad_mode', 'pad'])
+XIR OP name resnet_v1_50/block4/unit_3/bottleneck_v1/conv2/Conv2D_weights_fixneuron fix
+XIR ATT dict_keys(['if_signed', 'round_mode', 'fix_point', 'bit_width'])
+XIR OP name resnet_v1_50/block4/unit_3/bottleneck_v1/conv2/Conv2D_weights const
+XIR ATT dict_keys(['data', 'shape', 'data_type'])
+XIR OP name resnet_v1_50/block4/unit_3/bottleneck_v1/conv2/Relu/aquant fix
+XIR ATT dict_keys(['quant_in_bit_width', 'round_mode', 'bit_width', 'fix_point', 'quant_out_signed', 'quant_in_quantize_pos', 'quant_in_signed', 'quant_out_bit_width', 'quant_out_round_mode', 'if_signed', 'quant_in_round_mode', 'quant_out_quantize_pos'])
+XIR OP name resnet_v1_50/block4/unit_3/bottleneck_v1/conv2/Conv2D_bias const
+XIR ATT dict_keys(['data', 'shape', 'data_type'])
+XIR OP name resnet_v1_50/block4/unit_3/bottleneck_v1/conv2/Relu relu
+XIR ATT dict_keys(['quant_out_signed', 'quant_in_signed'])
+XIR OP name resnet_v1_50/block4/unit_3/bottleneck_v1/conv2/Conv2D_bias_fixneuron fix
+XIR ATT dict_keys(['if_signed', 'round_mode', 'fix_point', 'bit_width'])
+XIR OP name resnet_v1_50/block4/unit_1/bottleneck_v1/Relu/aquant fix
+XIR ATT dict_keys(['quant_in_bit_width', 'round_mode', 'bit_width', 'fix_point', 'quant_out_signed', 'quant_in_quantize_pos', 'quant_in_signed', 'quant_out_bit_width', 'quant_out_round_mode', 'if_signed', 'quant_in_round_mode', 'quant_out_quantize_pos'])
+XIR OP name resnet_v1_50/block4/unit_3/bottleneck_v1/conv2/Conv2D conv2d
+XIR ATT dict_keys(['quant_out_signed', 'quant_in_signed', 'dilation', 'kernel', 'stride', 'pad_mode', 'pad'])
+XIR OP name resnet_v1_50/block4/unit_2/bottleneck_v1/conv1/Conv2D_weights_fixneuron fix
+XIR ATT dict_keys(['if_signed', 'round_mode', 'fix_point', 'bit_width'])
+XIR OP name resnet_v1_50/block4/unit_2/bottleneck_v1/conv1/Conv2D_weights const
+XIR ATT dict_keys(['data', 'shape', 'data_type'])
+XIR OP name resnet_v1_50/block4/unit_2/bottleneck_v1/conv1/Relu relu
+XIR ATT dict_keys(['quant_out_signed', 'quant_in_signed'])
+XIR OP name resnet_v1_50/block4/unit_2/bottleneck_v1/conv1/Conv2D_bias const
+XIR ATT dict_keys(['data', 'shape', 'data_type'])
+XIR OP name resnet_v1_50/block4/unit_2/bottleneck_v1/conv1/Conv2D conv2d
+XIR ATT dict_keys(['quant_out_signed', 'quant_in_signed', 'dilation', 'kernel', 'stride', 'pad_mode', 'pad'])
+XIR OP name resnet_v1_50/block4/unit_2/bottleneck_v1/conv1/Conv2D_bias_fixneuron fix
+XIR ATT dict_keys(['if_signed', 'round_mode', 'fix_point', 'bit_width'])
+XIR OP name resnet_v1_50/block4/unit_2/bottleneck_v1/conv2/Conv2D_weights const
+XIR ATT dict_keys(['data', 'shape', 'data_type'])
+XIR OP name resnet_v1_50/block4/unit_2/bottleneck_v1/conv1/Relu/aquant fix
+XIR ATT dict_keys(['quant_in_bit_width', 'round_mode', 'bit_width', 'fix_point', 'quant_out_signed', 'quant_in_quantize_pos', 'quant_in_signed', 'quant_out_bit_width', 'quant_out_round_mode', 'if_signed', 'quant_in_round_mode', 'quant_out_quantize_pos'])
+XIR OP name resnet_v1_50/block4/unit_2/bottleneck_v1/conv2/Conv2D_bias const
+XIR ATT dict_keys(['data', 'shape', 'data_type'])
+XIR OP name resnet_v1_50/block4/unit_2/bottleneck_v1/conv2/Conv2D_weights_fixneuron fix
+XIR ATT dict_keys(['if_signed', 'round_mode', 'fix_point', 'bit_width'])
+XIR OP name resnet_v1_50/block4/unit_2/bottleneck_v1/conv2/Conv2D_bias_fixneuron fix
+XIR ATT dict_keys(['if_signed', 'round_mode', 'fix_point', 'bit_width'])
+XIR OP name resnet_v1_50/block4/unit_2/bottleneck_v1/conv2/Relu relu
+XIR ATT dict_keys(['quant_out_signed', 'quant_in_signed'])
+XIR OP name resnet_v1_50/block4/unit_2/bottleneck_v1/conv2/Relu/aquant fix
+XIR ATT dict_keys(['quant_in_bit_width', 'round_mode', 'bit_width', 'fix_point', 'quant_out_signed', 'quant_in_quantize_pos', 'quant_in_signed', 'quant_out_bit_width', 'quant_out_round_mode', 'if_signed', 'quant_in_round_mode', 'quant_out_quantize_pos'])
+XIR OP name resnet_v1_50/block4/unit_2/bottleneck_v1/conv2/Conv2D conv2d
+XIR ATT dict_keys(['quant_out_signed', 'quant_in_signed', 'dilation', 'kernel', 'stride', 'pad_mode', 'pad'])
+XIR OP name resnet_v1_50/block4/unit_2/bottleneck_v1/conv3/Conv2D_weights_fixneuron fix
+XIR ATT dict_keys(['if_signed', 'round_mode', 'fix_point', 'bit_width'])
+XIR OP name resnet_v1_50/block4/unit_2/bottleneck_v1/conv3/Conv2D_weights const
+XIR ATT dict_keys(['data', 'shape', 'data_type'])
+XIR OP name resnet_v1_50/block4/unit_2/bottleneck_v1/conv3/Conv2D_bias_fixneuron fix
+XIR ATT dict_keys(['if_signed', 'round_mode', 'fix_point', 'bit_width'])
+XIR OP name resnet_v1_50/block4/unit_2/bottleneck_v1/conv3/Conv2D_bias const
+XIR ATT dict_keys(['data', 'shape', 'data_type'])
+XIR OP name resnet_v1_50/block4/unit_3/bottleneck_v1/conv3/Conv2D_weights_fixneuron fix
+XIR ATT dict_keys(['if_signed', 'round_mode', 'fix_point', 'bit_width'])
+XIR OP name resnet_v1_50/block4/unit_3/bottleneck_v1/conv3/Conv2D_weights const
+XIR ATT dict_keys(['data', 'shape', 'data_type'])
+XIR OP name resnet_v1_50/block4/unit_3/bottleneck_v1/conv3/BatchNorm/FusedBatchNorm/add/aquant fix
+XIR ATT dict_keys(['quant_in_bit_width', 'round_mode', 'bit_width', 'fix_point', 'quant_out_signed', 'quant_in_quantize_pos', 'quant_in_signed', 'quant_out_bit_width', 'quant_out_round_mode', 'if_signed', 'quant_in_round_mode', 'quant_out_quantize_pos'])
+XIR OP name resnet_v1_50/block4/unit_3/bottleneck_v1/conv3/Conv2D_bias const
+XIR ATT dict_keys(['data', 'shape', 'data_type'])
+XIR OP name resnet_v1_50/block3/unit_6/bottleneck_v1/Pad pad
+XIR ATT dict_keys(['quant_out_signed', 'constant_values', 'paddings', 'quant_in_signed', 'mode'])
+XIR OP name resnet_v1_50/predictions/Reshape_1/aquant fix
+XIR ATT dict_keys(['quant_in_bit_width', 'round_mode', 'bit_width', 'fix_point', 'quant_out_signed', 'quant_in_quantize_pos', 'quant_in_signed', 'quant_out_bit_width', 'quant_out_round_mode', 'if_signed', 'quant_in_round_mode', 'quant_out_quantize_pos'])
+Floyd & Warshall
+BFS
+ ############################################# 
+ ######  Parameters Assimilation
+ ############################################# 
+ ############################################# 
+ ######  Assimilating Fix Neurons
+ ############################################# 
+ ############################################# 
+ ######  Assimilating Relu
+ ############################################# 
+{'quant_out_signed': True, 'constant_values': [0, 0, 0, 0], 'paddings': [0, 0, 1, 1, 1, 1, 0, 0], 'quant_in_signed': True, 'mode': 'CONSTANT', 'kernel_width': 1, 'kernel_height': 1, 'kernel_1': TensorShapes(batch=0, width=1, height=1, channel=0), 'stride_width': 1, 'stride_height': 1, 'strides_1': TensorShapes(batch=0, width=1, height=1, channel=0)}
+Pad assimilation resnet_v1_50/block2/unit_4/bottleneck_v1/Pad [0, 0, 1, 1, 1, 1, 0, 0] resnet_v1_50/block2/unit_4/bottleneck_v1/conv2/Conv2D [0, 0, 1, 1, 1, 1, 0, 0]
+Name resnet_v1_50/block2/unit_4/bottleneck_v1/conv1/Conv2D Parameter False	Space 3211264 bits, BitePerPixel 8 Fraction 6 Start 0 End 401408	Specifier  Layout -1 Time -1 Strategies None None	Shape  [4, 28, 28, 128] CNN_Shape TensorShapes(batch=4, width=28, height=28, channel=128)
+Name resnet_v1_50/block2/unit_4/bottleneck_v1/Pad Parameter False	Space 3686400 bits, BitePerPixel 8 Fraction 6 Start 0 End 460800	Specifier  Layout -1 Time -1 Strategies None None	Shape  [4, 30, 30, 128] CNN_Shape TensorShapes(batch=4, width=30, height=30, channel=128)
+
+Name resnet_v1_50/block2/unit_4/bottleneck_v1/conv2/Conv2D Parameter False	Space 802816 bits, BitePerPixel 8 Fraction 6 Start 0 End 100352	Specifier  Layout -1 Time -1 Strategies None None	Shape  [4, 14, 14, 128] CNN_Shape TensorShapes(batch=4, width=14, height=14, channel=128)
+{'quant_out_signed': True, 'constant_values': [0, 0, 0, 0], 'paddings': [0, 0, 3, 3, 3, 3, 0, 0], 'quant_in_signed': True, 'mode': 'CONSTANT', 'kernel_width': 1, 'kernel_height': 1, 'kernel_1': TensorShapes(batch=0, width=1, height=1, channel=0), 'stride_width': 1, 'stride_height': 1, 'strides_1': TensorShapes(batch=0, width=1, height=1, channel=0)}
+Pad assimilation resnet_v1_50/Pad [0, 0, 3, 3, 3, 3, 0, 0] resnet_v1_50/conv1/Conv2D [0, 0, 3, 3, 3, 3, 0, 0]
+Name input Parameter False	Space 4816896 bits, BitePerPixel 8 Fraction 6 Start 0 End 602112	Specifier  Layout -1 Time -1 Strategies None None	Shape  [4, 224, 224, 3] CNN_Shape TensorShapes(batch=4, width=224, height=224, channel=3)
+Name resnet_v1_50/Pad Parameter False	Space 5078400 bits, BitePerPixel 8 Fraction 6 Start 0 End 634800	Specifier  Layout -1 Time -1 Strategies None None	Shape  [4, 230, 230, 3] CNN_Shape TensorShapes(batch=4, width=230, height=230, channel=3)
+Name resnet_v1_50/conv1/Conv2D Parameter False	Space 25690112 bits, BitePerPixel 8 Fraction 6 Start 0 End 3211264	Specifier  Layout -1 Time -1 Strategies None None	Shape  [4, 112, 112, 64] CNN_Shape TensorShapes(batch=4, width=112, height=112, channel=64)
+{'quant_out_signed': True, 'constant_values': [0, 0, 0, 0], 'paddings': [0, 0, 1, 1, 1, 1, 0, 0], 'quant_in_signed': True, 'mode': 'CONSTANT', 'kernel_width': 1, 'kernel_height': 1, 'kernel_1': TensorShapes(batch=0, width=1, height=1, channel=0), 'stride_width': 1, 'stride_height': 1, 'strides_1': TensorShapes(batch=0, width=1, height=1, channel=0)}
+Pad assimilation resnet_v1_50/block1/unit_3/bottleneck_v1/Pad [0, 0, 1, 1, 1, 1, 0, 0] resnet_v1_50/block1/unit_3/bottleneck_v1/conv2/Conv2D [0, 0, 1, 1, 1, 1, 0, 0]
+Name resnet_v1_50/block1/unit_3/bottleneck_v1/conv1/Conv2D Parameter False	Space 6422528 bits, BitePerPixel 8 Fraction 6 Start 0 End 802816	Specifier  Layout -1 Time -1 Strategies None None	Shape  [4, 56, 56, 64] CNN_Shape TensorShapes(batch=4, width=56, height=56, channel=64)
+Name resnet_v1_50/block1/unit_3/bottleneck_v1/Pad Parameter False	Space 6889472 bits, BitePerPixel 8 Fraction 6 Start 0 End 861184	Specifier  Layout -1 Time -1 Strategies None None	Shape  [4, 58, 58, 64] CNN_Shape TensorShapes(batch=4, width=58, height=58, channel=64)
+Name resnet_v1_50/block1/unit_3/bottleneck_v1/conv2/Conv2D Parameter False	Space 1605632 bits, BitePerPixel 8 Fraction 6 Start 0 End 200704	Specifier  Layout -1 Time -1 Strategies None None	Shape  [4, 28, 28, 64] CNN_Shape TensorShapes(batch=4, width=28, height=28, channel=64)
+{'quant_out_signed': True, 'constant_values': [0, 0, 0, 0], 'paddings': [0, 0, 1, 1, 1, 1, 0, 0], 'quant_in_signed': True, 'mode': 'CONSTANT', 'kernel_width': 1, 'kernel_height': 1, 'kernel_1': TensorShapes(batch=0, width=1, height=1, channel=0), 'stride_width': 1, 'stride_height': 1, 'strides_1': TensorShapes(batch=0, width=1, height=1, channel=0)}
+Pad assimilation resnet_v1_50/block3/unit_6/bottleneck_v1/Pad [0, 0, 1, 1, 1, 1, 0, 0] resnet_v1_50/block3/unit_6/bottleneck_v1/conv2/Conv2D [0, 0, 1, 1, 1, 1, 0, 0]
+Name resnet_v1_50/block3/unit_6/bottleneck_v1/conv1/Conv2D Parameter False	Space 1605632 bits, BitePerPixel 8 Fraction 6 Start 0 End 200704	Specifier  Layout -1 Time -1 Strategies None None	Shape  [4, 14, 14, 256] CNN_Shape TensorShapes(batch=4, width=14, height=14, channel=256)
+Name resnet_v1_50/block3/unit_6/bottleneck_v1/Pad Parameter False	Space 2097152 bits, BitePerPixel 8 Fraction 6 Start 0 End 262144	Specifier  Layout -1 Time -1 Strategies None None	Shape  [4, 16, 16, 256] CNN_Shape TensorShapes(batch=4, width=16, height=16, channel=256)
+Name resnet_v1_50/block3/unit_6/bottleneck_v1/conv2/Conv2D Parameter False	Space 401408 bits, BitePerPixel 8 Fraction 6 Start 0 End 50176	Specifier  Layout -1 Time -1 Strategies None None	Shape  [4, 7, 7, 256] CNN_Shape TensorShapes(batch=4, width=7, height=7, channel=256)
+  0 const      _50/predictions/Reshape/shape_const Ops 0.000000e+00 IN [] OUT ['resnet_v1_50/predictions/Reshape']
+  1 const      v1_50/predictions/Shape_const_const Ops 0.000000e+00 IN [] OUT ['resnet_v1_50/predictions/Reshape_1']
+  2 data       input                               Ops 0.000000e+00 IN [] OUT ['resnet_v1_50/conv1/Conv2D']
+  3 conv2d     resnet_v1_50/conv1/Conv2D           Ops 0.000000e+00 IN ['input'] OUT ['resnet_v1_50/pool1/MaxPool']
+  4 maxpool2d  resnet_v1_50/pool1/MaxPool          Ops 0.000000e+00 IN ['resnet_v1_50/conv1/Conv2D'] OUT ['resnet_v1_50/block1/unit_1/bottleneck_v1/conv1/Conv2D', 'resnet_v1_50/block1/unit_1/bottleneck_v1/shortcut/Conv2D']
+  5 conv2d     nit_1/bottleneck_v1/shortcut/Conv2D Ops 0.000000e+00 IN ['resnet_v1_50/pool1/MaxPool'] OUT ['resnet_v1_50/block1/unit_1/bottleneck_v1/add']
+  6 conv2d     1/unit_1/bottleneck_v1/conv1/Conv2D Ops 0.000000e+00 IN ['resnet_v1_50/pool1/MaxPool'] OUT ['resnet_v1_50/block1/unit_1/bottleneck_v1/conv2/Conv2D']
+  7 conv2d     1/unit_1/bottleneck_v1/conv2/Conv2D Ops 0.000000e+00 IN ['resnet_v1_50/block1/unit_1/bottleneck_v1/conv1/Conv2D'] OUT ['resnet_v1_50/block1/unit_1/bottleneck_v1/conv3/Conv2D']
+  8 conv2d     1/unit_1/bottleneck_v1/conv3/Conv2D Ops 0.000000e+00 IN ['resnet_v1_50/block1/unit_1/bottleneck_v1/conv2/Conv2D'] OUT ['resnet_v1_50/block1/unit_1/bottleneck_v1/add']
+  9 add        _50/block1/unit_1/bottleneck_v1/add Ops 0.000000e+00 IN ['resnet_v1_50/block1/unit_1/bottleneck_v1/shortcut/Conv2D', 'resnet_v1_50/block1/unit_1/bottleneck_v1/conv3/Conv2D'] OUT ['resnet_v1_50/block1/unit_2/bottleneck_v1/conv1/Conv2D', 'resnet_v1_50/block1/unit_2/bottleneck_v1/add']
+ 10 conv2d     1/unit_2/bottleneck_v1/conv1/Conv2D Ops 0.000000e+00 IN ['resnet_v1_50/block1/unit_1/bottleneck_v1/add'] OUT ['resnet_v1_50/block1/unit_2/bottleneck_v1/conv2/Conv2D']
+ 11 conv2d     1/unit_2/bottleneck_v1/conv2/Conv2D Ops 0.000000e+00 IN ['resnet_v1_50/block1/unit_2/bottleneck_v1/conv1/Conv2D'] OUT ['resnet_v1_50/block1/unit_2/bottleneck_v1/conv3/Conv2D']
+ 12 conv2d     1/unit_2/bottleneck_v1/conv3/Conv2D Ops 0.000000e+00 IN ['resnet_v1_50/block1/unit_2/bottleneck_v1/conv2/Conv2D'] OUT ['resnet_v1_50/block1/unit_2/bottleneck_v1/add']
+ 13 add        _50/block1/unit_2/bottleneck_v1/add Ops 0.000000e+00 IN ['resnet_v1_50/block1/unit_2/bottleneck_v1/conv3/Conv2D', 'resnet_v1_50/block1/unit_1/bottleneck_v1/add'] OUT ['resnet_v1_50/block1/unit_3/bottleneck_v1/conv1/Conv2D', 'resnet_v1_50/block1/unit_3/bottleneck_v1/shortcut/MaxPool']
+ 14 maxpool2d  it_3/bottleneck_v1/shortcut/MaxPool Ops 0.000000e+00 IN ['resnet_v1_50/block1/unit_2/bottleneck_v1/add'] OUT ['resnet_v1_50/block1/unit_3/bottleneck_v1/add']
+ 15 conv2d     1/unit_3/bottleneck_v1/conv1/Conv2D Ops 0.000000e+00 IN ['resnet_v1_50/block1/unit_2/bottleneck_v1/add'] OUT ['resnet_v1_50/block1/unit_3/bottleneck_v1/conv2/Conv2D']
+ 16 conv2d     1/unit_3/bottleneck_v1/conv2/Conv2D Ops 0.000000e+00 IN ['resnet_v1_50/block1/unit_3/bottleneck_v1/conv1/Conv2D'] OUT ['resnet_v1_50/block1/unit_3/bottleneck_v1/conv3/Conv2D']
+ 17 conv2d     1/unit_3/bottleneck_v1/conv3/Conv2D Ops 0.000000e+00 IN ['resnet_v1_50/block1/unit_3/bottleneck_v1/conv2/Conv2D'] OUT ['resnet_v1_50/block1/unit_3/bottleneck_v1/add']
+ 18 add        _50/block1/unit_3/bottleneck_v1/add Ops 0.000000e+00 IN ['resnet_v1_50/block1/unit_3/bottleneck_v1/shortcut/MaxPool', 'resnet_v1_50/block1/unit_3/bottleneck_v1/conv3/Conv2D'] OUT ['resnet_v1_50/block2/unit_1/bottleneck_v1/conv1/Conv2D', 'resnet_v1_50/block2/unit_1/bottleneck_v1/shortcut/Conv2D']
+ 19 conv2d     nit_1/bottleneck_v1/shortcut/Conv2D Ops 0.000000e+00 IN ['resnet_v1_50/block1/unit_3/bottleneck_v1/add'] OUT ['resnet_v1_50/block2/unit_1/bottleneck_v1/add']
+ 20 conv2d     2/unit_1/bottleneck_v1/conv1/Conv2D Ops 0.000000e+00 IN ['resnet_v1_50/block1/unit_3/bottleneck_v1/add'] OUT ['resnet_v1_50/block2/unit_1/bottleneck_v1/conv2/Conv2D']
+ 21 conv2d     2/unit_1/bottleneck_v1/conv2/Conv2D Ops 0.000000e+00 IN ['resnet_v1_50/block2/unit_1/bottleneck_v1/conv1/Conv2D'] OUT ['resnet_v1_50/block2/unit_1/bottleneck_v1/conv3/Conv2D']
+ 22 conv2d     2/unit_1/bottleneck_v1/conv3/Conv2D Ops 0.000000e+00 IN ['resnet_v1_50/block2/unit_1/bottleneck_v1/conv2/Conv2D'] OUT ['resnet_v1_50/block2/unit_1/bottleneck_v1/add']
+ 23 add        _50/block2/unit_1/bottleneck_v1/add Ops 0.000000e+00 IN ['resnet_v1_50/block2/unit_1/bottleneck_v1/shortcut/Conv2D', 'resnet_v1_50/block2/unit_1/bottleneck_v1/conv3/Conv2D'] OUT ['resnet_v1_50/block2/unit_2/bottleneck_v1/conv1/Conv2D', 'resnet_v1_50/block2/unit_2/bottleneck_v1/add']
+ 24 conv2d     2/unit_2/bottleneck_v1/conv1/Conv2D Ops 0.000000e+00 IN ['resnet_v1_50/block2/unit_1/bottleneck_v1/add'] OUT ['resnet_v1_50/block2/unit_2/bottleneck_v1/conv2/Conv2D']
+ 25 conv2d     2/unit_2/bottleneck_v1/conv2/Conv2D Ops 0.000000e+00 IN ['resnet_v1_50/block2/unit_2/bottleneck_v1/conv1/Conv2D'] OUT ['resnet_v1_50/block2/unit_2/bottleneck_v1/conv3/Conv2D']
+ 26 conv2d     2/unit_2/bottleneck_v1/conv3/Conv2D Ops 0.000000e+00 IN ['resnet_v1_50/block2/unit_2/bottleneck_v1/conv2/Conv2D'] OUT ['resnet_v1_50/block2/unit_2/bottleneck_v1/add']
+ 27 add        _50/block2/unit_2/bottleneck_v1/add Ops 0.000000e+00 IN ['resnet_v1_50/block2/unit_2/bottleneck_v1/conv3/Conv2D', 'resnet_v1_50/block2/unit_1/bottleneck_v1/add'] OUT ['resnet_v1_50/block2/unit_3/bottleneck_v1/conv1/Conv2D', 'resnet_v1_50/block2/unit_3/bottleneck_v1/add']
+ 28 conv2d     2/unit_3/bottleneck_v1/conv1/Conv2D Ops 0.000000e+00 IN ['resnet_v1_50/block2/unit_2/bottleneck_v1/add'] OUT ['resnet_v1_50/block2/unit_3/bottleneck_v1/conv2/Conv2D']
+ 29 conv2d     2/unit_3/bottleneck_v1/conv2/Conv2D Ops 0.000000e+00 IN ['resnet_v1_50/block2/unit_3/bottleneck_v1/conv1/Conv2D'] OUT ['resnet_v1_50/block2/unit_3/bottleneck_v1/conv3/Conv2D']
+ 30 conv2d     2/unit_3/bottleneck_v1/conv3/Conv2D Ops 0.000000e+00 IN ['resnet_v1_50/block2/unit_3/bottleneck_v1/conv2/Conv2D'] OUT ['resnet_v1_50/block2/unit_3/bottleneck_v1/add']
+ 31 add        _50/block2/unit_3/bottleneck_v1/add Ops 0.000000e+00 IN ['resnet_v1_50/block2/unit_3/bottleneck_v1/conv3/Conv2D', 'resnet_v1_50/block2/unit_2/bottleneck_v1/add'] OUT ['resnet_v1_50/block2/unit_4/bottleneck_v1/conv1/Conv2D', 'resnet_v1_50/block2/unit_4/bottleneck_v1/shortcut/MaxPool']
+ 32 maxpool2d  it_4/bottleneck_v1/shortcut/MaxPool Ops 0.000000e+00 IN ['resnet_v1_50/block2/unit_3/bottleneck_v1/add'] OUT ['resnet_v1_50/block2/unit_4/bottleneck_v1/add']
+ 33 conv2d     2/unit_4/bottleneck_v1/conv1/Conv2D Ops 0.000000e+00 IN ['resnet_v1_50/block2/unit_3/bottleneck_v1/add'] OUT ['resnet_v1_50/block2/unit_4/bottleneck_v1/conv2/Conv2D']
+ 34 conv2d     2/unit_4/bottleneck_v1/conv2/Conv2D Ops 0.000000e+00 IN ['resnet_v1_50/block2/unit_4/bottleneck_v1/conv1/Conv2D'] OUT ['resnet_v1_50/block2/unit_4/bottleneck_v1/conv3/Conv2D']
+ 35 conv2d     2/unit_4/bottleneck_v1/conv3/Conv2D Ops 0.000000e+00 IN ['resnet_v1_50/block2/unit_4/bottleneck_v1/conv2/Conv2D'] OUT ['resnet_v1_50/block2/unit_4/bottleneck_v1/add']
+ 36 add        _50/block2/unit_4/bottleneck_v1/add Ops 0.000000e+00 IN ['resnet_v1_50/block2/unit_4/bottleneck_v1/shortcut/MaxPool', 'resnet_v1_50/block2/unit_4/bottleneck_v1/conv3/Conv2D'] OUT ['resnet_v1_50/block3/unit_1/bottleneck_v1/conv1/Conv2D', 'resnet_v1_50/block3/unit_1/bottleneck_v1/shortcut/Conv2D']
+ 37 conv2d     nit_1/bottleneck_v1/shortcut/Conv2D Ops 0.000000e+00 IN ['resnet_v1_50/block2/unit_4/bottleneck_v1/add'] OUT ['resnet_v1_50/block3/unit_1/bottleneck_v1/add']
+ 38 conv2d     3/unit_1/bottleneck_v1/conv1/Conv2D Ops 0.000000e+00 IN ['resnet_v1_50/block2/unit_4/bottleneck_v1/add'] OUT ['resnet_v1_50/block3/unit_1/bottleneck_v1/conv2/Conv2D']
+ 39 conv2d     3/unit_1/bottleneck_v1/conv2/Conv2D Ops 0.000000e+00 IN ['resnet_v1_50/block3/unit_1/bottleneck_v1/conv1/Conv2D'] OUT ['resnet_v1_50/block3/unit_1/bottleneck_v1/conv3/Conv2D']
+ 40 conv2d     3/unit_1/bottleneck_v1/conv3/Conv2D Ops 0.000000e+00 IN ['resnet_v1_50/block3/unit_1/bottleneck_v1/conv2/Conv2D'] OUT ['resnet_v1_50/block3/unit_1/bottleneck_v1/add']
+ 41 add        _50/block3/unit_1/bottleneck_v1/add Ops 0.000000e+00 IN ['resnet_v1_50/block3/unit_1/bottleneck_v1/shortcut/Conv2D', 'resnet_v1_50/block3/unit_1/bottleneck_v1/conv3/Conv2D'] OUT ['resnet_v1_50/block3/unit_2/bottleneck_v1/conv1/Conv2D', 'resnet_v1_50/block3/unit_2/bottleneck_v1/add']
+ 42 conv2d     3/unit_2/bottleneck_v1/conv1/Conv2D Ops 0.000000e+00 IN ['resnet_v1_50/block3/unit_1/bottleneck_v1/add'] OUT ['resnet_v1_50/block3/unit_2/bottleneck_v1/conv2/Conv2D']
+ 43 conv2d     3/unit_2/bottleneck_v1/conv2/Conv2D Ops 0.000000e+00 IN ['resnet_v1_50/block3/unit_2/bottleneck_v1/conv1/Conv2D'] OUT ['resnet_v1_50/block3/unit_2/bottleneck_v1/conv3/Conv2D']
+ 44 conv2d     3/unit_2/bottleneck_v1/conv3/Conv2D Ops 0.000000e+00 IN ['resnet_v1_50/block3/unit_2/bottleneck_v1/conv2/Conv2D'] OUT ['resnet_v1_50/block3/unit_2/bottleneck_v1/add']
+ 45 add        _50/block3/unit_2/bottleneck_v1/add Ops 0.000000e+00 IN ['resnet_v1_50/block3/unit_2/bottleneck_v1/conv3/Conv2D', 'resnet_v1_50/block3/unit_1/bottleneck_v1/add'] OUT ['resnet_v1_50/block3/unit_3/bottleneck_v1/conv1/Conv2D', 'resnet_v1_50/block3/unit_3/bottleneck_v1/add']
+ 46 conv2d     3/unit_3/bottleneck_v1/conv1/Conv2D Ops 0.000000e+00 IN ['resnet_v1_50/block3/unit_2/bottleneck_v1/add'] OUT ['resnet_v1_50/block3/unit_3/bottleneck_v1/conv2/Conv2D']
+ 47 conv2d     3/unit_3/bottleneck_v1/conv2/Conv2D Ops 0.000000e+00 IN ['resnet_v1_50/block3/unit_3/bottleneck_v1/conv1/Conv2D'] OUT ['resnet_v1_50/block3/unit_3/bottleneck_v1/conv3/Conv2D']
+ 48 conv2d     3/unit_3/bottleneck_v1/conv3/Conv2D Ops 0.000000e+00 IN ['resnet_v1_50/block3/unit_3/bottleneck_v1/conv2/Conv2D'] OUT ['resnet_v1_50/block3/unit_3/bottleneck_v1/add']
+ 49 add        _50/block3/unit_3/bottleneck_v1/add Ops 0.000000e+00 IN ['resnet_v1_50/block3/unit_3/bottleneck_v1/conv3/Conv2D', 'resnet_v1_50/block3/unit_2/bottleneck_v1/add'] OUT ['resnet_v1_50/block3/unit_4/bottleneck_v1/conv1/Conv2D', 'resnet_v1_50/block3/unit_4/bottleneck_v1/add']
+ 50 conv2d     3/unit_4/bottleneck_v1/conv1/Conv2D Ops 0.000000e+00 IN ['resnet_v1_50/block3/unit_3/bottleneck_v1/add'] OUT ['resnet_v1_50/block3/unit_4/bottleneck_v1/conv2/Conv2D']
+ 51 conv2d     3/unit_4/bottleneck_v1/conv2/Conv2D Ops 0.000000e+00 IN ['resnet_v1_50/block3/unit_4/bottleneck_v1/conv1/Conv2D'] OUT ['resnet_v1_50/block3/unit_4/bottleneck_v1/conv3/Conv2D']
+ 52 conv2d     3/unit_4/bottleneck_v1/conv3/Conv2D Ops 0.000000e+00 IN ['resnet_v1_50/block3/unit_4/bottleneck_v1/conv2/Conv2D'] OUT ['resnet_v1_50/block3/unit_4/bottleneck_v1/add']
+ 53 add        _50/block3/unit_4/bottleneck_v1/add Ops 0.000000e+00 IN ['resnet_v1_50/block3/unit_4/bottleneck_v1/conv3/Conv2D', 'resnet_v1_50/block3/unit_3/bottleneck_v1/add'] OUT ['resnet_v1_50/block3/unit_5/bottleneck_v1/conv1/Conv2D', 'resnet_v1_50/block3/unit_5/bottleneck_v1/add']
+ 54 conv2d     3/unit_5/bottleneck_v1/conv1/Conv2D Ops 0.000000e+00 IN ['resnet_v1_50/block3/unit_4/bottleneck_v1/add'] OUT ['resnet_v1_50/block3/unit_5/bottleneck_v1/conv2/Conv2D']
+ 55 conv2d     3/unit_5/bottleneck_v1/conv2/Conv2D Ops 0.000000e+00 IN ['resnet_v1_50/block3/unit_5/bottleneck_v1/conv1/Conv2D'] OUT ['resnet_v1_50/block3/unit_5/bottleneck_v1/conv3/Conv2D']
+ 56 conv2d     3/unit_5/bottleneck_v1/conv3/Conv2D Ops 0.000000e+00 IN ['resnet_v1_50/block3/unit_5/bottleneck_v1/conv2/Conv2D'] OUT ['resnet_v1_50/block3/unit_5/bottleneck_v1/add']
+ 57 add        _50/block3/unit_5/bottleneck_v1/add Ops 0.000000e+00 IN ['resnet_v1_50/block3/unit_5/bottleneck_v1/conv3/Conv2D', 'resnet_v1_50/block3/unit_4/bottleneck_v1/add'] OUT ['resnet_v1_50/block3/unit_6/bottleneck_v1/conv1/Conv2D', 'resnet_v1_50/block3/unit_6/bottleneck_v1/shortcut/MaxPool']
+ 58 maxpool2d  it_6/bottleneck_v1/shortcut/MaxPool Ops 0.000000e+00 IN ['resnet_v1_50/block3/unit_5/bottleneck_v1/add'] OUT ['resnet_v1_50/block3/unit_6/bottleneck_v1/add']
+ 59 conv2d     3/unit_6/bottleneck_v1/conv1/Conv2D Ops 0.000000e+00 IN ['resnet_v1_50/block3/unit_5/bottleneck_v1/add'] OUT ['resnet_v1_50/block3/unit_6/bottleneck_v1/conv2/Conv2D']
+ 60 conv2d     3/unit_6/bottleneck_v1/conv2/Conv2D Ops 0.000000e+00 IN ['resnet_v1_50/block3/unit_6/bottleneck_v1/conv1/Conv2D'] OUT ['resnet_v1_50/block3/unit_6/bottleneck_v1/conv3/Conv2D']
+ 61 conv2d     3/unit_6/bottleneck_v1/conv3/Conv2D Ops 0.000000e+00 IN ['resnet_v1_50/block3/unit_6/bottleneck_v1/conv2/Conv2D'] OUT ['resnet_v1_50/block3/unit_6/bottleneck_v1/add']
+ 62 add        _50/block3/unit_6/bottleneck_v1/add Ops 0.000000e+00 IN ['resnet_v1_50/block3/unit_6/bottleneck_v1/shortcut/MaxPool', 'resnet_v1_50/block3/unit_6/bottleneck_v1/conv3/Conv2D'] OUT ['resnet_v1_50/block4/unit_1/bottleneck_v1/conv1/Conv2D', 'resnet_v1_50/block4/unit_1/bottleneck_v1/shortcut/Conv2D']
+ 63 conv2d     nit_1/bottleneck_v1/shortcut/Conv2D Ops 0.000000e+00 IN ['resnet_v1_50/block3/unit_6/bottleneck_v1/add'] OUT ['resnet_v1_50/block4/unit_1/bottleneck_v1/add']
+ 64 conv2d     4/unit_1/bottleneck_v1/conv1/Conv2D Ops 0.000000e+00 IN ['resnet_v1_50/block3/unit_6/bottleneck_v1/add'] OUT ['resnet_v1_50/block4/unit_1/bottleneck_v1/conv2/Conv2D']
+ 65 conv2d     4/unit_1/bottleneck_v1/conv2/Conv2D Ops 0.000000e+00 IN ['resnet_v1_50/block4/unit_1/bottleneck_v1/conv1/Conv2D'] OUT ['resnet_v1_50/block4/unit_1/bottleneck_v1/conv3/Conv2D']
+ 66 conv2d     4/unit_1/bottleneck_v1/conv3/Conv2D Ops 0.000000e+00 IN ['resnet_v1_50/block4/unit_1/bottleneck_v1/conv2/Conv2D'] OUT ['resnet_v1_50/block4/unit_1/bottleneck_v1/add']
+ 67 add        _50/block4/unit_1/bottleneck_v1/add Ops 0.000000e+00 IN ['resnet_v1_50/block4/unit_1/bottleneck_v1/shortcut/Conv2D', 'resnet_v1_50/block4/unit_1/bottleneck_v1/conv3/Conv2D'] OUT ['resnet_v1_50/block4/unit_2/bottleneck_v1/conv1/Conv2D', 'resnet_v1_50/block4/unit_2/bottleneck_v1/add']
+ 68 conv2d     4/unit_2/bottleneck_v1/conv1/Conv2D Ops 0.000000e+00 IN ['resnet_v1_50/block4/unit_1/bottleneck_v1/add'] OUT ['resnet_v1_50/block4/unit_2/bottleneck_v1/conv2/Conv2D']
+ 69 conv2d     4/unit_2/bottleneck_v1/conv2/Conv2D Ops 0.000000e+00 IN ['resnet_v1_50/block4/unit_2/bottleneck_v1/conv1/Conv2D'] OUT ['resnet_v1_50/block4/unit_2/bottleneck_v1/conv3/Conv2D']
+ 70 conv2d     4/unit_2/bottleneck_v1/conv3/Conv2D Ops 0.000000e+00 IN ['resnet_v1_50/block4/unit_2/bottleneck_v1/conv2/Conv2D'] OUT ['resnet_v1_50/block4/unit_2/bottleneck_v1/add']
+ 71 add        _50/block4/unit_2/bottleneck_v1/add Ops 0.000000e+00 IN ['resnet_v1_50/block4/unit_2/bottleneck_v1/conv3/Conv2D', 'resnet_v1_50/block4/unit_1/bottleneck_v1/add'] OUT ['resnet_v1_50/block4/unit_3/bottleneck_v1/conv1/Conv2D', 'resnet_v1_50/block4/unit_3/bottleneck_v1/add']
+ 72 conv2d     4/unit_3/bottleneck_v1/conv1/Conv2D Ops 0.000000e+00 IN ['resnet_v1_50/block4/unit_2/bottleneck_v1/add'] OUT ['resnet_v1_50/block4/unit_3/bottleneck_v1/conv2/Conv2D']
+ 73 conv2d     4/unit_3/bottleneck_v1/conv2/Conv2D Ops 0.000000e+00 IN ['resnet_v1_50/block4/unit_3/bottleneck_v1/conv1/Conv2D'] OUT ['resnet_v1_50/block4/unit_3/bottleneck_v1/conv3/Conv2D']
+ 74 conv2d     4/unit_3/bottleneck_v1/conv3/Conv2D Ops 0.000000e+00 IN ['resnet_v1_50/block4/unit_3/bottleneck_v1/conv2/Conv2D'] OUT ['resnet_v1_50/block4/unit_3/bottleneck_v1/add']
+ 75 add        _50/block4/unit_3/bottleneck_v1/add Ops 0.000000e+00 IN ['resnet_v1_50/block4/unit_3/bottleneck_v1/conv3/Conv2D', 'resnet_v1_50/block4/unit_2/bottleneck_v1/add'] OUT ['resnet_v1_50/pool5']
+ 76 avgpool2d  resnet_v1_50/pool5                  Ops 0.000000e+00 IN ['resnet_v1_50/block4/unit_3/bottleneck_v1/add'] OUT ['resnet_v1_50/pool5/mul']
+ 77 mul        resnet_v1_50/pool5/mul              Ops 0.000000e+00 IN ['resnet_v1_50/pool5'] OUT ['resnet_v1_50/logits/Conv2D']
+ 78 conv2d     resnet_v1_50/logits/Conv2D          Ops 0.000000e+00 IN ['resnet_v1_50/pool5/mul'] OUT ['resnet_v1_50/SpatialSqueeze']
+ 79 squeeze    resnet_v1_50/SpatialSqueeze         Ops 0.000000e+00 IN ['resnet_v1_50/logits/Conv2D'] OUT ['resnet_v1_50/predictions/Reshape']
+ 80 reshape    resnet_v1_50/predictions/Reshape    Ops 0.000000e+00 IN ['resnet_v1_50/SpatialSqueeze'] OUT ['resnet_v1_50/predictions/Softmax']
+ 81 softmax    resnet_v1_50/predictions/Softmax    Ops 0.000000e+00 IN ['resnet_v1_50/predictions/Reshape'] OUT ['resnet_v1_50/predictions/Reshape_1']
+ 82 reshape    resnet_v1_50/predictions/Reshape_1  Ops 0.000000e+00 IN ['resnet_v1_50/predictions/Softmax'] OUT []
+Outputs dict_keys(['resnet_v1_50/predictions/Reshape_1'])
+ delete arch  resnet_v1_50/pool1/MaxPool-resnet_v1_50/block1/unit_1/bottleneck_v1/conv1/Conv2D True
+ delete arch  resnet_v1_50/block1/unit_1/bottleneck_v1/conv1/Conv2D-resnet_v1_50/block1/unit_1/bottleneck_v1/conv2/Conv2D True
+ delete arch  resnet_v1_50/block1/unit_1/bottleneck_v1/conv2/Conv2D-resnet_v1_50/block1/unit_1/bottleneck_v1/conv3/Conv2D True
+ delete arch  resnet_v1_50/block1/unit_1/bottleneck_v1/shortcut/Conv2D-resnet_v1_50/block1/unit_1/bottleneck_v1/add True
+ delete arch  resnet_v1_50/block1/unit_1/bottleneck_v1/conv3/Conv2D-resnet_v1_50/block1/unit_1/bottleneck_v1/add True
+ delete arch  resnet_v1_50/block1/unit_1/bottleneck_v1/add-resnet_v1_50/block1/unit_2/bottleneck_v1/conv1/Conv2D True
+ delete arch  resnet_v1_50/block1/unit_2/bottleneck_v1/conv1/Conv2D-resnet_v1_50/block1/unit_2/bottleneck_v1/conv2/Conv2D True
+ delete arch  resnet_v1_50/block1/unit_2/bottleneck_v1/conv2/Conv2D-resnet_v1_50/block1/unit_2/bottleneck_v1/conv3/Conv2D True
+ delete arch  resnet_v1_50/block1/unit_2/bottleneck_v1/conv3/Conv2D-resnet_v1_50/block1/unit_2/bottleneck_v1/add True
+ delete arch  resnet_v1_50/block1/unit_1/bottleneck_v1/add-resnet_v1_50/block1/unit_2/bottleneck_v1/add True
+ delete arch  resnet_v1_50/block1/unit_2/bottleneck_v1/add-resnet_v1_50/block1/unit_3/bottleneck_v1/conv1/Conv2D True
+ delete arch  resnet_v1_50/block1/unit_3/bottleneck_v1/conv1/Conv2D-resnet_v1_50/block1/unit_3/bottleneck_v1/conv2/Conv2D True
+ delete arch  resnet_v1_50/block1/unit_3/bottleneck_v1/conv2/Conv2D-resnet_v1_50/block1/unit_3/bottleneck_v1/conv3/Conv2D True
+ delete arch  resnet_v1_50/block1/unit_3/bottleneck_v1/shortcut/MaxPool-resnet_v1_50/block1/unit_3/bottleneck_v1/add True
+ delete arch  resnet_v1_50/block1/unit_3/bottleneck_v1/conv3/Conv2D-resnet_v1_50/block1/unit_3/bottleneck_v1/add True
+ delete arch  resnet_v1_50/block1/unit_3/bottleneck_v1/add-resnet_v1_50/block2/unit_1/bottleneck_v1/conv1/Conv2D True
+ delete arch  resnet_v1_50/block2/unit_1/bottleneck_v1/conv1/Conv2D-resnet_v1_50/block2/unit_1/bottleneck_v1/conv2/Conv2D True
+ delete arch  resnet_v1_50/block2/unit_1/bottleneck_v1/conv2/Conv2D-resnet_v1_50/block2/unit_1/bottleneck_v1/conv3/Conv2D True
+ delete arch  resnet_v1_50/block2/unit_1/bottleneck_v1/shortcut/Conv2D-resnet_v1_50/block2/unit_1/bottleneck_v1/add True
+ delete arch  resnet_v1_50/block2/unit_1/bottleneck_v1/conv3/Conv2D-resnet_v1_50/block2/unit_1/bottleneck_v1/add True
+ delete arch  resnet_v1_50/block2/unit_1/bottleneck_v1/add-resnet_v1_50/block2/unit_2/bottleneck_v1/conv1/Conv2D True
+ delete arch  resnet_v1_50/block2/unit_2/bottleneck_v1/conv1/Conv2D-resnet_v1_50/block2/unit_2/bottleneck_v1/conv2/Conv2D True
+ delete arch  resnet_v1_50/block2/unit_2/bottleneck_v1/conv2/Conv2D-resnet_v1_50/block2/unit_2/bottleneck_v1/conv3/Conv2D True
+ delete arch  resnet_v1_50/block2/unit_2/bottleneck_v1/conv3/Conv2D-resnet_v1_50/block2/unit_2/bottleneck_v1/add True
+ delete arch  resnet_v1_50/block2/unit_1/bottleneck_v1/add-resnet_v1_50/block2/unit_2/bottleneck_v1/add True
+ delete arch  resnet_v1_50/block2/unit_2/bottleneck_v1/add-resnet_v1_50/block2/unit_3/bottleneck_v1/conv1/Conv2D True
+ delete arch  resnet_v1_50/block2/unit_3/bottleneck_v1/conv1/Conv2D-resnet_v1_50/block2/unit_3/bottleneck_v1/conv2/Conv2D True
+ delete arch  resnet_v1_50/block2/unit_3/bottleneck_v1/conv2/Conv2D-resnet_v1_50/block2/unit_3/bottleneck_v1/conv3/Conv2D True
+ delete arch  resnet_v1_50/block2/unit_3/bottleneck_v1/conv3/Conv2D-resnet_v1_50/block2/unit_3/bottleneck_v1/add True
+ delete arch  resnet_v1_50/block2/unit_2/bottleneck_v1/add-resnet_v1_50/block2/unit_3/bottleneck_v1/add True
+ delete arch  resnet_v1_50/block2/unit_3/bottleneck_v1/add-resnet_v1_50/block2/unit_4/bottleneck_v1/conv1/Conv2D True
+ delete arch  resnet_v1_50/block2/unit_4/bottleneck_v1/conv1/Conv2D-resnet_v1_50/block2/unit_4/bottleneck_v1/conv2/Conv2D True
+ delete arch  resnet_v1_50/block2/unit_4/bottleneck_v1/conv2/Conv2D-resnet_v1_50/block2/unit_4/bottleneck_v1/conv3/Conv2D True
+ delete arch  resnet_v1_50/block2/unit_4/bottleneck_v1/shortcut/MaxPool-resnet_v1_50/block2/unit_4/bottleneck_v1/add True
+ delete arch  resnet_v1_50/block2/unit_4/bottleneck_v1/conv3/Conv2D-resnet_v1_50/block2/unit_4/bottleneck_v1/add True
+ delete arch  resnet_v1_50/block2/unit_4/bottleneck_v1/add-resnet_v1_50/block3/unit_1/bottleneck_v1/conv1/Conv2D True
+ delete arch  resnet_v1_50/block3/unit_1/bottleneck_v1/conv1/Conv2D-resnet_v1_50/block3/unit_1/bottleneck_v1/conv2/Conv2D True
+ delete arch  resnet_v1_50/block3/unit_1/bottleneck_v1/conv2/Conv2D-resnet_v1_50/block3/unit_1/bottleneck_v1/conv3/Conv2D True
+ delete arch  resnet_v1_50/block3/unit_1/bottleneck_v1/shortcut/Conv2D-resnet_v1_50/block3/unit_1/bottleneck_v1/add True
+ delete arch  resnet_v1_50/block3/unit_1/bottleneck_v1/conv3/Conv2D-resnet_v1_50/block3/unit_1/bottleneck_v1/add True
+ delete arch  resnet_v1_50/block3/unit_1/bottleneck_v1/add-resnet_v1_50/block3/unit_2/bottleneck_v1/conv1/Conv2D True
+ delete arch  resnet_v1_50/block3/unit_2/bottleneck_v1/conv1/Conv2D-resnet_v1_50/block3/unit_2/bottleneck_v1/conv2/Conv2D True
+ delete arch  resnet_v1_50/block3/unit_2/bottleneck_v1/conv2/Conv2D-resnet_v1_50/block3/unit_2/bottleneck_v1/conv3/Conv2D True
+ delete arch  resnet_v1_50/block3/unit_2/bottleneck_v1/conv3/Conv2D-resnet_v1_50/block3/unit_2/bottleneck_v1/add True
+ delete arch  resnet_v1_50/block3/unit_1/bottleneck_v1/add-resnet_v1_50/block3/unit_2/bottleneck_v1/add True
+ delete arch  resnet_v1_50/block3/unit_2/bottleneck_v1/add-resnet_v1_50/block3/unit_3/bottleneck_v1/conv1/Conv2D True
+ delete arch  resnet_v1_50/block3/unit_3/bottleneck_v1/conv1/Conv2D-resnet_v1_50/block3/unit_3/bottleneck_v1/conv2/Conv2D True
+ delete arch  resnet_v1_50/block3/unit_3/bottleneck_v1/conv2/Conv2D-resnet_v1_50/block3/unit_3/bottleneck_v1/conv3/Conv2D True
+ delete arch  resnet_v1_50/block3/unit_3/bottleneck_v1/conv3/Conv2D-resnet_v1_50/block3/unit_3/bottleneck_v1/add True
+ delete arch  resnet_v1_50/block3/unit_2/bottleneck_v1/add-resnet_v1_50/block3/unit_3/bottleneck_v1/add True
+ delete arch  resnet_v1_50/block3/unit_3/bottleneck_v1/add-resnet_v1_50/block3/unit_4/bottleneck_v1/conv1/Conv2D True
+ delete arch  resnet_v1_50/block3/unit_4/bottleneck_v1/conv1/Conv2D-resnet_v1_50/block3/unit_4/bottleneck_v1/conv2/Conv2D True
+ delete arch  resnet_v1_50/block3/unit_4/bottleneck_v1/conv2/Conv2D-resnet_v1_50/block3/unit_4/bottleneck_v1/conv3/Conv2D True
+ delete arch  resnet_v1_50/block3/unit_4/bottleneck_v1/conv3/Conv2D-resnet_v1_50/block3/unit_4/bottleneck_v1/add True
+ delete arch  resnet_v1_50/block3/unit_3/bottleneck_v1/add-resnet_v1_50/block3/unit_4/bottleneck_v1/add True
+ delete arch  resnet_v1_50/block3/unit_4/bottleneck_v1/add-resnet_v1_50/block3/unit_5/bottleneck_v1/conv1/Conv2D True
+ delete arch  resnet_v1_50/block3/unit_5/bottleneck_v1/conv1/Conv2D-resnet_v1_50/block3/unit_5/bottleneck_v1/conv2/Conv2D True
+ delete arch  resnet_v1_50/block3/unit_5/bottleneck_v1/conv2/Conv2D-resnet_v1_50/block3/unit_5/bottleneck_v1/conv3/Conv2D True
+ delete arch  resnet_v1_50/block3/unit_5/bottleneck_v1/conv3/Conv2D-resnet_v1_50/block3/unit_5/bottleneck_v1/add True
+ delete arch  resnet_v1_50/block3/unit_4/bottleneck_v1/add-resnet_v1_50/block3/unit_5/bottleneck_v1/add True
+ delete arch  resnet_v1_50/block3/unit_5/bottleneck_v1/add-resnet_v1_50/block3/unit_6/bottleneck_v1/conv1/Conv2D True
+ delete arch  resnet_v1_50/block3/unit_6/bottleneck_v1/conv1/Conv2D-resnet_v1_50/block3/unit_6/bottleneck_v1/conv2/Conv2D True
+ delete arch  resnet_v1_50/block3/unit_6/bottleneck_v1/conv2/Conv2D-resnet_v1_50/block3/unit_6/bottleneck_v1/conv3/Conv2D True
+ delete arch  resnet_v1_50/block3/unit_6/bottleneck_v1/shortcut/MaxPool-resnet_v1_50/block3/unit_6/bottleneck_v1/add True
+ delete arch  resnet_v1_50/block3/unit_6/bottleneck_v1/conv3/Conv2D-resnet_v1_50/block3/unit_6/bottleneck_v1/add True
+ delete arch  resnet_v1_50/block3/unit_6/bottleneck_v1/add-resnet_v1_50/block4/unit_1/bottleneck_v1/conv1/Conv2D True
+ delete arch  resnet_v1_50/block4/unit_1/bottleneck_v1/conv1/Conv2D-resnet_v1_50/block4/unit_1/bottleneck_v1/conv2/Conv2D True
+ delete arch  resnet_v1_50/block4/unit_1/bottleneck_v1/conv2/Conv2D-resnet_v1_50/block4/unit_1/bottleneck_v1/conv3/Conv2D True
+ delete arch  resnet_v1_50/block4/unit_1/bottleneck_v1/shortcut/Conv2D-resnet_v1_50/block4/unit_1/bottleneck_v1/add True
+ delete arch  resnet_v1_50/block4/unit_1/bottleneck_v1/conv3/Conv2D-resnet_v1_50/block4/unit_1/bottleneck_v1/add True
+ delete arch  resnet_v1_50/block4/unit_1/bottleneck_v1/add-resnet_v1_50/block4/unit_2/bottleneck_v1/conv1/Conv2D True
+ delete arch  resnet_v1_50/block4/unit_2/bottleneck_v1/conv1/Conv2D-resnet_v1_50/block4/unit_2/bottleneck_v1/conv2/Conv2D True
+ delete arch  resnet_v1_50/block4/unit_2/bottleneck_v1/conv2/Conv2D-resnet_v1_50/block4/unit_2/bottleneck_v1/conv3/Conv2D True
+ delete arch  resnet_v1_50/block4/unit_2/bottleneck_v1/conv3/Conv2D-resnet_v1_50/block4/unit_2/bottleneck_v1/add True
+ delete arch  resnet_v1_50/block4/unit_1/bottleneck_v1/add-resnet_v1_50/block4/unit_2/bottleneck_v1/add True
+ delete arch  resnet_v1_50/block4/unit_2/bottleneck_v1/add-resnet_v1_50/block4/unit_3/bottleneck_v1/conv1/Conv2D True
+ delete arch  resnet_v1_50/block4/unit_3/bottleneck_v1/conv1/Conv2D-resnet_v1_50/block4/unit_3/bottleneck_v1/conv2/Conv2D True
+ delete arch  resnet_v1_50/block4/unit_3/bottleneck_v1/conv2/Conv2D-resnet_v1_50/block4/unit_3/bottleneck_v1/conv3/Conv2D True
+ delete arch  resnet_v1_50/block4/unit_3/bottleneck_v1/conv3/Conv2D-resnet_v1_50/block4/unit_3/bottleneck_v1/add True
+ delete arch  resnet_v1_50/block4/unit_2/bottleneck_v1/add-resnet_v1_50/block4/unit_3/bottleneck_v1/add True
+ delete arch  resnet_v1_50/block4/unit_3/bottleneck_v1/add-resnet_v1_50/pool5 True
+ delete arch  resnet_v1_50/pool5-resnet_v1_50/pool5/mul True
+ delete arch  resnet_v1_50/pool5/mul-resnet_v1_50/logits/Conv2D True
+ delete arch  resnet_v1_50/logits/Conv2D-resnet_v1_50/SpatialSqueeze True
+ delete arch  resnet_v1_50/SpatialSqueeze-resnet_v1_50/predictions/Reshape True
+ delete arch  resnet_v1_50/predictions/Reshape-resnet_v1_50/predictions/Softmax True
+ delete arch  resnet_v1_50/predictions/Softmax-resnet_v1_50/predictions/Reshape_1 True
+ delete node  resnet_v1_50/predictions/Reshape_1
+ delete node  resnet_v1_50/block4/unit_1/bottleneck_v1/shortcut/Conv2D
+ delete node  resnet_v1_50/block3/unit_6/bottleneck_v1/shortcut/MaxPool
+ delete node  resnet_v1_50/block3/unit_1/bottleneck_v1/shortcut/Conv2D
+ delete node  resnet_v1_50/block2/unit_4/bottleneck_v1/shortcut/MaxPool
+ delete node  resnet_v1_50/block2/unit_1/bottleneck_v1/shortcut/Conv2D
+ delete node  resnet_v1_50/block1/unit_3/bottleneck_v1/shortcut/MaxPool
+ delete node  resnet_v1_50/block1/unit_1/bottleneck_v1/shortcut/Conv2D
+True input
+True resnet_v1_50/conv1/Conv2D
+ delete node  resnet_v1_50/predictions/Shape_const_const
+False resnet_v1_50/predictions/Shape_const_const
+ delete node  resnet_v1_50/predictions/Reshape/shape_const
+False resnet_v1_50/predictions/Reshape/shape_const
+Outputs dict_keys(['resnet_v1_50/conv1/Conv2D'])
+  0 data       input                               Ops 0.000000e+00 IN [] OUT ['resnet_v1_50/conv1/Conv2D']
+  1 conv2d     resnet_v1_50/conv1/Conv2D           Ops 0.000000e+00 IN ['input'] OUT []
+Floyd & Warshall
+BFS
+Name resnet_v1_50/conv1/Conv2D Type conv2d Composed [] Inputs ['input'] 
+
+	 Name input Type data Composed [] Inputs [] 
+
+Inputs dict_keys(['input'])
+Outputs dict_keys(['resnet_v1_50/conv1/Conv2D'])
+Inputs dict_keys(['input'])
+Floyd & Warshall
+BFS
+  0 data       input                               Ops 0.000000e+00 IN [] OUT ['resnet_v1_50/conv1/Conv2D']
+  1 conv2d     resnet_v1_50/conv1/Conv2D           Ops 0.000000e+00 IN ['input'] OUT []
+ ############################################# 
+ ######  CPU nodes Must Go
+ ############################################# 
+Inputs ['input']
+Outputs ['resnet_v1_50/conv1/Conv2D']
+FPGA True: data       input            
+FPGA True: conv2d     resnet_v1_50/conv1/Conv2D  
+delete these dict_keys(['input'])
+{'resnet_v1_50/conv1/Conv2D': Name resnet_v1_50/conv1/Conv2D Type conv2d Composed [] Inputs ['input'] 
+}
+Schedule boost
+0 data input False 1
+1 conv2d resnet_v1_50/conv1/Conv2D True 1
+  0 data       input                               Ops 0.000000e+00 IN [] OUT ['resnet_v1_50/conv1/Conv2D']
+  1 conv2d     resnet_v1_50/conv1/Conv2D           Ops 4.720558e+08 IN ['input'] OUT []
+Outputs ['resnet_v1_50/conv1/Conv2D']
+Inputs  ['input']
+Floyd & Warshall
+BFS
+ ############################################# 
+ ######  Avg Pool -> Conv
+ ############################################# 
+ ############################################# 
+ ######  Inner Products -> Conv
+ ############################################# 
+ ############################################# 
+ ######  Scale -> Conv
+ ############################################# 
+Floyd & Warshall
+BFS
+ ############################################# 
+ ######  topological schedule BFS
+ ############################################# 
+ ############################################# 
+ ######  WEIGHT & BIAS into Tensors
+ ############################################# 
+ ############################################# 
+ ######  DRU
+ ############################################# 
+{'quant_out_signed': True, 'quant_in_signed': True, 'dilation': [1, 1], 'kernel': [7, 7], 'stride': [2, 2], 'pad_mode': 'VALID', 'pad': [0, 0, 3, 3, 3, 3, 0, 0], 'kernel_width': 7, 'kernel_height': 7, 'kernel_1': TensorShapes(batch=0, width=7, height=7, channel=0), 'stride_width': 2, 'stride_height': 2, 'strides_1': TensorShapes(batch=0, width=2, height=2, channel=0), 'dilation_width': 1, 'dilation_height': 1, 'pad_left': 3, 'pad_right': 3, 'pad_top': 3, 'pad_bottom': 3}
+{'quant_out_signed': True, 'quant_in_signed': True, 'dilation': [1, 1], 'kernel': [7, 7], 'stride': [2, 2], 'pad_mode': 'VALID', 'pad': [0, 0, 3, 3, 3, 3, 0, 0], 'kernel_width': 7, 'kernel_height': 7, 'kernel_1': TensorShapes(batch=0, width=7, height=7, channel=0), 'stride_width': 2, 'stride_height': 2, 'strides_1': TensorShapes(batch=0, width=2, height=2, channel=0), 'dilation_width': 1, 'dilation_height': 1, 'pad_left': 3, 'pad_right': 3, 'pad_top': 3, 'pad_bottom': 3}
+ ############################################# 
+ ######  Conv + Pool -> single
+ ############################################# 
+ ############################################# 
+ ######  Conv + Elt -> Elt
+ ############################################# 
+ ############################################# 
+ ######  topological DFS
+ ############################################# 
+DFS_t input
+ ############################################# 
+ ######  TFS
+ ############################################# 
+INFO tfs
+dfs   1- tfs   0   0 input TensorShapes(batch=4, width=112, height=224, channel=21) [dict_keys([-1, 'fix', 'pad', 'dru'])]
+dfs   2- tfs   1   1 resnet_v1_50/conv1/Conv2D TensorShapes(batch=4, width=112, height=112, channel=64) [dict_keys([1, 2, -1, 'relu'])]
+ ############################################# 
+ ######  INC
+ ############################################# 
+INC
+ ############################################# 
+ ######  Singleton
+ ############################################# 
+INFO tfs
+dfs   1- inc   0- sn   0- tfs   0   0 input TensorShapes(batch=4, width=112, height=224, channel=21) [dict_keys([-1, 'fix', 'pad', 'dru'])]
+dfs   2- inc   0- sn   1- tfs   1   1 resnet_v1_50/conv1/Conv2D TensorShapes(batch=4, width=112, height=112, channel=64) [dict_keys([1, 2, -1, 'relu'])]
+  0 data       input                               Ops 0.000000e+00 IN [] OUT ['resnet_v1_50/conv1/Conv2D']
+  1 conv2d     resnet_v1_50/conv1/Conv2D           Ops 4.720558e+08 IN ['input'] OUT []
+ ############################################# 
+ ######  Given a Graph and Schedule boost : We crete Live Tensor
+ ############################################# 
+ ############################################# 
+ ######  Reset Live Structure
+ ############################################# 
+ ############################################# 
+ ######  Attempting Code Generation boost
+ ############################################# 
+ ############################################# 
+ ######  Element Wise: reuse one of the operands
+ ############################################# 
+ ############################################# 
+ ######  Concatenation: I love concatenation memory reuse
+ ############################################# 
+ ############################################# 
+ ######  Memory Management given a Schedule
+ ############################################# 
+Namespace(address=None, avgpool_as_convolution=True, backwardcut='resnet_v1_50/conv1/Conv2D', biaspatch=True, caffemodel=None, fc=False, final=False, firstlayerreshape='True', forwardcut='resnet_v1_50/conv1/Conv2D', framework='tensorflow', inner_as_convolution=True, inshapes='[4,224,224,3]', json='SC/meta.json', network='examples/tf_resnetv1_50_imagenet_224_224_6.97G/quantized/quantize_eval_model.pb', nocpu=True, operation_fusion='true', operation_fusion_elt='true', operation_fusion_pool_conv=False, output='SC/work/manasa/tf/all/1-reshape/out.asm', outputweight=None, parallelismgraphalgorithm=None, parallelismstrategy="['bottom','top']", params='SC/work/manasa/tf/all/1-reshape/params.txt', quant=None, skip=False, softwarepipeline='true')
+Name resnet_v1_50/conv1/Conv2D_weight Parameter True	Space 114688 bits, BitePerPixel 8 Fraction 12 Start 0 End 114688	Specifier 0 Layout 3 Time 1 Strategies None None	Shape  [64, 7, 7, 3] CNN_Shape TensorShapes(batch=64, width=7, height=1, channel=21)
+int8
+	reshape_wgt_to_ddr() (64, 7, 1, 21) done ... 
+0x30000000 0x30003800 Name resnet_v1_50/conv1/Conv2D_weight Parameter True	Space 114688 bits, BitePerPixel 8 Fraction 12 Start 0 End 114688	Specifier 0 Layout 3 Time 1 Strategies None None	Shape  [64, 7, 7, 3] CNN_Shape TensorShapes(batch=64, width=7, height=1, channel=21)
+14336
+	dump_ddr_data() done ...
+int32
+	reshape_bias_to_ddr() done ...
+0x30003800 0x30003900 Name resnet_v1_50/conv1/Conv2D_bias Parameter True	Space 2048 bits, BitePerPixel 32 Fraction 4 Start 114688 End 116736	Specifier 0 Layout 3 Time 2 Strategies None None	Shape  [64] CNN_Shape TensorShapes(batch=1, width=1, height=1, channel=64)
+256
+	dump_ddr_data() done ...
+WARNING input data WARNING
+Memory access IN ddr PAR pa  TMP fm  OUT ddr resnet_v1_50/conv1/Conv2D parallelism 3 [1, 0, 0, 0, 1, 1]  
+resnet_v1_50/conv1/Conv2D ['input']
+resnet_v1_50/conv1/Conv2D_weight ['input']
+resnet_v1_50/conv1/Conv2D_bias ['input']
+input ['input']
+change of layout resnet_v1_50/conv1/Conv2D [Name resnet_v1_50/conv1/Conv2D Type conv2d Composed [] Inputs ['input'] 
+] None True
+ ############################################# 
+ ######  Naive instruction depedency
+ ############################################# 
+ ############################################# 
+ ######  Code Generation at Node Level and then Recursively
+ ############################################# 
+Dependency ON 0 0 CUR 0 BY 0 
+1 4 input ON 0 CUR 0 BY 1
+2 4 resnet_v1_50/conv1/Conv2D ON 0 CUR 4 BY 2
+3 4 bracket ON 2 CUR 2 BY 0
+ ############################################# 
+ ######  Code Generation at Node Level and then Recursively
+ ############################################# 
+21 8 [950272.0, 917504] [688128, 458752]
+BATCH IN  Shape [4, 112, 224, 21] Heights [21, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 14] 
+BATCH OUT Shape [4, 112, 112, 64] Heights [8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8] 
+Name input Parameter False	Space 25690112 bits, BitePerPixel 8 Fraction -1 Start 131072 End 25821184	Specifier 0 Layout 3 Time 3 Strategies None None	Shape  [4, 224, 224, 3] CNN_Shape TensorShapes(batch=4, width=112, height=224, channel=21) Memory_Access(input=3, parameters=1, output=3)
+WP {'shift': 1, 'mapping': {'I': 0, 'O': 1}, 'full-level-a': 1, 'step': {}, 'info': {}}
+input 0 131072
+Input resnet_v1_50/conv1/Conv2D 0 131072 0 8
+Input resnet_v1_50/conv1/Conv2D 0 2195456 2 456
+Input resnet_v1_50/conv1/Conv2D 0 4030464 2 904
+Input resnet_v1_50/conv1/Conv2D 0 5865472 2 1352
+Input resnet_v1_50/conv1/Conv2D 0 7700480 2 1800
+Input resnet_v1_50/conv1/Conv2D 0 9535488 2 2248
+Input resnet_v1_50/conv1/Conv2D 0 11370496 2 2696
+Input resnet_v1_50/conv1/Conv2D 0 13205504 2 3144
+Input resnet_v1_50/conv1/Conv2D 0 15040512 2 3592
+Input resnet_v1_50/conv1/Conv2D 0 16875520 2 4040
+Input resnet_v1_50/conv1/Conv2D 0 18710528 2 4488
+Input resnet_v1_50/conv1/Conv2D 0 20545536 2 4936
+Input resnet_v1_50/conv1/Conv2D 0 22380544 2 5384
+Input resnet_v1_50/conv1/Conv2D 0 24215552 2 5832
+8 -1 12 3
+8 -1 12 3
+8 -1 12 3
+8 -1 12 3
+8 -1 12 3
+8 -1 12 3
+8 -1 12 3
+8 -1 12 3
+8 -1 12 3
+8 -1 12 3
+8 -1 12 3
+8 -1 12 3
+8 -1 12 3
+8 -1 12 3
+ ############################################# 
+ ######  Success 
+ ############################################# 
+ ############################################# 
+ ######  Writing code to file:SC/work/manasa/tf/all/1-reshape/out.asm
+ ############################################# 
+Namespace(address=None, avgpool_as_convolution=True, backwardcut='resnet_v1_50/conv1/Conv2D', biaspatch=True, caffemodel=None, fc=False, final=False, firstlayerreshape='True', forwardcut='resnet_v1_50/conv1/Conv2D', framework='tensorflow', inner_as_convolution=True, inshapes='[4,224,224,3]', json='SC/meta.json', network='examples/tf_resnetv1_50_imagenet_224_224_6.97G/quantized/quantize_eval_model.pb', nocpu=True, operation_fusion='true', operation_fusion_elt='true', operation_fusion_pool_conv=False, output='SC/work/manasa/tf/all/1-reshape/out.asm', outputweight=None, parallelismgraphalgorithm=None, parallelismstrategy="['bottom','top']", params='SC/work/manasa/tf/all/1-reshape/params.txt', quant=None, skip=False, softwarepipeline='true')
+{'model': 'res50', 'kernel': 'dpdpuv3_wrapper', 'xclbin': 'tests/app/models/dpuv3int8_resnet50', 'instrFile': 'controller/src/dpuv3int8/instr.txt', 'dInFile': 'controller/src/dpuv3int8/din.txt', 'dOutFile': 'controller/src/dpuv3int8/dout.txt', 'resultFile': 'controller/src/dpuv3int8/result.txt', 'paramsFile': 'controller/src/dpuv3int8/params.txt', 'inDDRSize': 150528, 'inKernelW': 7, 'inStrdW': 2, 'inCh': 3, 'inH': 224, 'inW': 224, 'outW': 112, 'padLft': 3, 'padRt': 3, 'swapBufSize': 16777216, 'druSrcBufSize': 16777216, 'druDstBufSize': 16777216, 'channelAugmentationMode': False, 'druMode': True}
+{'model': 'res50', 'kernel': 'dpdpuv3_wrapper', 'xclbin': 'tests/app/models/dpuv3int8_resnet50', 'instrFile': 'controller/src/dpuv3int8/instr.txt', 'dInFile': 'controller/src/dpuv3int8/din.txt', 'dOutFile': 'controller/src/dpuv3int8/dout.txt', 'resultFile': 'controller/src/dpuv3int8/result.txt', 'paramsFile': 'controller/src/dpuv3int8/params.txt', 'inDDRSize': 150528, 'inKernelW': 7, 'inStrdW': 2, 'inCh': 3, 'inH': 224, 'inW': 224, 'outW': 112, 'padLft': 3, 'padRt': 3, 'swapBufSize': 16777216, 'druSrcBufSize': 16777216, 'druDstBufSize': 16777216, 'channelAugmentationMode': False, 'druMode': True, 'inputs': {'input': {'name': 'input', 'shape': TensorShapes(batch=4, width=112, height=224, channel=21), 'address': 131072}}, 'outputs': {'resnet_v1_50/conv1/Conv2D': {'name': 'resnet_v1_50/conv1/Conv2D', 'shape': TensorShapes(batch=4, width=112, height=112, channel=64), 'address': 25821184}}, 'cmd': ('SC/HwAbstraction/code_generation.py -o SC/work/manasa/tf/all/1-reshape/out.asm --params SC/work/manasa/tf/all/1-reshape/params.txt -n examples/tf_resnetv1_50_imagenet_224_224_6.97G/quantized/quantize_eval_model.pb -f tensorflow -first True --json SC/meta.json -swpipe true -opfus true -opfuse true --forwardcut resnet_v1_50/conv1/Conv2D --backwardcut resnet_v1_50/conv1/Conv2D',)}
+SC/ meta json

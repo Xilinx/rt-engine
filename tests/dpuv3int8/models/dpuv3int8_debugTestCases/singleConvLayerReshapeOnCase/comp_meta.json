@@ -1,0 +1,51 @@
+{
+    "model": "res50",
+    "kernel": "dpdpuv3_wrapper",
+    "xclbin": "tests/app/models/dpuv3int8_resnet50",
+    "instrFile": "controller/src/dpuv3int8/instr.txt",
+    "dInFile": "controller/src/dpuv3int8/din.txt",
+    "dOutFile": "controller/src/dpuv3int8/dout.txt",
+    "resultFile": "controller/src/dpuv3int8/result.txt",
+    "paramsFile": "SC/work/manasa/tf/all/1-reshape/params.txt",
+    "inDDRSize": 150528,
+    "inKernelW": 7,
+    "inStrdW": 2,
+    "inCh": 3,
+    "inH": 224,
+    "inW": 224,
+    "outW": 112,
+    "padLft": 0,
+    "padRt": 0,
+    "swapBufSize": 0,
+    "druSrcBufSize": 16777216,
+    "druDstBufSize": 16777216,
+    "channelAugmentationMode": "True",
+    "druMode": true,
+    "inputs": {
+        "input": {
+            "name": "input",
+            "shape": [
+                4,
+                112,
+                224,
+                21
+            ],
+            "address": 131072
+        }
+    },
+    "outputs": {
+        "resnet_v1_50/conv1/Conv2D": {
+            "name": "resnet_v1_50/conv1/Conv2D",
+            "shape": [
+                4,
+                112,
+                112,
+                64
+            ],
+            "address": 25821184
+        }
+    },
+    "cmd": [
+        "SC/HwAbstraction/code_generation.py -o SC/work/manasa/tf/all/1-reshape/out.asm --params SC/work/manasa/tf/all/1-reshape/params.txt -n examples/tf_resnetv1_50_imagenet_224_224_6.97G/quantized/quantize_eval_model.pb -f tensorflow -first True --json SC/meta.json -swpipe true -opfus true -opfuse true --forwardcut resnet_v1_50/conv1/Conv2D --backwardcut resnet_v1_50/conv1/Conv2D"
+    ]
+}

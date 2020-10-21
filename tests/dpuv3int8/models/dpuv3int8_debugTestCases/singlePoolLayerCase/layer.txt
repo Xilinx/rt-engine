@@ -1,0 +1,1 @@
+resnet_v1_50/block1/unit_3/bottleneck_v1/shortcut/MaxPool

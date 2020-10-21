@@ -1,0 +1,51 @@
+{
+    "inputs": {
+        "input": {
+            "name": "input",
+            "shape": [
+                4,
+                224,
+                224,
+                3
+            ],
+            "address": 189153280
+        }
+    },
+    "outputs": {
+        "resnet_v1_50/block4/unit_3/bottleneck_v1/add": {
+            "name": "resnet_v1_50/block4/unit_3/bottleneck_v1/add",
+            "shape": [
+                4,
+                7,
+                7,
+                2048
+            ],
+            "address": 214843392
+        }
+    },
+    "cmd": [
+        "SC/HwAbstraction/code_generation.py -o SC/work/manasa/tf/all-frompic/73/out.asm -n examples/tf_resnetv1_50_imagenet_224_224_6.97G/quantized/quantize_eval_model.pb -f tensorflow --json SC/meta.json --params SC/work/manasa/tf/all-frompic/73/params.txt --biaspatch true --circus True --forwardcut resnet_v1_50/block4/unit_3/bottleneck_v1/add"
+    ],
+    "paramsFile": "controller/src/dpuv3int8/params.txt",
+    "channelAugmentationMode": false,
+    "swapBufSize": 16777216,
+    "inDDRSize": 150528,
+    "druSrcBufSize": 16777216,
+    "druDstBufSize": 16777216,
+    "druMode": true,
+    "model": "res50",
+    "kernel": "dpdpuv3_wrapper",
+    "xclbin": "tests/app/models/dpuv3int8_resnet50",
+    "instrFile": "controller/src/dpuv3int8/instr.txt",
+    "dInFile": "controller/src/dpuv3int8/din.txt",
+    "dOutFile": "controller/src/dpuv3int8/dout.txt",
+    "resultFile": "controller/src/dpuv3int8/result.txt",
+    "inKernelW": 7,
+    "inStrdW": 2,
+    "inCh": 3,
+    "inH": 224,
+    "inW": 224,
+    "outW": 112,
+    "padLft": 3,
+    "padRt": 3
+}

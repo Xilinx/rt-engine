@@ -1,0 +1,32 @@
+*****************************************************
+This section contains register values that are programmed onto kernel
+CONTROL_ADDR_BLOCK_INSTR, reg: 0x10 val: 0xd000
+CONTROL_ADDR_BLOCK_INSTR + 0x4, reg: 0x14 val: 0x40
+CONTROL_ADDR_BLOCK_PARAMS, reg: 0x18 val: 0x0
+CONTROL_ADDR_BLOCK_PARAMS + 0x4, reg: 0x1c val: 0x40
+CONTROL_ADDR_BLOCK_SWAP, reg: 0x20 val: 0x3b2000
+CONTROL_ADDR_BLOCK_SWAP + 0x4, reg: 0x24 val: 0x40
+CONTROL_ADDR_BLOCK_RSLT, reg: 0x28 val: 0x2755000
+CONTROL_ADDR_BLOCK_RSLT + 0x4, reg: 0x2c val: 0x40
+CONTROL_ADDR_BLOCK_SRC, reg: 0x30 val: 0x0
+CONTROL_ADDR_BLOCK_SRC + 0x4, reg: 0x 34 val: 0x0
+CONTROL_ADDR_BLOCK_DST, reg: 0x38 val: 0xa2000
+CONTROL_ADDR_BLOCK_DST + 0x4, reg: 0x3c val: 0x40
+CONTROL_ADDR_TASK_DRU_ADDR_STRD, reg: 0x40 val: 0x661
+CONTROL_ADDR_TASK_DRU_KW, reg: 0x44 val: 0x0
+CONTROL_ADDR_TASK_DRU_SW, reg: 0x48 val: 0xaaa5a0
+CONTROL_ADDR_TASK_DRU_IC, reg: 0x4c val: 0x0
+CONTROL_ADDR_TASK_DRU_OW, reg: 0x50 val: 0xb8dcbb78
+CONTROL_ADDR_TASK_DRU_OH, reg: 0x54 val: 0x7f2d
+CONTROL_ADDR_TASK_DRU_SRC_NTRANS, reg: 0x58 val: 0x0
+CONTROL_ADDR_TASK_DRU_DST_NTRANS, reg: 0x5c val: 0x0
+CONTROL_ADDR_TASK_DRU_PL_CORR, reg: 0x60 val: 0x0
+CONTROL_ADDR_TASK_DRU_PR_CORR, reg: 0x64 val: 0x0
+CONTROL_ADDR_TASK_DRU_IW_CORR, reg: 0x68 val: 0x0
+CONTROL_ADDR_TASK_DRU_SW_CORR, reg: 0x6c val: 0x0
+CONTROL_ADDR_TASK_DRU_WCG_CORR, reg: 0x70 val: 0x631
+CONTROL_ADDR_TASK_DRU_READ_MODE, reg: 0x74 val: 0x0
+CONTROL_ADDR_TASK_MODE, reg: 0x78 val: 0x1
+CONTROL_ADDR_REG_AXCACHE_AXOS, reg: 0x80 val: 0x1012020
+CONTROL_ADDR_REG_DPU_PROF_ENABLE, reg: 0x84 val: 0x1
+*****************************************************
