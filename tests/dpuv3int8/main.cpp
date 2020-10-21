@@ -17,6 +17,7 @@ int main(int argc, char** argv) {
     ("v,verbose", "cout each image details", cxxopts::value<bool>()->default_value("false"))
     ("p,noPrintMetrics", "don't print metrics", cxxopts::value<bool>()->default_value("false"))
     ("h,singlequeryhack", "execute single query on fpga", cxxopts::value<bool>()->default_value("false"))
+    ("c,numCUs", "Number of CUs To Utilize", cxxopts::value<int>()->default_value("1"))
     ;
   auto result = options.parse(argc, argv);
   if (!result.count("runnermeta"))
@@ -31,6 +32,7 @@ int main(int argc, char** argv) {
   const bool verbose = result["verbose"].as<bool>();
   const bool noPrintMetrics = result["noPrintMetrics"].as<bool>();
   const bool singleQueryHack = result["singlequeryhack"].as<bool>();
+  const int numCUs = result["numCUs"].as<int>();
 
   if(singleQueryHack)
   {
@@ -143,7 +145,7 @@ int main(int argc, char** argv) {
 
     std::cout << std::endl << "Test Classify Multi Thread..." << std::endl;
     auto t3 = std::chrono::high_resolution_clock::now();
-    TestClassifyMultiThread testClassifyMultiThread(runnerMeta, numQueries, numThreads, /*numRunners*/1, imgDir, golden, verbose);
+    TestClassifyMultiThread testClassifyMultiThread(runnerMeta, numQueries, numThreads, numCUs, imgDir, golden, verbose);
     auto t4 = std::chrono::high_resolution_clock::now();
     std::chrono::duration<double> elapsed0 = t4-t3;
 
@@ -157,7 +159,7 @@ int main(int argc, char** argv) {
 
     std::cout<<"-----------------------------------------------"<<std::endl;
     std::cout<<"Summary of Multi Thread Execution: "<<std::endl;
-    std::cout<<"Num CUs used: 1"<<std::endl;
+    std::cout<<"Num CUs used: "<<numCUs<<std::endl;
     std::cout<<"Postprocess includes output reorganization, softmax"<<std::endl;  
     std::cout << "(Preprocess + Kernel + Postprocess) Execution time for "<<numQueries*4<<" images (ms): "<<elapsed.count()*1000 << std::endl;
     std::cout << "Average (Preprocess + Kernel + Postprocess) Execution time for 4 or 1 img (ms): "<<(elapsed.count()*1000)/(numQueries) << std::endl;

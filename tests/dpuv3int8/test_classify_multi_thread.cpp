@@ -8,7 +8,8 @@ TestClassifyMultiThread::TestClassifyMultiThread(
 {
   
   cpuUtilobj_.reset(new cpuUtil(runner_dir, goldenAvailable, verbose, img_dir, num_queries_));
-
+  
+  std::cout<<"Executing test for "<<runner_dir<<std::endl;
   std::vector<std::thread> threads(num_runners_);
   for (unsigned ti=0; ti < threads.size(); ti++)
     threads[ti] = std::thread([this,ti]{init_thread(ti);});

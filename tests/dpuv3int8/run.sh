@@ -1,3 +1,4 @@
+echo "Please move this run script to home directory of rt-engine, in order to run tests for dpuv3int8 IP"
 
 # vart, xir & Unilog lib dir
 PREFIX=${HOME}/.local/Ubuntu.18.04.x86_64
@@ -30,6 +31,10 @@ build/tests/dpuv3int8.exe -r tests/dpuv3int8/models/dpuv3int8_xir/resnet50_handw
 build/tests/dpuv3int8.exe -r tests/dpuv3int8/models/dpuv3int8_xir/resnet50_handwritten.xmodel -t tcmt -d tests/dpuv3int8/models/commonImgLabelDir/imageDir100 -n 100 -s 4 -g true
 build/tests/dpuv3int8.exe -r tests/dpuv3int8/models/dpuv3int8_xir/resnet50_handwritten.xmodel -t tcmt -d tests/dpuv3int8/models/commonImgLabelDir/imageDir10000 -n 10000 -s 4 -g true
 
+#multi thread multi runner using 4 CUs
+build/tests/dpuv3int8.exe -r tests/dpuv3int8/models/dpuv3int8_xir/resnet50_handwritten.xmodel -t tcmt -d tests/dpuv3int8/models/commonImgLabelDir/imageDir100 -n 100 -s 4 -g true -c 4
+build/tests/dpuv3int8.exe -r tests/dpuv3int8/models/dpuv3int8_xir/resnet50_handwritten.xmodel -t tcmt -d tests/dpuv3int8/models/commonImgLabelDir/imageDir10000 -n 10000 -s 4 -g true -c 4
+
 export DPUV3INT8_DEBUGMODE=1
 build/tests/dpuv3int8.exe -r tests/dpuv3int8/models/dpuv3int8_debugTestCases/xirdebugCase/resnet50_case2_compiled_1008.xmodel -t tc -p
 
@@ -41,6 +46,10 @@ build/tests/dpuv3int8.exe -r tests/dpuv3int8/models/dpuv3int8_resnet50/meta.json
 #multi thread
 build/tests/dpuv3int8.exe -r tests/dpuv3int8/models/dpuv3int8_resnet50/meta.json -t tcmt -d tests/dpuv3int8/models/commonImgLabelDir/imageDir100 -n 100 -s 4 -g true
 build/tests/dpuv3int8.exe -r tests/dpuv3int8/models/dpuv3int8_resnet50/meta.json -t tcmt -d tests/dpuv3int8/models/commonImgLabelDir/imageDir10000 -n 10000 -s 4 -g true
+
+#multi thread multi runner using 4 CUs
+build/tests/dpuv3int8.exe -r tests/dpuv3int8/models/dpuv3int8_resnet50/meta.json -t tcmt -d tests/dpuv3int8/models/commonImgLabelDir/imageDir100 -n 100 -s 4 -g true -c 4
+build/tests/dpuv3int8.exe -r tests/dpuv3int8/models/dpuv3int8_resnet50/meta.json -t tcmt -d tests/dpuv3int8/models/commonImgLabelDir/imageDir10000 -n 10000 -s 4 -g true -c 4
 
 export DPUV3INT8_DEBUGMODE=1
 ##cumulative test cases

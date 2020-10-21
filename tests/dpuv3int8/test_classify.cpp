@@ -5,7 +5,7 @@ TestClassify::TestClassify(std::string runner_dir, unsigned num_queries, std::st
 {
 
   cpuUtilobj_.reset(new cpuUtil(runner_dir, goldenAvailable, verbose, img_dir, num_queries_));
-
+  std::cout<<"Executing test for "<<runner_dir<<std::endl;
   if(runner_dir.find(".json") != std::string::npos)
     runner_.reset(new vart::DpuRunner(runner_dir));
   else
