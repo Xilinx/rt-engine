@@ -67,7 +67,7 @@ void Xmodel::loadParamsJson(json_object* jobj, bool isDebugMode)
   inDdrSize_ = getValue("inDDRSize", jobj);
   padRgt_ = getValue("padRt", jobj);
 
-  dru_mode_ = getBool("druMode", jobj);
+  dru_mode_ = isDebugMode ? false:getBool("druMode", jobj);
   
   channel_augmentationmode_ = getBool("channelAugmentationMode", jobj);
  
@@ -127,8 +127,8 @@ void Xmodel::loadParamsSubgraph(const xir::Subgraph *subgraph, bool isDebugMode)
   inDdrSize_ = subgraph->get_attr<int>("inDDRSize");
   padRgt_ = subgraph->get_attr<int>("padRt");
 
-  dru_mode_ = subgraph->get_attr<int>("druMode");
-  
+  dru_mode_ = isDebugMode ? false:subgraph->get_attr<int>("druMode");
+
   channel_augmentationmode_ = subgraph->get_attr<int>("channelAugmentationMode");
  
   inKernelW_ = subgraph->get_attr<int>("inKernelW");
