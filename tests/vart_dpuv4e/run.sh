@@ -21,4 +21,4 @@ fi
 
 
 export RTE_ACQUIRE_DEVICE_UNMANAGED=1
-./build/tests/vart_dpuv4e.exe  tests/app/models/v4e_resnet50/dpu.xmodel tests/dpuv4e/models/v4e_resnet50/meta.json tests/dpuv3int8/models/commonImgLabelDir/imageDir/
+./build/tests/vart_dpuv4e.exe  tests/app/models/v4e_yolov3voc/dpu.xmodel tests/dpuv4e/models/v4e_resnet50/meta.json tests/dpuv3int8/models/commonImgLabelDir/imageDir/
