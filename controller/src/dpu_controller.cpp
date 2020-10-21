@@ -164,6 +164,11 @@ SampleDpuController::SampleDpuController(std::string meta)
 : XclDpuController<XclDeviceHandle, XclDeviceBuffer, XclDeviceBuffer>(meta) {
 }
 
+SampleDpuController::SampleDpuController(const xir::Subgraph *subgraph) 
+: XclDpuController<XclDeviceHandle, XclDeviceBuffer, XclDeviceBuffer>(subgraph) {
+}
+
+
 SampleDpuController::~SampleDpuController() {
 }
 

@@ -44,6 +44,10 @@ DpuRunner::DpuRunner(const xir::Subgraph* subgraph) : exec_core_idx_(0) {
   {
     dpu_controller_.emplace_back(new DpuV3meController(subgraph));
   }
+  else if (kernel == "kernelSxdnn_0")
+  {
+    dpu_controller_.emplace_back(new SampleDpuController(subgraph));
+  }
   else 
     throw std::runtime_error("Error: no DpuController found for " + kernel);
   
@@ -53,6 +57,55 @@ DpuRunner::DpuRunner(const xir::Subgraph* subgraph) : exec_core_idx_(0) {
   if (dpu_controller_.empty())
     throw std::runtime_error("Error: no FPGA resources available");
 }
+
+DpuRunner::DpuRunner(std::string meta) : exec_core_idx_(0) {
+  // default: each DpuController controls one core,
+  //          each DpuRunner has one DpuController
+  // (keep it simple)
+ 
+ std::ifstream f(meta);
+ std::stringstream metabuf;
+ metabuf << f.rdbuf();
+ json_object *jobj = json_tokener_parse(metabuf.str().c_str());     
+ json_object *obj = NULL;
+ if (!json_object_object_get_ex(jobj, "kernel", &obj))
+    std::cout<<"missing kernel field in meta.json"<<std::endl;
+ std::string kernel = json_object_get_string(obj);
+
+  if (kernel == "dpdpuv3_wrapper") 
+  // TODO/FIXME replace kernel name with standard name for dpuv3int8 
+  // e.g., DPUABC123XYZ
+  {
+    const bool DPUV3INT8_DEBUGMODE =
+        std::getenv("DPUV3INT8_DEBUGMODE") ? atoi(std::getenv("DPUV3INT8_DEBUGMODE")) == 1 : false;
+ 
+    if(DPUV3INT8_DEBUGMODE==1) 
+        dpu_controller_.emplace_back(new Dpuv3Int8DebugController(meta));
+    else 
+        dpu_controller_.emplace_back(new Dpuv3Int8Controller(meta));
+  }
+  else if (kernel == "DPUCVDX8H") 
+  {
+    dpu_controller_.emplace_back(new DpuV4eController(meta));
+  }
+  else if (kernel == "DPUCAHX8L")
+  {
+    dpu_controller_.emplace_back(new DpuV3meController(meta));
+  }
+  else if (kernel == "kernelSxdnn_0")
+  {
+    dpu_controller_.emplace_back(new SampleDpuController(meta));
+  }
+  else 
+    throw std::runtime_error("Error: no DpuController found for " + kernel);
+  
+  ip_scale.push_back(1.0f);
+  op_scale.push_back(1.0f);
+
+  if (dpu_controller_.empty())
+    throw std::runtime_error("Error: no FPGA resources available");
+}
+
 
 DpuRunner::~DpuRunner() {
 }

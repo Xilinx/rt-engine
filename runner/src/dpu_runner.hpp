@@ -27,6 +27,7 @@ namespace vart {
 class DpuRunner: public vart::dpu::DpuRunnerExt {
   public:
     DpuRunner(const xir::Subgraph* subgraph);
+    DpuRunner(std::string meta);
     ~DpuRunner();
     DpuRunner(const DpuRunner&) = delete;
     DpuRunner& operator=(const DpuRunner& other) = delete;

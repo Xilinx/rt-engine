@@ -58,6 +58,7 @@ class SampleDpuController
  : public XclDpuController<XclDeviceHandle, XclDeviceBuffer, XclDeviceBuffer> {
  public:
   SampleDpuController(std::string meta);
+  SampleDpuController(const xir::Subgraph *subgraph);
   virtual ~SampleDpuController() override;
   virtual void run(
     const std::vector<vart::TensorBuffer*> &inputs, 

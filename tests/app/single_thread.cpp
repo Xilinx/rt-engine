@@ -4,10 +4,15 @@
 SingleThreadTest::SingleThreadTest(std::string runner_dir, unsigned num_queries) 
  : num_queries_(num_queries)
 {
-  std::unique_ptr<xir::Graph> graph = xir::Graph::deserialize(runner_dir);
-  std::vector<xir::Subgraph *> subgraphs = graph->get_root_subgraph()->children_topological_sort();
-  auto subgraph = subgraphs[1];//TO_DO - replace 1 with automated value
-  runner_.reset(new vart::DpuRunner(subgraph));
+  if(runner_dir.find(".json") != std::string::npos)
+    runner_.reset(new vart::DpuRunner(runner_dir));
+  else
+  {
+    std::unique_ptr<xir::Graph> graph = xir::Graph::deserialize(runner_dir);
+    std::vector<xir::Subgraph *> subgraphs = graph->get_root_subgraph()->children_topological_sort();
+    auto subgraph = subgraphs[1];//TO_DO - replace 1 with automated value
+    runner_.reset(new vart::DpuRunner(subgraph));
+  }
 }
 
 void SingleThreadTest::run() {
