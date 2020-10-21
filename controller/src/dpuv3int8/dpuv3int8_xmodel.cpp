@@ -76,6 +76,8 @@ void Xmodel::loadParamsJson(json_object* jobj, bool isDebugMode)
   inStrdW_ = getValue("inStrdW", jobj);
   
   swapBufSize_ = getValue("swapBufSize", jobj);
+  if(swapBufSize_==0)
+    swapBufSize_=1;
   druSrcBufSize_ = getValue("druSrcBufSize", jobj);
   druDstBufSize_ = getValue("druDstBufSize", jobj);
 
@@ -134,6 +136,8 @@ void Xmodel::loadParamsSubgraph(const xir::Subgraph *subgraph, bool isDebugMode)
   inStrdW_ = subgraph->get_attr<int>("inStrdW");
   
   swapBufSize_ = subgraph->get_attr<int>("swapBufSize");
+  if(swapBufSize_==0)
+    swapBufSize_=1;
   druSrcBufSize_ = subgraph->get_attr<int>("druSrcBufSize");
   druDstBufSize_ = subgraph->get_attr<int>("druDstBufSize");
 
