@@ -288,7 +288,6 @@ void DpuV3meController::init_graph(const xir::Subgraph* subgraph) {
     xclGetBOProperties(handle, codeMem, &boProp);
     code_addr_ = boProp.paddr;
     free(codePtr);
-
   } else {
     dbg_layers_.clear();
     auto children = subgraph_->get_children();
@@ -326,6 +325,22 @@ void DpuV3meController::init_graph(const xir::Subgraph* subgraph) {
 
       dbg_layers_.emplace_back(std::move(layer));
     }
+  }
+
+  // Load mc_code
+  if(!debug_mode_) {
+    auto& mc_code_preload = subgraph_->get_attr<std::vector<char>>("mc_code_preload");
+    void *codePtr = NULL;
+    unsigned size = mc_code_preload.size();
+    if (posix_memalign(&codePtr, getpagesize(), size))
+      throw std::bad_alloc();
+    for (unsigned i=0; i < size; i++) ((char*)codePtr)[i] = mc_code_preload[i];
+    auto codeMem
+      = xclAllocUserPtrBO(handle, codePtr, size, 16);
+    xclSyncBO(handle, codeMem, XCL_BO_SYNC_BO_TO_DEVICE, size, 0);
+    xclGetBOProperties(handle, codeMem, &boProp);
+    preload_code_addr_ = boProp.paddr;
+    free(codePtr);
   }
 
   // reg0
@@ -527,8 +542,8 @@ auto trigger_dpu_func = [&](){
       // do preload
       regVals.push_back( { XDPU_CONTROL_INSTR_L / 4, preload_code_addr_ & 0xFFFFFFFF });
       regVals.push_back( { XDPU_CONTROL_INSTR_H / 4, (preload_code_addr_ >> 32) & 0xFFFFFFFF });
-      regVals.push_back( { XDPU_CONTROL_ADDR_0_L / 4, preload_reg0_addr_ & 0xFFFFFFFF });
-      regVals.push_back( { XDPU_CONTROL_ADDR_0_H / 4, (preload_reg0_addr_ >> 32) & 0xFFFFFFFF });
+      regVals.push_back( { XDPU_CONTROL_ADDR_0_L / 4, reg0_addr_ & 0xFFFFFFFF });
+      regVals.push_back( { XDPU_CONTROL_ADDR_0_H / 4, (reg0_addr_ >> 32) & 0xFFFFFFFF });
 
       p = 6;
       for (unsigned i=0; i < regVals.size(); i++) {
