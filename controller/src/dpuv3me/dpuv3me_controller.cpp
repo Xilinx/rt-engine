@@ -56,7 +56,8 @@ using namespace chrono;
 #define BATCHSIZE 1
 
 DEF_ENV_PARAM(DPU_IP_LATENCY, "0");
-DEF_ENV_PARAM(DPU_DEBUG_DUMP, "0");
+DEF_ENV_PARAM(XLNX_ENABLE_DUMP, "0");
+DEF_ENV_PARAM(XLNX_ENABLE_DEBUG_MODE, "0");
 DEF_ENV_PARAM(DEEPHI_PROFILINE, "0");
 DEF_ENV_PARAM(ENABLE_TB_CREATE, "0");
 /*
@@ -177,6 +178,17 @@ void DpuV3meController::init(const std::string &meta) {
 void DpuV3meController::init_graph(const xir::Subgraph* subgraph) {
   auto handle = contexts_[0]->get_dev_handle();
   xclBOProperties boProp;
+
+  dump_mode_ = ENV_PARAM(XLNX_ENABLE_DUMP);
+  debug_mode_ = ENV_PARAM(XLNX_ENABLE_DEBUG_MODE);
+  if(dump_mode_) {
+    auto t = std::chrono::system_clock::to_time_t(std::chrono::system_clock::now()); 
+    std::stringstream ss;
+    ss << "dump_" << std::put_time(std::localtime(&t), "%Y%m%d%H%M%S"); 
+    dump_folder_ = ss.str();
+    if(mkdir(dump_folder_.c_str(),S_IRUSR | S_IWUSR | S_IXUSR | S_IRWXG | S_IRWXO))
+      throw std::runtime_error("Error: Create dump folder error");  
+  }
 
   code_addr_ = 0x0ul;
   reg0_addr_ = 0x0ul;
@@ -711,11 +723,6 @@ auto trigger_dpu_func = [&](){
         io_addrs[i] + xdpu_io_output_offset[j]))
         throw std::runtime_error("Error: download failed");
       //__TOC_PROFILING__(OUTPUT)
-      if(ENV_PARAM(DPU_DEBUG_DUMP)) {
-        const auto mode = std::ios_base::out | std::ios_base::binary | std::ios_base::trunc;
-        auto output_file = "./output"+ to_string(j) + to_string(i)+".bin";
-          std::ofstream(output_file, mode).write((char*)output_tensor_buffers[i*xdpu_io_output_offset.size()+j]->data().first,outSize);
-      }
       sumSize += outSize;
     }
   }
