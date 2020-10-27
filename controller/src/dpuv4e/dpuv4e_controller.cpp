@@ -58,7 +58,6 @@ using namespace chrono;
 DEF_ENV_PARAM(DPU_IP_LATENCY, "0");
 DEF_ENV_PARAM(XLNX_ENABLE_DUMP, "0");
 DEF_ENV_PARAM(XLNX_ENABLE_DEBUG_MODE, "0");
-DEF_ENV_PARAM(DEEPHI_PROFILINE, "0");
 DEF_ENV_PARAM(ENABLE_TB_CREATE, "0");
 /*
  * a contiguous memory block is allocated for each requests' I/O
@@ -481,7 +480,7 @@ void DpuV4eController::run(const std::vector<vart::TensorBuffer*> &inputs,
   // upload batch of inputs
   //const auto inSize = get_input_tensors()[0]->get_element_num();
   __TIC__(INPUT_H2D)
-  for (unsigned i=0; i < io_bufs.size() && i < (inputs.size()/xdpu_io_input_offset.size()); i++)
+  for (unsigned i=0; i < io_bufs.size(); i++)
   {
     // instead of uploading all {output, input, intermediate}, 
     // just upload input region
