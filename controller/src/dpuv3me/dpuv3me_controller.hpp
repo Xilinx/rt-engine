@@ -22,6 +22,7 @@ class DpuV3meController
   void init_graph(const xir::Subgraph* subgraph);
   std::vector<const xir::Tensor*> get_merged_io_tensors() const;
   std::vector<vart::TensorBuffer*> init_tensor_buffer(std::vector<const xir::Tensor*> tensors);
+  std::pair<uint64_t,int32_t> alloc_and_fill_device_memory(xclDeviceHandle handle, std::vector<char> code);
   std::unordered_map<vart::TensorBuffer*, vart::TensorBuffer*> tbuf2hwbuf_;
   std::mutex hwbuf_mtx_;
 
@@ -53,13 +54,20 @@ class DpuV3meController
    * @param outputs: offset and size pairs of output tensors
    */
   struct layer_info {
-    layer_info(std::string name){ this->name = name;}
+    layer_info(std::string name){
+      this->name = name;
+      this->preload_code_addr.first = 0x0ul;
+      this->code_addr.first = 0x0ul;
+    }
     std::string name;
+    address_info preload_code_addr;
     address_info code_addr;
     std::vector<address_info> inputs;
     std::vector<address_info> outputs;
     void dbg_print() {
-      std::cout << name << "\n  CODE( " << code_addr.first << " , " << code_addr.second << " )\n  ";
+      std::cout << name << "\n  ";
+      std::cout << "PRELOAD_CODE( " << preload_code_addr.first << " , " << preload_code_addr.second << " )\n  ";
+      std::cout << "CODE( " << code_addr.first << " , " << code_addr.second << " )\n  ";
       std::cout << "IN " << inputs.size() << " : ";
       for(auto& l : inputs)
         std::cout << "(" << l.first << " , " << l.second << ") ";

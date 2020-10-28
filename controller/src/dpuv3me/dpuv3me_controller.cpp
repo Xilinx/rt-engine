@@ -175,6 +175,23 @@ void DpuV3meController::init(const std::string &meta) {
   }
   init_graph(subgraph[0]);
 }
+
+std::pair<uint64_t,int32_t> DpuV3meController::alloc_and_fill_device_memory(xclDeviceHandle handle, std::vector<char> code) {
+  xclBOProperties boProp;
+  void *codePtr = NULL;
+  std::pair<uint64_t,int32_t> data;
+  unsigned size = code.size();
+  if (posix_memalign(&codePtr, getpagesize(), size)) throw std::bad_alloc();
+  for (unsigned i=0; i < size; i++) ((char*)codePtr)[i] = code[i];
+  auto codeMem = xclAllocUserPtrBO(handle, codePtr, size, 16);
+  xclSyncBO(handle, codeMem, XCL_BO_SYNC_BO_TO_DEVICE, size, 0);
+  xclGetBOProperties(handle, codeMem, &boProp);
+  data.first = boProp.paddr;
+  free(codePtr);
+  data.second = size;
+  return data;
+}
+
 void DpuV3meController::init_graph(const xir::Subgraph* subgraph) {
   auto handle = contexts_[0]->get_dev_handle();
   xclBOProperties boProp;
@@ -271,23 +288,17 @@ void DpuV3meController::init_graph(const xir::Subgraph* subgraph) {
 
   }
 
-  //in release mode: using dbg_layers_ to store first inputs and final outputs information
-  dbg_layers_.emplace_back(std::move(layer));
-
   // Load mc_code
   if(!debug_mode_) {
     auto& mc_code = subgraph_->get_attr<std::vector<char>>("mc_code");
-    void *codePtr = NULL;
-    unsigned size = mc_code.size();
-    if (posix_memalign(&codePtr, getpagesize(), size))
-      throw std::bad_alloc();
-    for (unsigned i=0; i < size; i++) ((char*)codePtr)[i] = mc_code[i];
-    auto codeMem
-      = xclAllocUserPtrBO(handle, codePtr, size, 16);
-    xclSyncBO(handle, codeMem, XCL_BO_SYNC_BO_TO_DEVICE, size, 0);
-    xclGetBOProperties(handle, codeMem, &boProp);
-    code_addr_ = boProp.paddr;
-    free(codePtr);
+    layer.code_addr = alloc_and_fill_device_memory(handle, mc_code);
+    code_addr_ = layer.code_addr.first;
+    if (subgraph_->has_attr("mc_code_preload")) {
+      auto& mc_code_preload = subgraph_->get_attr<std::vector<char>>("mc_code_preload");
+      layer.preload_code_addr = alloc_and_fill_device_memory(handle, mc_code_preload);
+      preload_code_addr_ = layer.preload_code_addr.first;
+    }
+    dbg_layers_.emplace_back(std::move(layer));
   } else {
     dbg_layers_.clear();
     auto children = subgraph_->get_children();
@@ -299,19 +310,11 @@ void DpuV3meController::init_graph(const xir::Subgraph* subgraph) {
       layer_info layer(child_name);
       if ((*child)->has_attr("mc_code")) {
         auto& mc_code = (*child)->get_attr<std::vector<char> >("mc_code");
-
-        void *codePtr = NULL;
-        auto codeSize = mc_code.size();
-        if (posix_memalign(&codePtr, getpagesize(), codeSize))
-          throw std::bad_alloc();
-        std::copy(mc_code.begin(), mc_code.end(),  (char*)codePtr);
-        auto codeBO = xclAllocUserPtrBO(handle, codePtr, codeSize, 16);
-        xclSyncBO(handle, codeBO, XCL_BO_SYNC_BO_TO_DEVICE, codeSize, 0);
-
-        layer.code_addr.first = (uint64_t)xclGetDeviceAddr(handle, codeBO);
-        layer.code_addr.second = codeSize;
-
-        free(codePtr);
+        layer.code_addr = alloc_and_fill_device_memory(handle, mc_code);
+        if ((*child)->has_attr("mc_code_preload")) {
+          auto& mc_code_preload = subgraph_->get_attr<std::vector<char>>("mc_code_preload");
+          layer.preload_code_addr = alloc_and_fill_device_memory(handle, mc_code_preload);
+        }
       }
 
       auto in_tensors = (*child)->get_input_tensors() ;
@@ -325,22 +328,6 @@ void DpuV3meController::init_graph(const xir::Subgraph* subgraph) {
 
       dbg_layers_.emplace_back(std::move(layer));
     }
-  }
-
-  // Load mc_code
-  if(!debug_mode_) {
-    auto& mc_code_preload = subgraph_->get_attr<std::vector<char>>("mc_code_preload");
-    void *codePtr = NULL;
-    unsigned size = mc_code_preload.size();
-    if (posix_memalign(&codePtr, getpagesize(), size))
-      throw std::bad_alloc();
-    for (unsigned i=0; i < size; i++) ((char*)codePtr)[i] = mc_code_preload[i];
-    auto codeMem
-      = xclAllocUserPtrBO(handle, codePtr, size, 16);
-    xclSyncBO(handle, codeMem, XCL_BO_SYNC_BO_TO_DEVICE, size, 0);
-    xclGetBOProperties(handle, codeMem, &boProp);
-    preload_code_addr_ = boProp.paddr;
-    free(codePtr);
   }
 
   // reg0
@@ -696,6 +683,7 @@ auto trigger_dpu_func = [&](){
     for(auto& layer: dbg_layers_) {
       if(layer.code_addr.second > 0) {
         code_addr_ = layer.code_addr.first;
+        preload_code_addr_ = layer.preload_code_addr.first;
         trigger_dpu_func();
 
         // Save the outputs to file
