@@ -51,6 +51,8 @@ class DpuRunner: public vart::dpu::DpuRunnerExt {
 
   protected:
     std::vector<std::unique_ptr<DpuController>> dpu_controller_;
+    std::vector<vart::TensorBuffer*> in_bufs;
+    std::vector<vart::TensorBuffer*> out_bufs;
     std::atomic<unsigned> exec_core_idx_;
     std::vector<float> ip_scale;
     std::vector<float> op_scale;
