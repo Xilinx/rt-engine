@@ -1,4 +1,3 @@
-export LD_LIBRARY_PATH=build:${CONDA_PREFIX}/lib:/opt/xilinx/xrt/lib:${XILINX_VART}/lib
 export XILINX_XRT=/opt/xilinx/xrt
 
 #Sample commands
@@ -16,6 +15,7 @@ else
     XILINX_VART=$1
 fi
 
+export LD_LIBRARY_PATH=build:${CONDA_PREFIX}/lib:/opt/xilinx/xrt/lib:${XILINX_VART}/lib
 # Set below env corresponding to xclbin
 export XLNX_VART_FIRMWARE=/opt/xilinx/overlaybins/xdnnv3
 if [[ -z "${XLNX_VART_FIRMWARE}" ]]; then

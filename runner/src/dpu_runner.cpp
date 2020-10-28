@@ -51,6 +51,8 @@ DpuRunner::DpuRunner(const xir::Subgraph* subgraph) : exec_core_idx_(0) {
   else 
     throw std::runtime_error("Error: no DpuController found for " + kernel);
   
+  in_bufs = dpu_controller_[0]->get_inputs();
+  out_bufs = dpu_controller_[0]->get_outputs();
   ip_scale.push_back(1.0f);
   op_scale.push_back(1.0f);
 
@@ -126,11 +128,11 @@ std::vector<float> DpuRunner::get_output_scale() const {
 }
 
 std::vector<vart::TensorBuffer*> DpuRunner::get_inputs() {
-  return dpu_controller_[0]->get_inputs();
+  return in_bufs;//dpu_controller_[0]->get_inputs();
 }
 
 std::vector<vart::TensorBuffer*> DpuRunner::get_outputs() {
-  return dpu_controller_[0]->get_outputs();
+  return out_bufs;//dpu_controller_[0]->get_outputs();
 }
 
 std::pair<uint32_t, int> DpuRunner::execute_async(

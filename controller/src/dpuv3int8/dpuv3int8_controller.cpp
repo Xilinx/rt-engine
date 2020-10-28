@@ -25,11 +25,11 @@ Dpuv3Int8Controller::Dpuv3Int8Controller(const xir::Subgraph *subgraph) : XclDpu
 
 void Dpuv3Int8Controller::initializeTensors()
 {
-    const std::vector<std::int32_t> indims = { int32_t(BATCH_SIZE*xmodel_->getInW()*xmodel_->getInH()*xmodel_->getInCh())};
+    const std::vector<std::int32_t> indims = { BATCH_SIZE, int32_t(xmodel_->getInW()), int32_t(xmodel_->getInH()), int32_t(xmodel_->getInCh())};
     std::vector<std::int32_t> inHwDims = { int32_t(BATCH_SIZE*xmodel_->getInW()*xmodel_->getInH()*xmodel_->getInCh())};
     if(not xmodel_->getDruMode())
       inHwDims = { int32_t(xmodel_->getInW()*xmodel_->getInH()*BATCH_SIZE*ceil((float)xmodel_->getInCh()/16)*16)};
-    const std::vector<std::int32_t> outdims = { int32_t(BATCH_SIZE*xmodel_->getOutSize())};
+    const std::vector<std::int32_t> outdims = { BATCH_SIZE, 1, 1, int32_t(xmodel_->getOutSize())};
     
     xir::Tensor *in_t = xir::Tensor::create("input", indims, xir::DataType{xir::DataType::INT, 8}).release();
     xir::Tensor *in_hw = xir::Tensor::create("inputHw", inHwDims, xir::DataType{xir::DataType::INT, 8}).release();
