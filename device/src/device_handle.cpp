@@ -35,6 +35,9 @@ DeviceResource::DeviceResource(std::string kernelName, std::string xclbin) {
   auto cuIdx = naive_resource_mgr_cu_idx_.fetch_add(1);
 
   xir::XrtBinStream binstream(xclbin);
+  if (cuIdx >= binstream.get_num_of_cu())
+    throw std::runtime_error("Error: no CUs available");
+
   auto cu_full_name = kernelName + ":" 
     + std::to_string(deviceIdx) + ":" + std::to_string(cuIdx);
 
