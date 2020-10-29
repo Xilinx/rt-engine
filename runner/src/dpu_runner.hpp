@@ -50,10 +50,9 @@ class DpuRunner: public vart::dpu::DpuRunnerExt {
     virtual std::vector<float> get_output_scale() const override;
 
   protected:
-    std::vector<std::unique_ptr<DpuController>> dpu_controller_;
+    std::shared_ptr<DpuController> dpu_controller_;
     std::vector<vart::TensorBuffer*> in_bufs;
     std::vector<vart::TensorBuffer*> out_bufs;
-    std::atomic<unsigned> exec_core_idx_;
     std::vector<float> ip_scale;
     std::vector<float> op_scale;
 };
