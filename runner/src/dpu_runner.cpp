@@ -82,12 +82,21 @@ std::vector<float> DpuRunner::get_output_scale() const {
 }
 
 std::vector<vart::TensorBuffer*> DpuRunner::get_inputs() {
-  return in_bufs;//dpu_controller_->get_inputs();
+  return in_bufs;
 }
 
 std::vector<vart::TensorBuffer*> DpuRunner::get_outputs() {
-  return out_bufs;//dpu_controller_->get_outputs();
+  return out_bufs;
 }
+
+std::vector<vart::TensorBuffer*> DpuRunner::make_inputs() {
+  return dpu_controller_->get_inputs();
+}
+std::vector<vart::TensorBuffer*> DpuRunner::make_outputs() {
+  return dpu_controller_->get_outputs();
+}
+
+
 
 std::pair<uint32_t, int> DpuRunner::execute_async(
   const std::vector<vart::TensorBuffer*>& inputs,

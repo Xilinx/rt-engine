@@ -46,6 +46,8 @@ class DpuRunner: public vart::dpu::DpuRunnerExt {
     
     virtual std::vector<vart::TensorBuffer*> get_inputs() override;
     virtual std::vector<vart::TensorBuffer*> get_outputs() override;
+    virtual std::vector<vart::TensorBuffer*> make_inputs(); 
+    virtual std::vector<vart::TensorBuffer*> make_outputs();
     virtual std::vector<float> get_input_scale() const override;
     virtual std::vector<float> get_output_scale() const override;
 
