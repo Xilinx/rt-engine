@@ -1,9 +1,5 @@
 export XILINX_XRT=/opt/xilinx/xrt
 
-#Sample commands
-#build/tests/engine.exe
-build/tests/app.exe -r tests/app/models/sample_resnet50/meta.json
-
 # vart, xir & Unilog lib dir
 PREFIX=${HOME}/.local/Ubuntu.18.04.x86_64
 
@@ -21,6 +17,9 @@ export XLNX_VART_FIRMWARE=/opt/xilinx/overlaybins/xdnnv3
 if [[ -z "${XLNX_VART_FIRMWARE}" ]]; then
     export XLNX_VART_FIRMWARE=/usr/lib
 fi
+
+#Sample commands
+build/tests/app.exe -r tests/app/models/sample_resnet50/meta.json
 
 #vart integrated
 build/tests/app.exe -r tests/app/models/sample_resnet50/sampleres50.xmodel
