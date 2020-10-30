@@ -50,6 +50,8 @@ build/tests/dpuv3int8.exe -r tests/dpuv3int8/models/dpuv3int8_resnet50/meta.json
 #multi thread multi runner using 4 CUs
 build/tests/dpuv3int8.exe -r tests/dpuv3int8/models/dpuv3int8_resnet50/meta.json -t tcmt -d tests/dpuv3int8/models/commonImgLabelDir/imageDir100 -n 100 -s 4 -g true -c 4
 build/tests/dpuv3int8.exe -r tests/dpuv3int8/models/dpuv3int8_resnet50/meta.json -t tcmt -d tests/dpuv3int8/models/commonImgLabelDir/imageDir10000 -n 10000 -s 4 -g true -c 4
+build/tests/dpuv3int8.exe -r tests/dpuv3int8/models/dpuv3int8_paolo_optimized_resnet50/meta.json -t tcmt -d tests/dpuv3int8/models/commonImgLabelDir/imageDir10000 -n 10000 -s 4 -g true -c 4
+build/tests/dpuv3int8.exe -r tests/dpuv3int8/models/dpuv3int8_paolo_unoptimized_resnet50/meta.json -t tcmt -d tests/dpuv3int8/models/commonImgLabelDir/imageDir10000 -n 10000 -s 4 -g true -c 4
 
 export DPUV3INT8_DEBUGMODE=1
 ##cumulative test cases
