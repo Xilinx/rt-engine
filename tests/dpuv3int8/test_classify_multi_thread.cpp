@@ -59,8 +59,8 @@ void TestClassifyMultiThread::init_thread(unsigned ridx)
 
 void TestClassifyMultiThread::run_thread(unsigned tidx, unsigned ridx, unsigned n) {
   auto runner = runners_[ridx].get();
-  auto inputs = runner->get_inputs();
-  auto outputs = runner->get_outputs();
+  auto inputs = runner->make_inputs();
+  auto outputs = runner->make_outputs();
   
   for (unsigned i=tidx*n; i < (tidx+1)*n; i++)
   {
