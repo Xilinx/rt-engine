@@ -201,16 +201,18 @@ void DpuV4eController::init_graph(const xir::Subgraph* subgraph) {
   // Load parameter
   size_t parameter_size = 0;
   const char * parameter_value = NULL;
-  auto reg_id_to_parameter_value =
-    subgraph_->get_attr<std::map<std::string, std::vector<char>>>("reg_id_to_parameter_value");
-  for (const auto& c : reg_id_to_parameter_value) {
-    if (!c.second.empty()) {
-      parameter_size = c.second.size();
-      parameter_value = (const char *)&c.second[0];
-      break;
+  std::map<std::string, std::vector<char>> reg_id_to_parameter_value;
+  if (subgraph_->has_attr("reg_id_to_parameter_value")) {
+    reg_id_to_parameter_value =
+      subgraph_->get_attr<std::map<std::string, std::vector<char>>>("reg_id_to_parameter_value");
+    for (const auto& c : reg_id_to_parameter_value) {
+      if (!c.second.empty()) {
+        parameter_size = c.second.size();
+        parameter_value = (const char *)&c.second[0];
+        break;
+      }
     }
   }
-
   // Get Reg ID size
   auto reg_id_to_context_type =
     subgraph_->get_attr<std::map<std::string, std::string>>("reg_id_to_context_type");
@@ -329,17 +331,20 @@ void DpuV4eController::init_graph(const xir::Subgraph* subgraph) {
   }
 
   // reg0
-  void *reg0Ptr = NULL; 
-  if (posix_memalign(&reg0Ptr, getpagesize(), parameter_size))
-    throw std::bad_alloc();
-  for (unsigned i=0; i < parameter_size; i++) ((char*)reg0Ptr)[i] = parameter_value[i];
-  auto reg0Mem 
-    = xclAllocUserPtrBO(handle, reg0Ptr, parameter_size, handle_->get_device_info().ddr_bank);
-  xclSyncBO(handle, reg0Mem, XCL_BO_SYNC_BO_TO_DEVICE, parameter_size, 0);
-  xclGetBOProperties(handle, reg0Mem, &boProp);
-  reg0_addr_ = boProp.paddr;
-  free(reg0Ptr);
-
+  if (parameter_size) {
+    void *reg0Ptr = NULL; 
+    if (posix_memalign(&reg0Ptr, getpagesize(), parameter_size))
+      throw std::bad_alloc();
+    for (unsigned i=0; i < parameter_size; i++) ((char*)reg0Ptr)[i] = parameter_value[i];
+    auto reg0Mem 
+      = xclAllocUserPtrBO(handle, reg0Ptr, parameter_size, handle_->get_device_info().ddr_bank);
+    xclSyncBO(handle, reg0Mem, XCL_BO_SYNC_BO_TO_DEVICE, parameter_size, 0);
+    xclGetBOProperties(handle, reg0Mem, &boProp);
+    reg0_addr_ = boProp.paddr;
+    free(reg0Ptr);
+  } else {
+    reg0_addr_ = 0;
+  }
   program_once_complete = 0;
 }
 
