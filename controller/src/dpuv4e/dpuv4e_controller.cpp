@@ -125,7 +125,11 @@ std::vector<vart::TensorBuffer*> DpuV4eController::init_tensor_buffer(std::vecto
 }
 
 void DpuV4eController::init(const xir::Subgraph *subgraph) {
-  init_graph(subgraph);
+  if (subgraph->has_attr("device")&&(subgraph->get_attr<std::string>("device")=="DPU")) {
+    init_graph(subgraph);
+  }
+  else
+    throw std::runtime_error("Error: subgraph is not supported in DPURunner");
 
 }
 void DpuV4eController::init(const std::string &meta) {
