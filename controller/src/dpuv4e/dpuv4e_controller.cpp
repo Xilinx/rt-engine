@@ -425,6 +425,7 @@ void DpuV4eController::run(const std::vector<vart::TensorBuffer*> &inputs,
   unsigned bs = inputs[0]->get_tensor()->get_shape()[0];
   unsigned obs = outputs[0]->get_tensor()->get_shape()[0];
   unsigned inputBs;
+  // check if tensorbuffer store batch inputs/outputs
   if ((inputs.size()/input_tensors_.size())>1)
     inputBs = inputs.size()/input_tensors_.size();
   else
@@ -435,17 +436,17 @@ void DpuV4eController::run(const std::vector<vart::TensorBuffer*> &inputs,
   if(ENV_PARAM(ENABLE_TB_CREATE)) {
     input_tensor_buffers = get_inputs();
     output_tensor_buffers = get_outputs();
-    unsigned cnt=0;
     for (unsigned i=0; i < input_tensors_.size(); i++ ) {
+      unsigned cnt=0;
       for (unsigned j=0; j < inputs.size(); j++) {
         if (inputs[j]->get_tensor()->get_name() == input_tensors_[i]->get_name()) {
-          if (bs == inputBs) {
+          if (bs == inputBs) { //one tensrobuffer store batch
             for (unsigned b=0; b < bs; b++) {
-              memcpy((void*)input_tensor_buffers[b*input_tensors_.size()+i]->data().first,(char*)inputs[j]->data().first+b*input_tensors_[i]->get_element_num(),inputs[j]->get_tensor()->get_element_num());
+              memcpy((void*)input_tensor_buffers[b*input_tensors_.size()+i]->data().first,(char*)inputs[j]->data().first+b*input_tensors_[i]->get_element_num(),input_tensors_[i]->get_element_num());
             }
           }
           else {
-            memcpy((char*)input_tensor_buffers[floor(cnt/input_tensors_.size())*input_tensors_.size()+i]->data().first,(void *)inputs[j]->data().first,inputs[j]->get_tensor()->get_element_num());
+            memcpy((char*)input_tensor_buffers[cnt*input_tensors_.size()+i]->data().first,(void *)inputs[j]->data().first,inputs[j]->get_tensor()->get_element_num());
             cnt++;
           }
 
@@ -691,18 +692,18 @@ void DpuV4eController::run(const std::vector<vart::TensorBuffer*> &inputs,
   }
   __TOC__(OUTPUT_D2H)
   if(ENV_PARAM(ENABLE_TB_CREATE)) {
-    unsigned cnt=0;
     for (unsigned i=0; i < output_tensors_.size(); i++  ) {
+      unsigned cnt=0;
       for (unsigned j=0; j < outputs.size(); j++) {
         if (outputs[j]->get_tensor()->get_name() == output_tensors_[i]->get_name()) {
           if (bs == inputBs) {
             for (unsigned b=0; b < obs; b++) {
-              memcpy((char*)outputs[j]->data().first+b*output_tensors_[i]->get_element_num(), (void*)output_tensor_buffers[b*output_tensors_.size()+i]->data().first,outputs[j]->get_tensor()->get_element_num());
+              memcpy((char*)outputs[j]->data().first+b*output_tensors_[i]->get_element_num(), (void*)output_tensor_buffers[b*output_tensors_.size()+i]->data().first,output_tensors_[i]->get_element_num());
             }
           }
           else {
 
-            memcpy((char*)outputs[j]->data().first,(void*)output_tensor_buffers[floor(cnt/output_tensors_.size())*output_tensors_.size()+i]->data().first,outputs[j]->get_tensor()->get_element_num());
+            memcpy((char*)outputs[j]->data().first,(void*)output_tensor_buffers[cnt*output_tensors_.size()+i]->data().first,outputs[j]->get_tensor()->get_element_num());
             cnt++;
 
           }
