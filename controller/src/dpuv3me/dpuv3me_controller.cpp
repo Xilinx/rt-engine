@@ -384,7 +384,7 @@ std::vector<vart::TensorBuffer*> DpuV3meController::get_inputs() {
 std::vector<vart::TensorBuffer*> DpuV3meController::get_outputs() {
 //  return get_tensor_buffer_pointer(output_tensor_buffers_);
   auto tbufs = init_tensor_buffer(output_tensors_);
-  auto hwbufs = create_tensor_buffers(get_merged_io_tensors(),false);
+  auto hwbufs = create_tensor_buffers(get_merged_io_tensors(),false, 16);
   for (int i=0;i<BATCHSIZE; i++) {
     std::unique_lock<std::mutex> lock(hwbuf_mtx_);
     tbuf2hwbuf_.emplace(tbufs[i*output_tensors_.size()], hwbufs[i]);

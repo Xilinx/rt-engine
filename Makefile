@@ -36,7 +36,7 @@ ifneq "$(wildcard $(XILINX_XRM))" ""
   endif
 endif
 
-CPPFLAGS ?= $(INC_FLAGS) $(VITIS_INCLUDES) $(VITIS_LIBS) -Wall -std=c++17 -O3
+CPPFLAGS ?= $(INC_FLAGS) $(VITIS_INCLUDES) $(VITIS_LIBS) -fpermissive -Wall -std=c++17 -O3
 
 .PHONY: all
 all: $(BUILD_DIR)/$(TARGET_LIB) $(TEST_BINS)

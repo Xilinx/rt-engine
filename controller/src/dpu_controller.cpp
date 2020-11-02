@@ -121,7 +121,7 @@ XclDpuController<Dhandle, DbufIn, DbufOut>::get_outputs() {
 template <class Dhandle, class DbufIn, class DbufOut>
 std::vector<vart::TensorBuffer*> 
 XclDpuController<Dhandle, DbufIn, DbufOut>::create_tensor_buffers(
-  const std::vector<const xir::Tensor*> &tensors, bool isInput) {
+  const std::vector<const xir::Tensor*> &tensors, bool isInput, unsigned int ddr_bank = 0) {
   std::vector<vart::TensorBuffer*> tbufs;
   for (unsigned ti=0; ti < tensors.size(); ti++)
   {
@@ -141,10 +141,10 @@ XclDpuController<Dhandle, DbufIn, DbufOut>::create_tensor_buffers(
     std::unique_ptr<DeviceBuffer> dbuf;
     if (isInput)
       dbuf.reset(
-        new DbufIn(handle_.get(), tbuf.get(), handle_->get_device_info().ddr_bank));
+        new DbufIn(handle_.get(), tbuf.get(), ddr_bank? ddr_bank: handle_->get_device_info().ddr_bank));
     else
       dbuf.reset(
-        new DbufOut(handle_.get(), tbuf.get(), handle_->get_device_info().ddr_bank));
+        new DbufOut(handle_.get(), tbuf.get(), ddr_bank? ddr_bank: handle_->get_device_info().ddr_bank));
 
     // register this TensorBuffer->DeviceBuffer pair
     {
