@@ -288,6 +288,10 @@ void DpuV3meController::init_graph(const xir::Subgraph* subgraph) {
 
   }
 
+  //in release mode: using dbg_layers_ to store first inputs and final outputs inform
+  dbg_layers_.clear();
+  dbg_layers_.emplace_back(std::move(layer));
+
   // Load mc_code
   if(!debug_mode_) {
     auto& mc_code = subgraph_->get_attr<std::vector<char>>("mc_code");
@@ -302,7 +306,6 @@ void DpuV3meController::init_graph(const xir::Subgraph* subgraph) {
     }
     dbg_layers_.emplace_back(std::move(layer));
   } else {
-    dbg_layers_.clear();
     auto children = subgraph_->get_children();
     auto child_order = subgraph_->get_attr<std::vector<std::string>>("children_topological_sort");
     for (const auto& child_name : child_order) {
@@ -686,7 +689,8 @@ auto trigger_dpu_func = [&](){
     }
 
     int layer_idx = 0;
-    for(auto& layer: dbg_layers_) {
+    for(auto iter = dbg_layers_.begin() + 1;iter !=dbg_layers_.end();iter++) {
+      auto layer = *iter;
       if(layer.code_addr.second > 0) {
         code_addr_ = layer.code_addr.first;
         preload_code_addr_ = layer.preload_code_addr.first;

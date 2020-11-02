@@ -272,7 +272,8 @@ void DpuV4eController::init_graph(const xir::Subgraph* subgraph) {
 
   }
   
-  //in release mode: using dbg_layers_ to store first inputs and final outputs information
+  //in release mode: using dbg_layers_ to store first inputs and final outputs information  
+  dbg_layers_.clear();
   dbg_layers_.emplace_back(std::move(layer));
 
   // Load mc_code
@@ -290,8 +291,7 @@ void DpuV4eController::init_graph(const xir::Subgraph* subgraph) {
     code_addr_ = boProp.paddr;
     free(codePtr);
 
-  } else {  
-    dbg_layers_.clear();
+  } else {
     auto children = subgraph_->get_children(); 
     auto child_order = subgraph_->get_attr<std::vector<std::string>>("children_topological_sort");
     for (const auto& child_name : child_order) { 
@@ -642,8 +642,9 @@ void DpuV4eController::run(const std::vector<vart::TensorBuffer*> &inputs,
       } 
     }
 
-    int layer_idx = 0;
-    for(auto& layer: dbg_layers_) {
+    int layer_idx = 0; 
+    for(auto iter = dbg_layers_.begin() + 1;iter !=dbg_layers_.end();iter++) {
+      auto layer = *iter;
       if(layer.code_addr.second > 0) {
         code_addr_ = layer.code_addr.first; 
         trigger_dpu_func();  
