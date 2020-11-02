@@ -238,7 +238,7 @@ void DpuV4eController::init_graph(const xir::Subgraph* subgraph) {
     layer.inputs.emplace_back(address_info{out->get_attr<std::int32_t>("ddr_addr"), out->get_data_size()});
     input_dims.emplace_back(out->get_shape());
     
-    xir::Tensor *tensor = xir::Tensor::create(in_name, out->get_shape(), xir::DataType{xir::DataType::INT, 8}).release();
+    xir::Tensor *tensor = xir::Tensor::create(out->get_name(), out->get_shape(), xir::DataType{xir::DataType::INT, 8}).release();
       //std::unique_ptr<xir::Tensor> tensor(
       //  new xir::Tensor(in_name, out->get_shape(),xir::Tensor::DataType::INT8));
     //input_tensors_.emplace_back(tensor.get());
@@ -262,7 +262,7 @@ void DpuV4eController::init_graph(const xir::Subgraph* subgraph) {
     layer.outputs.emplace_back(address_info{out->get_attr<std::int32_t>("ddr_addr"), out->get_data_size()});
     //std::unique_ptr<xir::Tensor> tensor(
     //  new xir::Tensor(out_name, out->get_shape(),xir::Tensor::DataType::INT8));
-    xir::Tensor *tensor = xir::Tensor::create(out_name, out->get_shape(), xir::DataType{xir::DataType::INT, 8}).release();
+    xir::Tensor *tensor = xir::Tensor::create(out->get_name(), out->get_shape(), xir::DataType{xir::DataType::INT, 8}).release();
     //auto tensor = out;
     output_tensors_.emplace_back(tensor);
     //{
