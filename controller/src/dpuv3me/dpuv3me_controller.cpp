@@ -517,7 +517,11 @@ void DpuV3meController::run(const std::vector<vart::TensorBuffer*> &inputs,
 auto trigger_dpu_func = [&](){
   std::vector<std::pair<int, int> > regVals;
   if (0 == program_once_complete) {
-    program_once_complete = 1;
+
+    // in debug mode, need to run preload instruction layer by layer
+    if(!debug_mode_){
+      program_once_complete = 1;
+    }
 
     regVals.push_back( { XDPU_CONTROL_AP, XDPU_CONTROL_AP_START });
     regVals.push_back( { XDPU_CONTROL_GIE / 4, XDPU_GLOBAL_INT_ENABLE });
