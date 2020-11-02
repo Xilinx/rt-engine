@@ -439,7 +439,7 @@ void DpuV4eController::run(const std::vector<vart::TensorBuffer*> &inputs,
     for (unsigned i=0; i < input_tensors_.size(); i++ ) {
       unsigned cnt=0;
       for (unsigned j=0; j < inputs.size(); j++) {
-        if (inputs[j]->get_tensor()->get_name() == input_tensors_[i]->get_name()) {
+        if (input_tensors_[i]->get_name().find(inputs[j]->get_tensor()->get_name()) != std::string::npos) {
           if (bs == inputBs) { //one tensrobuffer store batch
             for (unsigned b=0; b < bs; b++) {
               memcpy((void*)input_tensor_buffers[b*input_tensors_.size()+i]->data().first,(char*)inputs[j]->data().first+b*input_tensors_[i]->get_element_num(),input_tensors_[i]->get_element_num());
@@ -695,7 +695,7 @@ void DpuV4eController::run(const std::vector<vart::TensorBuffer*> &inputs,
     for (unsigned i=0; i < output_tensors_.size(); i++  ) {
       unsigned cnt=0;
       for (unsigned j=0; j < outputs.size(); j++) {
-        if (outputs[j]->get_tensor()->get_name() == output_tensors_[i]->get_name()) {
+        if (output_tensors_[i]->get_name().find(outputs[j]->get_tensor()->get_name()) != std::string::npos) {
           if (bs == inputBs) {
             for (unsigned b=0; b < obs; b++) {
               memcpy((char*)outputs[j]->data().first+b*output_tensors_[i]->get_element_num(), (void*)output_tensor_buffers[b*output_tensors_.size()+i]->data().first,output_tensors_[i]->get_element_num());
