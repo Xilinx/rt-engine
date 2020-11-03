@@ -1,3 +1,32 @@
+class inputLayerParams
+{
+    public:
+      inputLayerParams(json_object* jobj, bool isDebugMode);
+      inputLayerParams(const xir::Subgraph *subgraph, bool isDebugMode);  
+      uint32_t inW_;
+      uint32_t inH_;
+      uint32_t inCh_;
+      uint32_t inKernelW_;
+      uint32_t padLft_;
+      uint32_t padRgt_;
+      uint32_t inStrdW_;
+      uint32_t druSrcBufSize_;
+      uint32_t druDstBufSize_;
+      uint32_t inDdrSize_;
+      bool dru_mode_;
+      bool channel_augmentationmode_;
+  
+};
+
+class outputLayerParams
+{
+    public:
+      outputLayerParams(const xir::Subgraph *subgraph);     
+      outputLayerParams(json_object* jobj);
+      uint32_t outSize_;
+};
+
+
 class Xmodel {
   public:
     uint32_t getInW();
@@ -35,21 +64,10 @@ class Xmodel {
     void loadParamsXIR(std::string xmodel_filename, bool isDebugMode);
     void loadParamsSubgraph(const xir::Subgraph *subgraph, bool isDebugMode);
     std::unique_ptr<InstrFormatConverter> instrFormatConverter_;
-
-    uint32_t inW_;
-    uint32_t inH_;
-    uint32_t inCh_;
-    uint32_t outSize_;
-    uint32_t inKernelW_;
-    uint32_t padLft_;
-    uint32_t padRgt_;
-    uint32_t inStrdW_;
+    
+    std::vector<inputLayerParams> inputParams_;
+    std::vector<outputLayerParams> outputParams_;
     uint32_t swapBufSize_;
-    uint32_t druSrcBufSize_;
-    uint32_t druDstBufSize_;
-    uint32_t inDdrSize_;
-    bool dru_mode_;
-    bool channel_augmentationmode_;
     std::string instr_asm_filename_;
     std::string instr_filename_;
     std::string params_filename_;
@@ -61,7 +79,6 @@ class Xmodel {
     std::string debug_din_filename_;
     std::string debug_golden_filename_;
 
-
-
 };
+
 
