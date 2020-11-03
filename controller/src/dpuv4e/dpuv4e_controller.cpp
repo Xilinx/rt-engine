@@ -153,14 +153,6 @@ void DpuV4eController::init(const std::string &meta) {
  
   if (json_object_object_get_ex(jobj, "dump_mode", &modelObj)) {
     dump_mode_ = json_object_get_boolean(modelObj);
-    if(dump_mode_) {
-      auto t = std::chrono::system_clock::to_time_t(std::chrono::system_clock::now()); 
-      std::stringstream ss;
-      ss << "dump_" << std::put_time(std::localtime(&t), "%Y%m%d%H%M%S"); 
-      dump_folder_ = ss.str();
-      if(mkdir(dump_folder_.c_str(),S_IRUSR | S_IWUSR | S_IXUSR | S_IRWXG | S_IRWXO))
-        throw std::runtime_error("Error: Create dump folder error");  
-    }
   }  
   if (json_object_object_get_ex(jobj, "debug_mode", &modelObj)) {
     debug_mode_ = json_object_get_boolean(modelObj);
@@ -183,16 +175,22 @@ void DpuV4eController::init_graph(const xir::Subgraph* subgraph) {
   auto handle = contexts_[0]->get_dev_handle();
   xclBOProperties boProp;
 
-  dump_mode_ = ENV_PARAM(XLNX_ENABLE_DUMP);
-  debug_mode_ = ENV_PARAM(XLNX_ENABLE_DEBUG_MODE);
+  dump_mode_ = dump_mode_|| ENV_PARAM(XLNX_ENABLE_DUMP);
+  debug_mode_ = debug_mode_|| ENV_PARAM(XLNX_ENABLE_DEBUG_MODE);
   if(dump_mode_) {
     auto t = std::chrono::system_clock::to_time_t(std::chrono::system_clock::now()); 
     std::stringstream ss;
     ss << "dump_" << std::put_time(std::localtime(&t), "%Y%m%d%H%M%S"); 
     dump_folder_ = ss.str();
     if(mkdir(dump_folder_.c_str(),S_IRUSR | S_IWUSR | S_IXUSR | S_IRWXG | S_IRWXO))
-      throw std::runtime_error("Error: Create dump folder error");  
+      throw std::runtime_error("Error: Create dump folder error");
+    for(auto i = 0;i<BATCHSIZE;i++) {
+      std::string tmp = dump_folder_ + "/E" + std::to_string(i);
+      if(mkdir(tmp.c_str(),S_IRUSR | S_IWUSR | S_IXUSR | S_IRWXG | S_IRWXO))
+        throw std::runtime_error("Error: Create dump sub folder error"); 
+    } 
   }
+
 
   auto graph = subgraph->get_graph();
   // Get one subgraph
@@ -235,8 +233,8 @@ void DpuV4eController::init_graph(const xir::Subgraph* subgraph) {
     xdpu_io_input_offset.emplace_back(out->get_attr<std::int32_t>("ddr_addr"));
     input_scales_.push_back(pow(2,out->get_attr<std::int32_t>("fix_point")));
     input_dims.emplace_back(out->get_shape());
-    layer.inputs.emplace_back(address_info{out->get_attr<std::int32_t>("ddr_addr"), out->get_data_size()});
-    input_dims.emplace_back(out->get_shape());
+    layer.inputs.emplace_back(address_info(out->get_attr<std::int32_t>("ddr_addr"), 
+      out->get_data_size(), layer_info::name_map(out->get_name()))); 
     
     xir::Tensor *tensor = xir::Tensor::create(out->get_name(), out->get_shape(), xir::DataType{xir::DataType::INT, 8}).release();
       //std::unique_ptr<xir::Tensor> tensor(
@@ -259,7 +257,9 @@ void DpuV4eController::init_graph(const xir::Subgraph* subgraph) {
     xdpu_io_output_offset.emplace_back(out->get_attr<std::int32_t>("ddr_addr"));
     output_scales_.push_back(pow(2,out->get_attr<std::int32_t>("fix_point")));
     output_dims.emplace_back(out->get_shape()); 
-    layer.outputs.emplace_back(address_info{out->get_attr<std::int32_t>("ddr_addr"), out->get_data_size()});
+    layer.outputs.emplace_back(std::make_tuple(out->get_attr<std::int32_t>("ddr_addr"), 
+        out->get_data_size(), layer_info::name_map(out->get_name())));
+
     //std::unique_ptr<xir::Tensor> tensor(
     //  new xir::Tensor(out_name, out->get_shape(),xir::Tensor::DataType::INT8));
     xir::Tensor *tensor = xir::Tensor::create(out->get_name(), out->get_shape(), xir::DataType{xir::DataType::INT, 8}).release();
@@ -310,19 +310,21 @@ void DpuV4eController::init_graph(const xir::Subgraph* subgraph) {
         auto codeBO = xclAllocUserPtrBO(handle, codePtr, codeSize, handle_->get_device_info().ddr_bank); 
         xclSyncBO(handle, codeBO, XCL_BO_SYNC_BO_TO_DEVICE, codeSize, 0);
         
-        layer.code_addr.first = (uint64_t)xclGetDeviceAddr(handle, codeBO);
-        layer.code_addr.second = codeSize;
+        std::get<0>(layer.code_addr) = (uint64_t)xclGetDeviceAddr(handle, codeBO);
+        std::get<1>(layer.code_addr) = codeSize;
         
         free(codePtr); 
       }    
  
       auto in_tensors = (*child)->get_input_tensors() ;
       for(auto t: in_tensors) {
-        layer.inputs.emplace_back(address_info{t->get_attr<int32_t>("ddr_addr"), t->get_data_size()});
+        layer.inputs.emplace_back(address_info{t->get_attr<int32_t>("ddr_addr"), 
+            t->get_data_size(), layer_info::name_map(t->get_name())});
       }
       auto out_tensors = (*child)->get_output_tensors() ;
       for(auto t: out_tensors) {
-        layer.outputs.emplace_back(address_info{t->get_attr<int32_t>("ddr_addr"), t->get_data_size()});
+        layer.outputs.emplace_back(address_info{t->get_attr<int32_t>("ddr_addr"), 
+            t->get_data_size(), layer_info::name_map(t->get_name())});
       } 
 
       dbg_layers_.emplace_back(std::move(layer));
@@ -582,15 +584,14 @@ void DpuV4eController::run(const std::vector<vart::TensorBuffer*> &inputs,
     if(dump_mode_ ) { // dump input    
       int tensor_idx = 0;
       for(auto& out: dbg_layers_[0].inputs) {
-        auto offset = out.first;
-        auto size = out.second;
+        auto offset = std::get<0>(out);
+        auto size = std::get<1>(out);
         auto data = std::make_unique<char[]>(size);
         for (unsigned i=0; i < io_bufs.size(); i++) { 
           if (xclUnmgdPread(xcl_handle, 0, data.get(), size, io_addrs[i] + offset))
             throw std::runtime_error("Error: dump failed!");
           std::stringstream ss;  
-          ss << dump_folder_ << "/INPUT_" 
-             << "_E" << i << "_" << std::to_string(tensor_idx); 
+          ss << dump_folder_ << "/E" << i << "/" << std::get<2>(out); 
           std::ofstream ofs(ss.str(), std::ofstream::binary);
           ofs.write(data.get(), size);
           ofs.close(); 
@@ -604,15 +605,14 @@ void DpuV4eController::run(const std::vector<vart::TensorBuffer*> &inputs,
     if(dump_mode_ ) {  // dump final output   
       int tensor_idx = 0;
       for(auto& out: dbg_layers_[0].outputs) {
-        auto offset = out.first;
-        auto size = out.second;
+        auto offset = std::get<0>(out);
+        auto size = std::get<1>(out);
         auto data = std::make_unique<char[]>(size);
         for (unsigned i=0; i < io_bufs.size(); i++) { 
           if (xclUnmgdPread(xcl_handle, 0, data.get(), size, io_addrs[i] + offset))
             throw std::runtime_error("Error: dump failed!");
           std::stringstream ss;  
-          ss << dump_folder_ << "/OUTPUT_" 
-             << "_E" << i << "_" << std::to_string(tensor_idx); 
+          ss << dump_folder_ << "/E" << i << "/" << std::get<2>(out); 
           std::ofstream ofs(ss.str(), std::ofstream::binary);
           ofs.write(data.get(), size);
           ofs.close(); 
@@ -626,14 +626,14 @@ void DpuV4eController::run(const std::vector<vart::TensorBuffer*> &inputs,
       auto& inputs = dbg_layers_[0].inputs;
       int tensor_idx = 0;
       for(auto& input: inputs) {
-        auto offset = input.first;
-        auto size = input.second;
+        auto offset = std::get<0>(input);
+        auto size = std::get<1>(input);
         auto data = std::make_unique<char[]>(size);
         for (unsigned i=0; i < io_bufs.size(); i++) { 
           if (xclUnmgdPread(xcl_handle, 0, data.get(), size, io_addrs[i] + offset))
             throw std::runtime_error("Error: dump failed!");
           std::stringstream ss;
-          ss << dump_folder_ << "/0000_E" << i << "_" << tensor_idx << "INPUT"; 
+          ss << dump_folder_ << "/E" << i << "/" << std::get<2>(input); 
           std::ofstream ofs(ss.str(), std::ofstream::binary);
           ofs.write(data.get(), size);
           ofs.close(); 
@@ -645,23 +645,22 @@ void DpuV4eController::run(const std::vector<vart::TensorBuffer*> &inputs,
     int layer_idx = 0; 
     for(auto iter = dbg_layers_.begin() + 1;iter !=dbg_layers_.end();iter++) {
       auto layer = *iter;
-      if(layer.code_addr.second > 0) {
-        code_addr_ = layer.code_addr.first; 
+      if(std::get<1>(layer.code_addr) > 0) {
+        code_addr_ = std::get<0>(layer.code_addr); 
         trigger_dpu_func();  
      
         // Save the outputs to file  
         if(dump_mode_) { 
           int tensor_idx = 0;
           for(auto& out: layer.outputs) {
-            auto offset = out.first;
-            auto size = out.second;
+            auto offset = std::get<0>(out);
+            auto size = std::get<1>(out);
             auto data = std::make_unique<char[]>(size);
             for (unsigned i=0; i < io_bufs.size(); i++) { 
               if (xclUnmgdPread(xcl_handle, 0, data.get(), size, io_addrs[i] + offset))
                 throw std::runtime_error("Error: dump failed!");
               std::stringstream ss;  
-              ss << dump_folder_ << "/" << setw(4) << setfill('0') << layer_idx 
-                 << "_E" << i << "_" << std::to_string(tensor_idx) << std::regex_replace(layer.name, std::regex("/"), "_"); 
+              ss << dump_folder_ << "/E" << i << "/" << std::get<2>(out); 
               std::ofstream ofs(ss.str(), std::ofstream::binary);
               ofs.write(data.get(), size);
               ofs.close(); 
@@ -673,6 +672,7 @@ void DpuV4eController::run(const std::vector<vart::TensorBuffer*> &inputs,
       } 
     } 
   }
+
   __TIC__(OUTPUT_D2H)
   for (unsigned i=0; i < io_bufs.size(); i++)
   {

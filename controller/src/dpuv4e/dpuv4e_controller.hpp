@@ -45,7 +45,7 @@ class DpuV4eController
   // Debug instruction support
   //****************************************************
   /** address info: <offset, size> */
-  using address_info = std::pair<uint64_t,int32_t>; 
+  using address_info = std::tuple<uint64_t,int32_t,std::string>; 
   /**
    * layer information
    * @param code_addr: address for instruction
@@ -59,15 +59,20 @@ class DpuV4eController
     std::vector<address_info> inputs;
     std::vector<address_info> outputs;
     void dbg_print() {
-      std::cout << name << "\n  CODE( " << code_addr.first << " , " << code_addr.second << " )\n  ";
+      std::cout << name << "\n  CODE( " << std::get<0>(code_addr) << " , " << std::get<1>(code_addr) << " )\n  ";
       std::cout << "IN " << inputs.size() << " : ";
       for(auto& l : inputs)
-        std::cout << "(" << l.first << " , " << l.second << ") ";
+        std::cout << "(" << std::get<0>(l) << " , " << std::get<1>(l) << ") ";
       std::cout << "\n  ";
       std::cout << "OUT " << outputs.size() << " : ";
       for(auto& o : outputs)
-        std::cout << "(" << o.first << " , " << o.second << ") ";
+        std::cout << "(" << std::get<0>(o) << " , " << std::get<1>(o) << ") ";
       std::cout << std::endl;
+    }
+    static std::string name_map(std::string raw) {
+      std::string tmp = std::regex_replace(raw, std::regex("/"), "_");
+      tmp = std::regex_replace(tmp, std::regex("\\(.*\\)"), "");
+      return tmp + ".bin";
     }
   }; 
   std::vector<layer_info> dbg_layers_;

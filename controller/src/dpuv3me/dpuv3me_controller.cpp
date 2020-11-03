@@ -149,14 +149,6 @@ void DpuV3meController::init(const std::string &meta) {
 
   if (json_object_object_get_ex(jobj, "dump_mode", &modelObj)) {
     dump_mode_ = json_object_get_boolean(modelObj);
-    if(dump_mode_) {
-      auto t = std::chrono::system_clock::to_time_t(std::chrono::system_clock::now());
-      std::stringstream ss;
-      ss << "dump_" << std::put_time(std::localtime(&t), "%Y%m%d%H%M%S");
-      dump_folder_ = ss.str();
-      if(mkdir(dump_folder_.c_str(),S_IRUSR | S_IWUSR | S_IXUSR | S_IRWXG | S_IRWXO))
-        throw std::runtime_error("Error: Create dump folder error");
-    }
   }
   if (json_object_object_get_ex(jobj, "debug_mode", &modelObj)) {
     debug_mode_ = json_object_get_boolean(modelObj);
@@ -196,15 +188,20 @@ void DpuV3meController::init_graph(const xir::Subgraph* subgraph) {
   auto handle = contexts_[0]->get_dev_handle();
   xclBOProperties boProp;
 
-  dump_mode_ = ENV_PARAM(XLNX_ENABLE_DUMP);
-  debug_mode_ = ENV_PARAM(XLNX_ENABLE_DEBUG_MODE);
+  dump_mode_ = dump_mode_|| ENV_PARAM(XLNX_ENABLE_DUMP);
+  debug_mode_ = debug_mode_|| ENV_PARAM(XLNX_ENABLE_DEBUG_MODE);
   if(dump_mode_) {
     auto t = std::chrono::system_clock::to_time_t(std::chrono::system_clock::now()); 
     std::stringstream ss;
     ss << "dump_" << std::put_time(std::localtime(&t), "%Y%m%d%H%M%S"); 
     dump_folder_ = ss.str();
     if(mkdir(dump_folder_.c_str(),S_IRUSR | S_IWUSR | S_IXUSR | S_IRWXG | S_IRWXO))
-      throw std::runtime_error("Error: Create dump folder error");  
+      throw std::runtime_error("Error: Create dump folder error");
+    for(auto i = 0;i < BATCHSIZE;i++) {
+      std::string tmp = dump_folder_ + "/E" + std::to_string(i);
+      if(mkdir(tmp.c_str(),S_IRUSR | S_IWUSR | S_IXUSR | S_IRWXG | S_IRWXO))
+        throw std::runtime_error("Error: Create dump sub folder error"); 
+    } 
   }
 
   code_addr_ = 0x0ul;
@@ -252,6 +249,7 @@ void DpuV3meController::init_graph(const xir::Subgraph* subgraph) {
     input_scales_.push_back(pow(2,out->get_attr<std::int32_t>("fix_point")));
     input_dims.emplace_back(out->get_shape());
     layer.inputs.emplace_back(address_info{out->get_attr<std::int32_t>("ddr_addr"), out->get_data_size()});
+    layer.inputs_name.emplace_back(layer_info::name_map(out->get_name()));
     input_dims.emplace_back(out->get_shape());
     
     xir::Tensor *tensor = xir::Tensor::create(in_name, out->get_shape(), xir::DataType{xir::DataType::INT, 8}).release();
@@ -276,6 +274,7 @@ void DpuV3meController::init_graph(const xir::Subgraph* subgraph) {
     output_scales_.push_back(pow(2,out->get_attr<std::int32_t>("fix_point")));
     output_dims.emplace_back(out->get_shape()); 
     layer.outputs.emplace_back(address_info{out->get_attr<std::int32_t>("ddr_addr"), out->get_data_size()});
+    layer.outputs_name.emplace_back(layer_info::name_map(out->get_name()));
     //std::unique_ptr<xir::Tensor> tensor(
     //  new xir::Tensor(out_name, out->get_shape(),xir::Tensor::DataType::INT8));
     xir::Tensor *tensor = xir::Tensor::create(out_name, out->get_shape(), xir::DataType{xir::DataType::INT, 8}).release();
@@ -325,12 +324,14 @@ void DpuV3meController::init_graph(const xir::Subgraph* subgraph) {
       auto in_tensors = (*child)->get_input_tensors() ;
       for(auto t: in_tensors) {
         layer.inputs.emplace_back(address_info{t->get_attr<int32_t>("ddr_addr"), t->get_data_size()});
+        layer.inputs_name.emplace_back(layer_info::name_map(t->get_name()));
       }
       auto out_tensors = (*child)->get_output_tensors() ;
       for(auto t: out_tensors) {
         layer.outputs.emplace_back(address_info{t->get_attr<int32_t>("ddr_addr"), t->get_data_size()});
+        layer.outputs_name.emplace_back(layer_info::name_map(t->get_name()));
       }
-
+      
       dbg_layers_.emplace_back(std::move(layer));
     }
   }
@@ -635,8 +636,7 @@ auto trigger_dpu_func = [&](){
           if (xclUnmgdPread(xcl_handle, 0, data.get(), size, io_addrs[i] + offset))
             throw std::runtime_error("Error: dump failed!");
           std::stringstream ss;
-          ss << dump_folder_ << "/INPUT_"
-             << "_E" << i << "_" << std::to_string(tensor_idx);
+          ss << dump_folder_ << "/E" << i << "/" << dbg_layers_[0].inputs_name[tensor_idx];
           std::ofstream ofs(ss.str(), std::ofstream::binary);
           ofs.write(data.get(), size);
           ofs.close();
@@ -657,9 +657,8 @@ auto trigger_dpu_func = [&](){
           if (xclUnmgdPread(xcl_handle, 0, data.get(), size, io_addrs[i] + offset))
             throw std::runtime_error("Error: dump failed!");
           std::stringstream ss;
-          ss << dump_folder_ << "/OUTPUT_"
-             << "_E" << i << "_" << std::to_string(tensor_idx);
-          std::ofstream ofs(ss.str(), std::ofstream::binary);
+          ss << dump_folder_ << "/E" << i << "/" << dbg_layers_[0].outputs_name[tensor_idx];
+          std::ofstream ofs(ss.str(), std::ofstream::binary); 
           ofs.write(data.get(), size);
           ofs.close();
         }
@@ -679,16 +678,15 @@ auto trigger_dpu_func = [&](){
           if (xclUnmgdPread(xcl_handle, 0, data.get(), size, io_addrs[i] + offset))
             throw std::runtime_error("Error: dump failed!");
           std::stringstream ss;
-          ss << dump_folder_ << "/0000_E" << i << "_" << tensor_idx << "INPUT";
+          ss << dump_folder_ << "/E" << i << "/" << dbg_layers_[0].inputs_name[tensor_idx]; 
           std::ofstream ofs(ss.str(), std::ofstream::binary);
           ofs.write(data.get(), size);
           ofs.close();
         }
-        tensor_idx++;
       }
     }
 
-    int layer_idx = 0;
+    int layer_idx = 1;
     for(auto iter = dbg_layers_.begin() + 1;iter !=dbg_layers_.end();iter++) {
       auto layer = *iter;
       if(layer.code_addr.second > 0) {
@@ -706,14 +704,13 @@ auto trigger_dpu_func = [&](){
             for (unsigned i=0; i < io_bufs.size(); i++) {
               if (xclUnmgdPread(xcl_handle, 0, data.get(), size, io_addrs[i] + offset))
                 throw std::runtime_error("Error: dump failed!");
-              std::stringstream ss;
-              ss << dump_folder_ << "/" << setw(4) << setfill('0') << layer_idx
-                 << "_E" << i << "_" << std::to_string(tensor_idx) << std::regex_replace(layer.name, std::regex("/"), "_");
+              std::stringstream ss; 
+              ss << dump_folder_ << "/E" << i << "/" << layer.outputs_name[tensor_idx];
               std::ofstream ofs(ss.str(), std::ofstream::binary);
               ofs.write(data.get(), size);
               ofs.close();
             }
-            tensor_idx++;
+            tensor_idx++; 
           }
         }
         layer_idx ++;

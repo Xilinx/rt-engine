@@ -64,6 +64,8 @@ class DpuV3meController
     address_info code_addr;
     std::vector<address_info> inputs;
     std::vector<address_info> outputs;
+    std::vector<std::string> inputs_name;
+    std::vector<std::string> outputs_name;
     void dbg_print() {
       std::cout << name << "\n  ";
       std::cout << "PRELOAD_CODE( " << preload_code_addr.first << " , " << preload_code_addr.second << " )\n  ";
@@ -76,6 +78,11 @@ class DpuV3meController
       for(auto& o : outputs)
         std::cout << "(" << o.first << " , " << o.second << ") ";
       std::cout << std::endl;
+    }
+    static std::string name_map(std::string raw) {
+      std::string tmp = std::regex_replace(raw, std::regex("/"), "_");
+      tmp = std::regex_replace(tmp, std::regex("\\(.*\\)"), "");
+      return tmp + ".bin";
     }
   };
   std::vector<layer_info> dbg_layers_;
