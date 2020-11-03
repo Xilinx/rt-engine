@@ -1,4 +1,4 @@
-echo "Please move this run script to home directory of rt-engine, in order to run tests for dpuv3int8 IP"
+cd ../../.
 
 # vart, xir & Unilog lib dir
 PREFIX=${HOME}/.local/Ubuntu.18.04.x86_64
