@@ -1,0 +1,69 @@
+{
+    "inputs": {
+        "resnet_v1_50/block3/unit_3/bottleneck_v1/conv1/Conv2D": {
+            "name": "resnet_v1_50/block3/unit_3/bottleneck_v1/conv1/Relu/aquant",
+            "shape": [
+                4,
+                224,
+                224,
+                3
+            ],
+            "address": 4734976,
+            "inKernelW": 7,
+            "inStrdW": 2,
+            "padLft": 3,
+            "padRt": 3,
+            "druSrcBufSize": 16777216,
+            "druDstBufSize": 16777216,
+            "channelAugmentationMode": false,
+            "druMode": false,
+            "inDDRSize": 150528,
+            "reshape": {
+                "shape": [
+                    4,
+                    14,
+                    14,
+                    256
+                ],
+                "kernel": [
+                    3,
+                    3
+                ],
+                "pad": [
+                    0,
+                    0,
+                    0,
+                    0
+                ]
+            }
+        }
+    },
+    "outputs": {
+        "resnet_v1_50/block3/unit_3/bottleneck_v1/conv2/Conv2D": {
+            "name": "resnet_v1_50/block3/unit_3/bottleneck_v1/conv2/Relu/aquant",
+            "shape": [
+                4,
+                14,
+                14,
+                256
+            ],
+            "address": 6340608,
+            "outDDRSize": 50176
+        }
+    },
+    "cmd": [
+        "SC/HwAbstraction/code_generation.py -o SC/work/manasa/tf/all/45/instr.asm --params SC/work/manasa/tf/all/45/params.txt -n examples/tf_resnetv1_50_imagenet_224_224_6.97G/quantized/quantize_eval_model.pb -f tensorflow --json SC/work/manasa/tf/all/45/meta1.json -swpipe true -opfus true -opfuse true --biaspatch true --quant examples/tf_resnetv1_50_imagenet_224_224_6.97G/quantized/temp_fix.txt --forwardcut resnet_v1_50/block3/unit_3/bottleneck_v1/conv2/Conv2D --backwardcut resnet_v1_50/block3/unit_3/bottleneck_v1/conv2/Conv2D"
+    ],
+    "parameters": {
+        "resnet_v1_50/block3/unit_3/bottleneck_v1/conv2/Conv2D_weight": "0x30000000",
+        "resnet_v1_50/block3/unit_3/bottleneck_v1/conv2/Conv2D_bias": "0x30090000"
+    },
+    "swapBufSize": 16777216,
+    "kernel": "dpdpuv3_wrapper",
+    "xclbin": "tests/app/models/dpuv3int8_resnet50",
+    "debugDInFile": "input.bin",
+    "debugGoldenFile": "resnet_v1_50_block3_unit_3_bottleneck_v1_conv2_Relu_aquant.fix.bin",
+    "debugMode": true,
+    "usexmodel": false,
+    "xmodelFile": "resnet50_case73_compiled_0922.xmodel"
+}
