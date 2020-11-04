@@ -32,9 +32,23 @@ bool getBool(std::string name, json_object* jobj)
 
 inputLayerParams::inputLayerParams(json_object* jobj, bool isDebugMode, bool multiFormat)
 {
-  inW_ = getValue("inW", jobj);
-  inH_ = getValue("inH", jobj);
-  inCh_ = getValue("inCh", jobj);
+  if(multiFormat)
+  {
+    json_object* obj = json_object_object_get(jobj, "shape");
+    json_object* shapeVal;
+    shapeVal = json_object_array_get_idx(obj, 1);
+    inH_ = json_object_get_int(shapeVal);
+    shapeVal = json_object_array_get_idx(obj, 2);
+    inW_ = json_object_get_int(shapeVal);
+    shapeVal = json_object_array_get_idx(obj, 3);
+    inCh_ = json_object_get_int(shapeVal);
+  }
+  else
+  {
+    inW_ = getValue("inW", jobj);
+    inH_ = getValue("inH", jobj);
+    inCh_ = getValue("inCh", jobj);
+  }
   inDdrSize_ = getValue("inDDRSize", jobj);
   padRgt_ = getValue("padRt", jobj);
 
@@ -52,8 +66,12 @@ inputLayerParams::inputLayerParams(json_object* jobj, bool isDebugMode, bool mul
 
 outputLayerParams::outputLayerParams(json_object* jobj, bool multiFormat)
 {
-  outSize_ = getValue("outSize", jobj);
-
+  if(multiFormat)
+    outSize_ = getValue("outDDRSize", jobj);
+  else
+  {
+    outSize_ = getValue("outSize", jobj);
+  }
 }
 
 inputLayerParams::inputLayerParams(const xir::Subgraph *subgraph, bool isDebugMode, bool multiFormat)
@@ -146,9 +164,39 @@ void Xmodel::loadParamsJson(json_object* jobj, bool isDebugMode)
   instrFormatConverter_->convertAsmToDdrFormat(instr_asm_filename_, instr_filename_);
   
   bool multiFormat = false;
-
-  inputParams_.push_back(inputLayerParams(jobj, isDebugMode, multiFormat));
-  outputParams_.push_back(outputLayerParams(jobj, multiFormat));
+  json_object_object_foreach(jobj, key, val) 
+  {
+    std::string keyString(key);
+    if(keyString.compare("inputs") == 0)
+      multiFormat = true;
+  }
+  
+  if(multiFormat)
+  {
+    json_object_object_foreach(jobj, key, val)
+    {
+      std::string keyString(key);
+      if(keyString.compare("inputs") == 0)
+      {
+        json_object_object_foreach(val, inputkey, inputval)
+        {
+          inputParams_.push_back(inputLayerParams(inputval, isDebugMode, multiFormat));
+        }
+      }
+      if(keyString.compare("outputs") == 0)
+      {
+        json_object_object_foreach(val, outputkey, outputval)
+        {
+          outputParams_.push_back(outputLayerParams(outputval, multiFormat)); 
+        }
+      }
+    }
+  }
+  else
+  {
+    inputParams_.push_back(inputLayerParams(jobj, isDebugMode, multiFormat));
+    outputParams_.push_back(outputLayerParams(jobj, multiFormat));
+  }
   
   swapBufSize_ = getValue("swapBufSize", jobj);
   if(swapBufSize_==0)
