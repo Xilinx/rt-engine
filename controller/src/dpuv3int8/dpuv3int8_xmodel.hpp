@@ -1,8 +1,8 @@
 class inputLayerParams
 {
     public:
-      inputLayerParams(json_object* jobj, bool isDebugMode);
-      inputLayerParams(const xir::Subgraph *subgraph, bool isDebugMode);  
+      inputLayerParams(json_object* jobj, bool isDebugMode, bool multiFormat);
+      inputLayerParams(const xir::Subgraph *subgraph, bool isDebugMode, bool multiFormat);  
       uint32_t inW_;
       uint32_t inH_;
       uint32_t inCh_;
@@ -21,8 +21,8 @@ class inputLayerParams
 class outputLayerParams
 {
     public:
-      outputLayerParams(const xir::Subgraph *subgraph);     
-      outputLayerParams(json_object* jobj);
+      outputLayerParams(const xir::Subgraph *subgraph, bool multiFormat);     
+      outputLayerParams(json_object* jobj, bool multiFormat);
       uint32_t outSize_;
 };
 

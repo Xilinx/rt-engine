@@ -30,7 +30,7 @@ bool getBool(std::string name, json_object* jobj)
 
 }
 
-inputLayerParams::inputLayerParams(json_object* jobj, bool isDebugMode)
+inputLayerParams::inputLayerParams(json_object* jobj, bool isDebugMode, bool multiFormat)
 {
   inW_ = getValue("inW", jobj);
   inH_ = getValue("inH", jobj);
@@ -50,13 +50,13 @@ inputLayerParams::inputLayerParams(json_object* jobj, bool isDebugMode)
 
 }
 
-outputLayerParams::outputLayerParams(json_object* jobj)
+outputLayerParams::outputLayerParams(json_object* jobj, bool multiFormat)
 {
   outSize_ = getValue("outSize", jobj);
 
 }
 
-inputLayerParams::inputLayerParams(const xir::Subgraph *subgraph, bool isDebugMode)
+inputLayerParams::inputLayerParams(const xir::Subgraph *subgraph, bool isDebugMode, bool multiFormat)
 {
   inW_ = subgraph->get_attr<int>("inW");
   inH_ = subgraph->get_attr<int>("inH");
@@ -78,7 +78,7 @@ inputLayerParams::inputLayerParams(const xir::Subgraph *subgraph, bool isDebugMo
 
 }
 
-outputLayerParams::outputLayerParams(const xir::Subgraph *subgraph)
+outputLayerParams::outputLayerParams(const xir::Subgraph *subgraph, bool multiFormat)
 {
   outSize_ = subgraph->get_attr<int>("outSize");
 
@@ -144,9 +144,11 @@ void Xmodel::loadParamsJson(json_object* jobj, bool isDebugMode)
 {
   instrFormatConverter_.reset(new InstrFormatConverter());
   instrFormatConverter_->convertAsmToDdrFormat(instr_asm_filename_, instr_filename_);
+  
+  bool multiFormat = false;
 
-  inputParams_.push_back(inputLayerParams(jobj, isDebugMode));
-  outputParams_.push_back(outputLayerParams(jobj));
+  inputParams_.push_back(inputLayerParams(jobj, isDebugMode, multiFormat));
+  outputParams_.push_back(outputLayerParams(jobj, multiFormat));
   
   swapBufSize_ = getValue("swapBufSize", jobj);
   if(swapBufSize_==0)
@@ -190,9 +192,11 @@ void Xmodel::loadParamsSubgraph(const xir::Subgraph *subgraph, bool isDebugMode)
     oFile1<<paramsMachineFormat[i]<<"\n";
   }
   oFile1.close();
+  
+  bool multiFormat = false;
 
-  inputParams_.push_back(inputLayerParams(subgraph, isDebugMode));
-  outputParams_.push_back(outputLayerParams(subgraph));
+  inputParams_.push_back(inputLayerParams(subgraph, isDebugMode, multiFormat));
+  outputParams_.push_back(outputLayerParams(subgraph, multiFormat));
 
   swapBufSize_ = subgraph->get_attr<int>("swapBufSize");
   if(swapBufSize_==0)
