@@ -1,9 +1,0 @@
-{
-    "kernel": "dpdpuv3_wrapper",
-    "xclbin": "tests/dpuv3int8/models/commonImgLabelDir",
-    "debugDInFile": "input.bin",
-    "debugGoldenFile": "resnet_v1_50_pool1_MaxPool_aquant.fix.bin",
-    "debugMode":true,
-    "usexmodel":true,
-    "xmodelFile": "resnet50_case2_compiled_1008.xmodel"
-}
