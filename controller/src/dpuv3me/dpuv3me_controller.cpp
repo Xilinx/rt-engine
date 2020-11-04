@@ -317,7 +317,9 @@ void DpuV3meController::init_graph(const xir::Subgraph* subgraph) {
         layer.code_addr = alloc_and_fill_device_memory(handle, mc_code);
         if ((*child)->has_attr("mc_code_preload")) {
           auto& mc_code_preload = subgraph_->get_attr<std::vector<char>>("mc_code_preload");
-          layer.preload_code_addr = alloc_and_fill_device_memory(handle, mc_code_preload);
+          if (mc_code_preload.size() > 0) {
+            layer.preload_code_addr = alloc_and_fill_device_memory(handle, mc_code_preload);
+          }
         }
       }
 
