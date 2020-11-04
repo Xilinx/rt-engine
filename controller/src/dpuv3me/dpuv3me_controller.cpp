@@ -58,7 +58,6 @@ using namespace chrono;
 DEF_ENV_PARAM(DPU_IP_LATENCY, "0");
 DEF_ENV_PARAM(XLNX_ENABLE_DUMP, "0");
 DEF_ENV_PARAM(XLNX_ENABLE_DEBUG_MODE, "0");
-DEF_ENV_PARAM(DEEPHI_PROFILINE, "0");
 DEF_ENV_PARAM(ENABLE_TB_CREATE, "0");
 /*
  * a contiguous memory block is allocated for each requests' I/O
@@ -126,7 +125,12 @@ std::vector<vart::TensorBuffer*> DpuV3meController::init_tensor_buffer(std::vect
 }
 
 void DpuV3meController::init(const xir::Subgraph *subgraph) {
-  init_graph(subgraph);
+  if (subgraph->has_attr("device")&&(subgraph->get_attr<std::string>("device")=="DPU")) {
+    init_graph(subgraph);
+  }
+  else
+    throw std::runtime_error("Error: subgraph is not supported in DPURunner");
+
 }
 
 void DpuV3meController::init(const std::string &meta) {
@@ -216,16 +220,18 @@ void DpuV3meController::init_graph(const xir::Subgraph* subgraph) {
   // Load parameter
   size_t parameter_size = 0;
   const char * parameter_value = NULL;
-  auto reg_id_to_parameter_value =
-    subgraph_->get_attr<std::map<std::string, std::vector<char>>>("reg_id_to_parameter_value");
-  for (const auto& c : reg_id_to_parameter_value) {
-    if (!c.second.empty()) {
-      parameter_size = c.second.size();
-      parameter_value = (const char *)&c.second[0];
-      break;
+  std::map<std::string, std::vector<char>> reg_id_to_parameter_value;
+  if (subgraph_->has_attr("reg_id_to_parameter_value")) {
+    reg_id_to_parameter_value =
+      subgraph_->get_attr<std::map<std::string, std::vector<char>>>("reg_id_to_parameter_value");
+    for (const auto& c : reg_id_to_parameter_value) {
+      if (!c.second.empty()) {
+        parameter_size = c.second.size();
+        parameter_value = (const char *)&c.second[0];
+        break;
+      }
     }
   }
-
   // Get Reg ID size
   auto reg_id_to_context_type =
     subgraph_->get_attr<std::map<std::string, std::string>>("reg_id_to_context_type");
@@ -252,7 +258,7 @@ void DpuV3meController::init_graph(const xir::Subgraph* subgraph) {
     layer.inputs_name.emplace_back(layer_info::name_map(out->get_name()));
     input_dims.emplace_back(out->get_shape());
     
-    xir::Tensor *tensor = xir::Tensor::create(in_name, out->get_shape(), xir::DataType{xir::DataType::INT, 8}).release();
+    xir::Tensor *tensor = xir::Tensor::create(out->get_name(), out->get_shape(), xir::DataType{xir::DataType::INT, 8}).release();
       //std::unique_ptr<xir::Tensor> tensor(
       //  new xir::Tensor(in_name, out->get_shape(),xir::Tensor::DataType::INT8));
     //input_tensors_.emplace_back(tensor.get());
@@ -277,7 +283,7 @@ void DpuV3meController::init_graph(const xir::Subgraph* subgraph) {
     layer.outputs_name.emplace_back(layer_info::name_map(out->get_name()));
     //std::unique_ptr<xir::Tensor> tensor(
     //  new xir::Tensor(out_name, out->get_shape(),xir::Tensor::DataType::INT8));
-    xir::Tensor *tensor = xir::Tensor::create(out_name, out->get_shape(), xir::DataType{xir::DataType::INT, 8}).release();
+    xir::Tensor *tensor = xir::Tensor::create(out->get_name(), out->get_shape(), xir::DataType{xir::DataType::INT, 8}).release();
     //auto tensor = out;
     output_tensors_.emplace_back(tensor);
     //{
@@ -339,16 +345,21 @@ void DpuV3meController::init_graph(const xir::Subgraph* subgraph) {
   }
 
   // reg0
-  void *reg0Ptr = NULL;
-  if (posix_memalign(&reg0Ptr, getpagesize(), parameter_size))
-    throw std::bad_alloc();
-  for (unsigned i=0; i < parameter_size; i++) ((char*)reg0Ptr)[i] = parameter_value[i];
-  auto reg0Mem
-    = xclAllocUserPtrBO(handle, reg0Ptr, parameter_size, 16);
-  xclSyncBO(handle, reg0Mem, XCL_BO_SYNC_BO_TO_DEVICE, parameter_size, 0);
-  xclGetBOProperties(handle, reg0Mem, &boProp);
-  reg0_addr_ = boProp.paddr;
-  free(reg0Ptr);
+  if (parameter_size) {
+    void *reg0Ptr = NULL;
+    if (posix_memalign(&reg0Ptr, getpagesize(), parameter_size))
+      throw std::bad_alloc();
+    for (unsigned i=0; i < parameter_size; i++) ((char*)reg0Ptr)[i] = parameter_value[i];
+    auto reg0Mem
+      = xclAllocUserPtrBO(handle, reg0Ptr, parameter_size, 16);
+    xclSyncBO(handle, reg0Mem, XCL_BO_SYNC_BO_TO_DEVICE, parameter_size, 0);
+    xclGetBOProperties(handle, reg0Mem, &boProp);
+    reg0_addr_ = boProp.paddr;
+    free(reg0Ptr);
+  } else {
+    reg0_addr_ = 0;
+  }
+  program_once_complete = 0;
 }
 
 std::vector<float> DpuV3meController::get_input_scale() {
@@ -438,17 +449,17 @@ void DpuV3meController::run(const std::vector<vart::TensorBuffer*> &inputs,
   if(ENV_PARAM(ENABLE_TB_CREATE)) {
     input_tensor_buffers = get_inputs();
     output_tensor_buffers = get_outputs();
-    unsigned cnt=0;
     for (unsigned i=0; i < input_tensors_.size(); i++ ) {
+      unsigned cnt=0;
       for (unsigned j=0; j < inputs.size(); j++) {
-        if (inputs[j]->get_tensor()->get_name() == input_tensors_[i]->get_name()) {
-          if (bs == inputBs) {
+        if (input_tensors_[i]->get_name().find(inputs[j]->get_tensor()->get_name()) != std::string::npos) {
+          if (bs == inputBs) { //one tensrobuffer store batch
             for (unsigned b=0; b < bs; b++) {
-              memcpy((void*)input_tensor_buffers[b*input_tensors_.size()+i]->data().first,(char*)inputs[j]->data().first+b*input_tensors_[i]->get_element_num(),inputs[j]->get_tensor()->get_element_num());
+              memcpy((void*)input_tensor_buffers[b*input_tensors_.size()+i]->data().first,(char*)inputs[j]->data().first+b*input_tensors_[i]->get_element_num(),input_tensors_[i]->get_element_num());
             }
           }
           else {
-            memcpy((char*)input_tensor_buffers[floor(cnt/input_tensors_.size())*input_tensors_.size()+i]->data().first,(void *)inputs[j]->data().first,inputs[j]->get_tensor()->get_element_num());
+            memcpy((char*)input_tensor_buffers[cnt*input_tensors_.size()+i]->data().first,(void *)inputs[j]->data().first,inputs[j]->get_tensor()->get_element_num());
             cnt++;
           }
 
@@ -492,7 +503,7 @@ void DpuV3meController::run(const std::vector<vart::TensorBuffer*> &inputs,
   // upload batch of inputs
   //const auto inSize = get_input_tensors()[0]->get_element_num();
   __TIC__(INPUT_H2D)
-  for (unsigned i=0; i < io_bufs.size() && i < (inputs.size()/xdpu_io_input_offset.size()); i++)
+  for (unsigned i=0; i < io_bufs.size(); i++)
   {
     // instead of uploading all {output, input, intermediate}, 
     // just upload input region
@@ -740,18 +751,18 @@ auto trigger_dpu_func = [&](){
   }
   __TOC__(OUTPUT_D2H)
   if(ENV_PARAM(ENABLE_TB_CREATE)) {
-    unsigned cnt=0;
     for (unsigned i=0; i < output_tensors_.size(); i++  ) {
+      unsigned cnt=0;
       for (unsigned j=0; j < outputs.size(); j++) {
-        if (outputs[j]->get_tensor()->get_name() == output_tensors_[i]->get_name()) {
+        if (output_tensors_[i]->get_name().find(outputs[j]->get_tensor()->get_name()) != std::string::npos) {
           if (bs == inputBs) {
             for (unsigned b=0; b < obs; b++) {
-              memcpy((char*)outputs[j]->data().first+b*output_tensors_[i]->get_element_num(), (void*)output_tensor_buffers[b*output_tensors_.size()+i]->data().first,outputs[j]->get_tensor()->get_element_num());
+              memcpy((char*)outputs[j]->data().first+b*output_tensors_[i]->get_element_num(), (void*)output_tensor_buffers[b*output_tensors_.size()+i]->data().first,output_tensors_[i]->get_element_num());
             }
           }
           else {
 
-            memcpy((char*)outputs[j]->data().first,(void*)output_tensor_buffers[floor(cnt/output_tensors_.size())*output_tensors_.size()+i]->data().first,outputs[j]->get_tensor()->get_element_num());
+            memcpy((char*)outputs[j]->data().first,(void*)output_tensor_buffers[cnt*output_tensors_.size()+i]->data().first,outputs[j]->get_tensor()->get_element_num());
             cnt++;
 
           }
