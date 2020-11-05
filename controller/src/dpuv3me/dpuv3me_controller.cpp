@@ -706,30 +706,30 @@ auto trigger_dpu_func = [&](){
         code_addr_ = layer.code_addr.first;
         preload_code_addr_ = layer.preload_code_addr.first;
         trigger_dpu_func();
-
-        // Save the outputs to file
-        if(dump_mode_) {
-          int tensor_idx = 0;
-          for(auto& out: layer.outputs) {
-            auto offset = out.first;
-            auto size = out.second;
-            auto data = std::make_unique<char[]>(size);
-            for (unsigned i=0; i < io_bufs.size(); i++) {
-              if (xclUnmgdPread(xcl_handle, 0, data.get(), size, io_addrs[i] + offset))
-                throw std::runtime_error("Error: dump failed!");
-              std::stringstream ss; 
-              ss << dump_folder_ << "/E" << i << "/" << layer.outputs_name[tensor_idx];
-              std::ofstream ofs(ss.str(), std::ofstream::binary);
-              ofs.write(data.get(), size);
-              ofs.close();
-            }
-            tensor_idx++; 
-          }
-        }
-        layer_idx ++;
       }
+        // Save the outputs to file
+      if(dump_mode_) {
+        int tensor_idx = 0;
+        for(auto& out: layer.outputs) {
+          auto offset = out.first;
+          auto size = out.second;
+          auto data = std::make_unique<char[]>(size);
+          for (unsigned i=0; i < io_bufs.size(); i++) {
+            if (xclUnmgdPread(xcl_handle, 0, data.get(), size, io_addrs[i] + offset))
+              throw std::runtime_error("Error: dump failed!");
+            std::stringstream ss; 
+            ss << dump_folder_ << "/E" << i << "/" << layer.outputs_name[tensor_idx];
+            std::ofstream ofs(ss.str(), std::ofstream::binary);
+            ofs.write(data.get(), size);
+            ofs.close();
+          }
+          tensor_idx++; 
+        }
+      } 
+      layer_idx ++;
     }
   }
+
   // download results into output TensorBuffers
  __TIC__(OUTPUT_D2H)
   for (unsigned i=0; i < io_bufs.size(); i++)

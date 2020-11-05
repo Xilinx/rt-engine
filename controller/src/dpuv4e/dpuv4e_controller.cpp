@@ -648,28 +648,27 @@ void DpuV4eController::run(const std::vector<vart::TensorBuffer*> &inputs,
       if(std::get<1>(layer.code_addr) > 0) {
         code_addr_ = std::get<0>(layer.code_addr); 
         trigger_dpu_func();  
-     
-        // Save the outputs to file  
-        if(dump_mode_) { 
-          int tensor_idx = 0;
-          for(auto& out: layer.outputs) {
-            auto offset = std::get<0>(out);
-            auto size = std::get<1>(out);
-            auto data = std::make_unique<char[]>(size);
-            for (unsigned i=0; i < io_bufs.size(); i++) { 
-              if (xclUnmgdPread(xcl_handle, 0, data.get(), size, io_addrs[i] + offset))
-                throw std::runtime_error("Error: dump failed!");
-              std::stringstream ss;  
-              ss << dump_folder_ << "/E" << i << "/" << std::get<2>(out); 
-              std::ofstream ofs(ss.str(), std::ofstream::binary);
-              ofs.write(data.get(), size);
-              ofs.close(); 
-            }
-            tensor_idx++;
+      }
+      // Save the outputs to file  
+      if(dump_mode_) { 
+        int tensor_idx = 0;
+        for(auto& out: layer.outputs) {
+          auto offset = std::get<0>(out);
+          auto size = std::get<1>(out);
+          auto data = std::make_unique<char[]>(size);
+          for (unsigned i=0; i < io_bufs.size(); i++) { 
+            if (xclUnmgdPread(xcl_handle, 0, data.get(), size, io_addrs[i] + offset))
+              throw std::runtime_error("Error: dump failed!");
+            std::stringstream ss;  
+            ss << dump_folder_ << "/E" << i << "/" << std::get<2>(out); 
+            std::ofstream ofs(ss.str(), std::ofstream::binary);
+            ofs.write(data.get(), size);
+            ofs.close(); 
           }
+          tensor_idx++;
         }
-        layer_idx ++;
-      } 
+      }
+      layer_idx ++;
     } 
   }
 
