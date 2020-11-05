@@ -255,7 +255,7 @@ void DpuV4eController::init_graph(const xir::Subgraph* subgraph) {
     auto op = graph->get_op(out_name);
     auto out = op->get_output_tensor();
     xdpu_io_output_offset.emplace_back(out->get_attr<std::int32_t>("ddr_addr"));
-    output_scales_.push_back(pow(2,out->get_attr<std::int32_t>("fix_point")));
+    output_scales_.push_back(pow(2,(-1)*out->get_attr<std::int32_t>("fix_point")));
     output_dims.emplace_back(out->get_shape()); 
     layer.outputs.emplace_back(std::make_tuple(out->get_attr<std::int32_t>("ddr_addr"), 
         out->get_data_size(), layer_info::name_map(out->get_name())));
