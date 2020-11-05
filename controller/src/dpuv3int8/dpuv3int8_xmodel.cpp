@@ -168,7 +168,10 @@ void Xmodel::loadParamsJson(json_object* jobj, bool isDebugMode)
   {
     std::string keyString(key);
     if(keyString.compare("inputs") == 0)
+    {
       multiFormat = true;
+      assert(val);
+    }
   }
   
   if(multiFormat)
@@ -180,6 +183,7 @@ void Xmodel::loadParamsJson(json_object* jobj, bool isDebugMode)
       {
         json_object_object_foreach(val, inputkey, inputval)
         {
+          assert(inputkey);
           inputParams_.push_back(inputLayerParams(inputval, isDebugMode, multiFormat));
         }
       }
@@ -187,6 +191,7 @@ void Xmodel::loadParamsJson(json_object* jobj, bool isDebugMode)
       {
         json_object_object_foreach(val, outputkey, outputval)
         {
+          assert(outputkey);
           outputParams_.push_back(outputLayerParams(outputval, multiFormat)); 
         }
       }

@@ -46,7 +46,10 @@ void jsonOrXirKeys::loadFromJson(json_object* jobj)
   {
     std::string keyString(key);
     if(keyString.compare("inputs") == 0)
+    {
       multiFormat = true;
+      assert(val);
+    }
   }
 
   if(not multiFormat)
@@ -69,6 +72,7 @@ void jsonOrXirKeys::loadFromJson(json_object* jobj)
       {
         json_object_object_foreach(val, inputkey, inputval)
         {
+          assert(inputkey);
           json_object* obj = json_object_object_get(inputval, "shape");
           json_object* shapeVal;
           shapeVal = json_object_array_get_idx(obj, 1);
@@ -83,6 +87,7 @@ void jsonOrXirKeys::loadFromJson(json_object* jobj)
       {
         json_object_object_foreach(val, outputkey, outputval)
         {
+          assert(outputkey);
           outSize_ = getValue("outDDRSize", outputval);
         }
       }
