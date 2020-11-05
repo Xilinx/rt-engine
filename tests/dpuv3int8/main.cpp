@@ -16,7 +16,7 @@ int main(int argc, char** argv) {
     ("g,golden", "Prints top-1 and top-5 results, given golden labels file", cxxopts::value<bool>()->default_value("false"))
     ("v,verbose", "cout each image details", cxxopts::value<bool>()->default_value("false"))
     ("p,noPrintMetrics", "don't print metrics", cxxopts::value<bool>()->default_value("false"))
-    ("h,singlequeryhack", "execute single query on fpga", cxxopts::value<bool>()->default_value("false"))
+    ("h,singlequery", "execute single query on fpga", cxxopts::value<bool>()->default_value("false"))
     ("c,numCUs", "Number of CUs To Utilize", cxxopts::value<int>()->default_value("1"))
     ;
   auto result = options.parse(argc, argv);
@@ -31,13 +31,13 @@ int main(int argc, char** argv) {
   const bool golden = result["golden"].as<bool>();
   const bool verbose = result["verbose"].as<bool>();
   const bool noPrintMetrics = result["noPrintMetrics"].as<bool>();
-  const bool singleQueryHack = result["singlequeryhack"].as<bool>();
+  const bool singleQuery = result["singlequery"].as<bool>();
   const int numCUs = result["numCUs"].as<int>();
 
-  if(singleQueryHack)
+  if(singleQuery)
   {
-    FpgaOnlySingleQueryExecutionHack fpgaOnlySingleQueryExecutionHack(runnerMeta);
-    fpgaOnlySingleQueryExecutionHack.run();
+    FpgaOnlySingleQueryExecution fpgaOnlySingleQueryExecution(runnerMeta);
+    fpgaOnlySingleQueryExecution.run();
     return 0;
   }
 

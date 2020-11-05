@@ -1,6 +1,6 @@
 #include "tests.hpp"
 
-FpgaOnlySingleQueryExecutionHack::FpgaOnlySingleQueryExecutionHack(std::string runner_dir) 
+FpgaOnlySingleQueryExecution::FpgaOnlySingleQueryExecution(std::string runner_dir) 
 {
 
   std::unique_ptr<xir::Graph> graph = xir::Graph::deserialize(runner_dir);
@@ -14,7 +14,7 @@ FpgaOnlySingleQueryExecutionHack::FpgaOnlySingleQueryExecutionHack(std::string r
 
 }
 
-void FpgaOnlySingleQueryExecutionHack::run() {
+void FpgaOnlySingleQueryExecution::run() {
   
   auto inputs = runner_->get_inputs();
   auto outputs = runner_->get_outputs();

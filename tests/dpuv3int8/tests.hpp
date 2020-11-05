@@ -129,9 +129,9 @@ class TestClassifyMultiThread : public Test {
     std::unique_ptr<cpuUtil> cpuUtilobj_;
 };
 
-class FpgaOnlySingleQueryExecutionHack : public Test {
+class FpgaOnlySingleQueryExecution : public Test {
   public:
-    FpgaOnlySingleQueryExecutionHack(std::string runner_dir);
+    FpgaOnlySingleQueryExecution(std::string runner_dir);
     virtual void run();
 
   private:

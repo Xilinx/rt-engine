@@ -76,23 +76,22 @@ outputLayerParams::outputLayerParams(json_object* jobj, bool multiFormat)
 
 inputLayerParams::inputLayerParams(const xir::Subgraph *subgraph, bool isDebugMode, bool multiFormat)
 {
-  inW_ = subgraph->get_attr<int>("inW");
-  inH_ = subgraph->get_attr<int>("inH");
-  inCh_ = subgraph->get_attr<int>("inCh");
-  inDdrSize_ = subgraph->get_attr<int>("inDDRSize");
-  padRgt_ = subgraph->get_attr<int>("padRt");
-
-  dru_mode_ = isDebugMode ? false:subgraph->get_attr<int>("druMode");
-
-  channel_augmentationmode_ = subgraph->get_attr<int>("channelAugmentationMode");
- 
-  inKernelW_ = subgraph->get_attr<int>("inKernelW");
-  padLft_ = subgraph->get_attr<int>("padLft");
-  inStrdW_ = subgraph->get_attr<int>("inStrdW");
+    inW_ = subgraph->get_attr<int>("inW");
+    inH_ = subgraph->get_attr<int>("inH");
+    inCh_ = subgraph->get_attr<int>("inCh");
+    inDdrSize_ = subgraph->get_attr<int>("inDDRSize");
+    padRgt_ = subgraph->get_attr<int>("padRt");
   
-  druSrcBufSize_ = subgraph->get_attr<int>("druSrcBufSize");
-  druDstBufSize_ = subgraph->get_attr<int>("druDstBufSize");
-
+    dru_mode_ = isDebugMode ? false:subgraph->get_attr<int>("druMode");
+  
+    channel_augmentationmode_ = subgraph->get_attr<int>("channelAugmentationMode");
+   
+    inKernelW_ = subgraph->get_attr<int>("inKernelW");
+    padLft_ = subgraph->get_attr<int>("padLft");
+    inStrdW_ = subgraph->get_attr<int>("inStrdW");
+    
+    druSrcBufSize_ = subgraph->get_attr<int>("druSrcBufSize");
+    druDstBufSize_ = subgraph->get_attr<int>("druDstBufSize");
 
 }
 
@@ -246,10 +245,50 @@ void Xmodel::loadParamsSubgraph(const xir::Subgraph *subgraph, bool isDebugMode)
   }
   oFile1.close();
   
-  bool multiFormat = false;
-
-  inputParams_.push_back(inputLayerParams(subgraph, isDebugMode, multiFormat));
-  outputParams_.push_back(outputLayerParams(subgraph, multiFormat));
+  bool multiFormat = true;
+  
+  auto attrs = subgraph->get_attrs();
+  auto keys = attrs->get_keys();
+  for (auto& key : keys) {
+    std::string keyString(key);
+    if(keyString.compare("inW")==0)
+    {
+      multiFormat = false;
+      break;
+    }
+  }
+  
+  if(multiFormat)
+  {
+    std::string tensorInfo = subgraph->get_attr<std::string>("tensor_info");
+    char * c = tensorInfo.c_str();
+    json_object* jobj = json_tokener_parse(c);
+    json_object_object_foreach(jobj, key, val)
+    {
+      std::string keyString(key);
+      if(keyString.compare("inputs") == 0)
+      {
+        json_object_object_foreach(val, inputkey, inputval)
+        {
+          assert(inputkey);
+          inputParams_.push_back(inputLayerParams(inputval, isDebugMode, multiFormat));
+        }
+      }
+      if(keyString.compare("outputs") == 0)
+      {
+        json_object_object_foreach(val, outputkey, outputval)
+        {
+          assert(outputkey);
+          outputParams_.push_back(outputLayerParams(outputval, multiFormat)); 
+        }
+      }
+    }
+  }
+  else
+  {
+    inputParams_.push_back(inputLayerParams(subgraph, isDebugMode, multiFormat));
+    outputParams_.push_back(outputLayerParams(subgraph, multiFormat));
+  }
 
   swapBufSize_ = subgraph->get_attr<int>("swapBufSize");
   if(swapBufSize_==0)
