@@ -85,6 +85,20 @@ DeviceBuffer* XclDpuController<Dhandle, DbufIn, DbufOut>::get_device_buffer(vart
 }
 
 template <class Dhandle, class DbufIn, class DbufOut>
+std::vector<float> 
+XclDpuController<Dhandle, DbufIn, DbufOut>::get_input_scale() {
+  // TODO 
+  static const std::vector<float> in = { 1.0};
+  return in;
+}
+template <class Dhandle, class DbufIn, class DbufOut>
+std::vector<float> 
+XclDpuController<Dhandle, DbufIn, DbufOut>::get_output_scale() {
+  // TODO 
+  static const std::vector<float> out = { 1.0};
+  return out;
+}
+template <class Dhandle, class DbufIn, class DbufOut>
 std::vector<const xir::Tensor*> 
 XclDpuController<Dhandle, DbufIn, DbufOut>::get_input_tensors() const {
   // TODO get from compiler 

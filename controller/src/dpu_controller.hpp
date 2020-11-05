@@ -24,6 +24,8 @@ class DpuController {
   virtual std::vector<const xir::Tensor*> get_output_tensors() const = 0; 
   virtual std::vector<vart::TensorBuffer*> get_inputs() = 0;
   virtual std::vector<vart::TensorBuffer*> get_outputs() = 0;
+  virtual std::vector<float> get_input_scale() = 0;
+  virtual std::vector<float> get_output_scale() = 0;
 
  private:
   DpuController() = delete;
@@ -42,6 +44,8 @@ class XclDpuController : public DpuController {
   virtual std::vector<const xir::Tensor*> get_output_tensors() const override; 
   virtual std::vector<vart::TensorBuffer*> get_inputs() override;
   virtual std::vector<vart::TensorBuffer*> get_outputs() override;
+  virtual std::vector<float> get_input_scale() override;
+  virtual std::vector<float> get_output_scale() override;
 
  protected:
   virtual std::vector<vart::TensorBuffer*> create_tensor_buffers(

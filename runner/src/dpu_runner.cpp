@@ -31,8 +31,8 @@ DpuRunner::DpuRunner(const xir::Subgraph* subgraph) {
   in_bufs = dpu_controller_->get_inputs();
   out_bufs = dpu_controller_->get_outputs();
 
-  ip_scale.push_back(1.0f);
-  op_scale.push_back(1.0f);
+  //ip_scale.push_back(1.0f);
+  //op_scale.push_back(1.0f);
 }
 
 DpuRunner::DpuRunner(std::string meta) {
@@ -58,8 +58,8 @@ DpuRunner::DpuRunner(std::string meta) {
   in_bufs = dpu_controller_->get_inputs();
   out_bufs = dpu_controller_->get_outputs();
 
-  ip_scale.push_back(1.0f);
-  op_scale.push_back(1.0f);
+  //ip_scale.push_back(1.0f);
+  //op_scale.push_back(1.0f);
 }
 
 
@@ -74,11 +74,13 @@ std::vector<const xir::Tensor*> DpuRunner::get_output_tensors() {
 }
 
 std::vector<float> DpuRunner::get_input_scale() const {
-    return ip_scale; 
+    //return ip_scale; 
+    return dpu_controller_->get_input_scale();
 }
 
 std::vector<float> DpuRunner::get_output_scale() const {
-    return op_scale; 
+    //return op_scale; 
+    return dpu_controller_->get_output_scale();
 }
 
 std::vector<vart::TensorBuffer*> DpuRunner::get_inputs() {

@@ -55,8 +55,8 @@ class DpuRunner: public vart::dpu::DpuRunnerExt {
     std::shared_ptr<DpuController> dpu_controller_;
     std::vector<vart::TensorBuffer*> in_bufs;
     std::vector<vart::TensorBuffer*> out_bufs;
-    std::vector<float> ip_scale;
-    std::vector<float> op_scale;
+    //std::vector<float> ip_scale;
+    //std::vector<float> op_scale;
 };
 
 class CpuFlatTensorBuffer : public vart::TensorBuffer {
