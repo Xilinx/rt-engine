@@ -28,10 +28,4 @@ class DpuControllerFactory {
   private:
     DpuControllerFactory() {}
     ~DpuControllerFactory() {}
-
-    std::unordered_map<
-        std::string,
-        std::vector<std::weak_ptr<DpuController> > > controllers_;
-    std::unordered_map<std::string, unsigned> controller_share_idx_;
-    std::mutex mtx_;
 };
