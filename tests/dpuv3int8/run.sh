@@ -57,7 +57,7 @@ build/tests/dpuv3int8.exe -r tests/dpuv3int8/models/dpuv3int8_debugTestCases/cum
 
 #multiinput multioutput format
 build/tests/dpuv3int8.exe -r tests/dpuv3int8/models/dpuv3int8_multiinput_multioutput_format/multiinput_multioutput_metajson_format/cumulativeCase45/meta.json -t tc -p 
-build/tests/dpuv3int8.exe -r tests/dpuv3int8/models/dpuv3int8_multiinput_multioutput_format/multiinput_multioutput_xmodel_format/resnet50_case2_compiled_newmeta_1022.xmodel -h
+build/tests/dpuv3int8.exe -r tests/dpuv3int8/models/dpuv3int8_multiinput_multioutput_format/multiinput_multioutput_xmodel_format/res50Case2/resnet50_case2_compiled_newmeta_1022.xmodel -h
 
 #single layer test cases
 build/tests/dpuv3int8.exe -r tests/dpuv3int8/models/dpuv3int8_debugTestCases/singleConvLayerCase/meta.json -t tc -p 
