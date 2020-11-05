@@ -3,7 +3,8 @@
 /*
  * Reference: vart/xrt-device-handle/src/xrt_device_handle_butler.hpp
  */
-
+#include <map>
+#include <mutex>
 #include <memory>
 #include <string>
 #include <xrt.h>
@@ -92,6 +93,12 @@ class XclDeviceHandle : public DeviceHandle {
   cl_context context_;
   cl_command_queue commands_;
   cl_program program_;
+
+  // use_count_ map used to track how many runners are assigned
+  //   to a given (xrt_device, cu_index) pair.
+  //   Because it is static, it is shared state across threads, and must be protected by a mutex
+  static std::map<std::pair<xrt_device*,size_t>, size_t> use_count_;
+  static std::mutex use_count_mutex_;
 };
 
 class XrtContext;

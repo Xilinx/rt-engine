@@ -3,6 +3,7 @@
 #include <fstream>
 #include <memory>
 #include <dirent.h>
+#include <iostream>
 
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wignored-qualifiers"
@@ -69,40 +70,69 @@ static uint64_t getDDRBankFromButlerBitmask(unsigned bitmask) {
   throw std::runtime_error("Error: unknown ddr_bank config");
 }
 
-ButlerResource::ButlerResource(std::string kernelName, std::string xclbin) {
-  client_.reset(new butler::ButlerClient());
-  if (client_->Ping() != butler::errCode::SUCCESS)
-    throw std::runtime_error("Error: cannot ping butler server");
-
-  std::pair<butler::Alloc, std::vector<butler::xCU>> acquireResult;
-  acquireResult = client_->acquireCU(kernelName, xclbin);
-
-  auto alloc = acquireResult.first;
-  if (alloc.myErrCode != butler::errCode::SUCCESS) {
-    std::cerr << alloc << std::endl;
-    throw std::runtime_error("Error: could not acquire device handle");
-  }
-  std::cout << "Device acquired" << std::endl << alloc << std::endl;
-
-  auto xcu = acquireResult.second[0];
-  auto cu_full_name = xcu.getKernelName() + ":" + xcu.getName() + ":" +
-                      std::to_string(xcu.getFPGAIdx()) + ":" +
-                      std::to_string(xcu.getCUIdx());
-
-  info_.reset(new DeviceInfo{
+namespace {
+DeviceInfo*
+createDeviceInfoFromXCU(butler::xCU& xcu,std::string& name) {
+  return
+    new DeviceInfo{
       .cu_base_addr = xcu.getBaseAddr(),
       .ddr_bank = getDDRBankFromButlerBitmask(xcu.getKernelArgMemIdxMapAt(0)),
       .device_index = size_t(xcu.getFPGAIdx()),
       .cu_index = size_t(xcu.getCUIdx()),
       .cu_mask = (1u << xcu.getCUIdx()),
       .xclbin_path = xcu.getXCLBINPath(),
-      .full_name = cu_full_name,
+      .full_name = name,
       .device_id = xcu.getOCLDev(),
       .xdev = xcu.getXDev(),
       .fingerprint = 0,
-  });
+    };
+}
+}
 
-  handle_ = alloc.myHandle;
+ButlerResource::ButlerResource(std::string kernelName, std::string xclbin) {
+  client_.reset(new butler::ButlerClient());
+  if (client_->Ping() != butler::errCode::SUCCESS)
+    throw std::runtime_error("Error: cannot ping butler server");
+
+  // Try to acquire a new CU
+  std::pair<butler::Alloc, std::vector<butler::xCU>> acquireResult;
+  acquireResult = client_->acquireCU(kernelName, xclbin);
+  auto alloc = acquireResult.first;
+
+  // If we can't
+  if (alloc.myErrCode != butler::errCode::SUCCESS) {
+    // Try to share one that has previously been acquired by this process
+    acquireResult = client_->subscribeService(kernelName);
+    alloc = acquireResult.first;
+    if (alloc.myErrCode != butler::errCode::SUCCESS) {
+      std::cerr << alloc << std::endl;
+      throw std::runtime_error("Error: could not acquire device handle");
+    }
+    else { // We are successfully able to share
+      std::cout << "Device acquired (Sharing CU)" << std::endl << alloc << std::endl;
+      auto xcus = acquireResult.second;
+      auto it = xcus.begin();
+      std::advance(it, rand() % xcus.size());
+      auto xcu = *it; // Choose random CU from service
+      auto cu_full_name = xcu.getKernelName() + ":" + xcu.getName() + ":" +
+                          std::to_string(xcu.getFPGAIdx()) + ":" +
+                          std::to_string(xcu.getCUIdx());
+      info_.reset(createDeviceInfoFromXCU(xcu,cu_full_name));
+      handle_ = alloc.myHandle;
+    }
+  }
+  else {
+    std::cout << "Device acquired (New CU)" << std::endl << alloc << std::endl;
+    auto xcu = acquireResult.second[0];
+    auto cu_full_name = xcu.getKernelName() + ":" + xcu.getName() + ":" +
+                        std::to_string(xcu.getFPGAIdx()) + ":" +
+                        std::to_string(xcu.getCUIdx());
+    info_.reset(createDeviceInfoFromXCU(xcu,cu_full_name));
+    handle_ = alloc.myHandle;
+    std::vector<butler::handle> handles;
+    handles.push_back(alloc.myHandle);
+    client_->publishService(kernelName,handles);
+  }
 }
 
 ButlerResource::~ButlerResource() {
@@ -242,6 +272,10 @@ DeviceHandle::DeviceHandle(std::string kernelName, std::string xclbin) {
  * XCL device handle
  */
 
+// Initialize shared state
+std::map<std::pair<xrt_device*,size_t>, size_t> XclDeviceHandle::use_count_;
+std::mutex XclDeviceHandle::use_count_mutex_;
+
 XclDeviceHandle::XclDeviceHandle(std::string kernelName, std::string xclbin)
     : DeviceHandle(kernelName, xclbin), context_(nullptr), commands_(nullptr),
       program_(nullptr) {
@@ -284,14 +318,27 @@ XclDeviceHandle::XclDeviceHandle(std::string kernelName, std::string xclbin)
         context_, 1, &get_device_info().device_id, &size, &data, &status, &err);
   }
 
-  xrtcpp::acquire_cu_context(get_device_info().xdev, get_device_info().cu_index
-    /*,shared=true*/ // enable shared in new XRT codebase
-  ); 
+  {
+    auto devCU = std::make_pair(get_device_info().xdev,get_device_info().cu_index);
+    std::lock_guard<std::mutex> lockGuard(use_count_mutex_);
+    if (use_count_.find(devCU) == use_count_.end()) {
+      xrtcpp::acquire_cu_context(get_device_info().xdev, get_device_info().cu_index);
+      use_count_[devCU] = 1;
+    }
+    else
+      ++use_count_[devCU];
+  }
 }
 
 XclDeviceHandle::~XclDeviceHandle() {
-  if (get_device_info().xdev)
-    xrtcpp::release_cu_context(get_device_info().xdev, get_device_info().cu_index);
+  {
+    auto devCU = std::make_pair(get_device_info().xdev,get_device_info().cu_index);
+    std::lock_guard<std::mutex> lockGuard(use_count_mutex_);
+    if (use_count_.find(devCU) != use_count_.end() && get_device_info().xdev) {
+      xrtcpp::release_cu_context(get_device_info().xdev, get_device_info().cu_index);
+      use_count_.erase(devCU);
+    }
+  }
 
   if (program_)
     clReleaseProgram(program_);
