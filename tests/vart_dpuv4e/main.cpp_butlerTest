@@ -95,7 +95,7 @@ int main(int argc, char* argv[]) {
     workers[k] = thread([&,k]() {
 
     //auto r2 = vart::Runner::create_runner(subgraph2[0], "run");
-    auto r = vart::Runner::create_runner(sub[0], "run");
+    auto r = vart::Runner::create_runner(sub[k%2], "run");
     auto runner = r.get();
     //auto runner2 = r2.get();
     auto inputs = dynamic_cast<vart::dpu::DpuRunnerExt*>(runner)->get_inputs();
