@@ -22,11 +22,7 @@ DpuRunner::DpuRunner(const xir::Subgraph* subgraph) {
     kernel = subgraph->get_attr<std::string>("kernel");
   }
 
-  try {
-    dpu_controller_ = DpuControllerFactory::get_instance().get(kernel, subgraph);
-  } catch(...) {
-    throw std::runtime_error("Error: no FPGA resources available");
-  }
+  dpu_controller_ = DpuControllerFactory::get_instance().get(kernel, subgraph);
   
   in_bufs = dpu_controller_->get_inputs();
   out_bufs = dpu_controller_->get_outputs();
@@ -40,20 +36,16 @@ DpuRunner::DpuRunner(std::string meta) {
   //          each DpuRunner has one DpuController
   // (keep it simple)
  
- std::ifstream f(meta);
- std::stringstream metabuf;
- metabuf << f.rdbuf();
- json_object *jobj = json_tokener_parse(metabuf.str().c_str());     
- json_object *obj = NULL;
- if (!json_object_object_get_ex(jobj, "kernel", &obj))
+  std::ifstream f(meta);
+  std::stringstream metabuf;
+  metabuf << f.rdbuf();
+  json_object *jobj = json_tokener_parse(metabuf.str().c_str());     
+  json_object *obj = NULL;
+  if (!json_object_object_get_ex(jobj, "kernel", &obj))
     std::cout<<"missing kernel field in meta.json"<<std::endl;
- std::string kernel = json_object_get_string(obj);
+  std::string kernel = json_object_get_string(obj);
 
-  try {
-    dpu_controller_ = DpuControllerFactory::get_instance().get(kernel, meta);
-  } catch(...) {
-    throw std::runtime_error("Error: no FPGA resources available");
-  }
+  dpu_controller_ = DpuControllerFactory::get_instance().get(kernel, meta);
 
   in_bufs = dpu_controller_->get_inputs();
   out_bufs = dpu_controller_->get_outputs();
