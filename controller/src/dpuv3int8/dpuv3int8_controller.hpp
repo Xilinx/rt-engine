@@ -68,7 +68,7 @@ class Dpuv3Int8Controller : public XclDpuController<XclDeviceHandle, XclDeviceBu
   void initializeTaskDRUVariables(); 
   virtual void initCreateBuffers();
   void postprocess(vart::TensorBuffer*, vart::TensorBuffer*);
-  std::vector<vart::TensorBuffer*> create_hw_buffers(std::vector<vart::TensorBuffer*> stdBuf, bool isInput=true);
+  std::vector<vart::TensorBuffer*> create_hw_buffers(std::vector<vart::TensorBuffer*> stdBuf, bool isInput);
   vart::TensorBuffer* get_hw_buffer(vart::TensorBuffer *tb);
   void execute(uint64_t *buf_addr);
   

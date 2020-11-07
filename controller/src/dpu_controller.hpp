@@ -2,6 +2,7 @@
 
 #include <unordered_map>
 #include <mutex>
+#include <list>
 #include <vector>
 #include "vart/runner.hpp"
 //#include "tensor_buffer.hpp"
@@ -49,11 +50,12 @@ class XclDpuController : public DpuController {
 
  protected:
   virtual std::vector<vart::TensorBuffer*> create_tensor_buffers(
-    const std::vector<const xir::Tensor*> &tensors, bool isInput=true, unsigned int ddr_bank = 0);
+    const std::vector<const xir::Tensor*> &tensors, bool isInput, int ddrBank=-1);
+  virtual void free_tensor_buffers(std::vector<vart::TensorBuffer*>&);
   DeviceBuffer *get_device_buffer(vart::TensorBuffer *tb);
 
   std::unique_ptr<Dhandle> handle_;
-  std::vector<std::unique_ptr<vart::TensorBuffer>> tbufs_;
+  std::list<std::unique_ptr<vart::TensorBuffer>> tbufs_;
   std::unordered_map<vart::TensorBuffer*, std::unique_ptr<DeviceBuffer>> tbuf2dbuf_;
   std::mutex tbuf_mtx_;
 };
