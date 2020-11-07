@@ -381,7 +381,7 @@ DpuV3meController::get_output_tensors() const {
 
 std::vector<const xir::Tensor*>
 DpuV3meController::get_merged_io_tensors() const {
-  static const std::vector<std::int32_t> dims = { 1, 1, 1, xdpu_io_total_size };
+  const std::vector<std::int32_t> dims = { 1, 1, 1, xdpu_io_total_size };
   xir::Tensor *tensor = xir::Tensor::create("inout", dims, xir::DataType{xir::DataType::INT, 8}).release();
   //static xir::Tensor tensor("inout", dims, xir::Tensor::DataType::INT8); 
   return std::vector<const xir::Tensor*>(8, tensor);
@@ -436,14 +436,15 @@ void DpuV3meController::run(const std::vector<vart::TensorBuffer*> &inputs,
   std::vector<vart::TensorBuffer*> output_tensor_buffers;
   if(inputs.size()%input_tensors_.size())
     throw std::runtime_error("Error: input tensorbuffers error");
-  unsigned bs = inputs[0]->get_tensor()->get_shape()[0];
-  unsigned obs = outputs[0]->get_tensor()->get_shape()[0];
+  unsigned ibs = inputs[0]->get_tensor()->get_shape()[0]/input_tensors_[0]->get_shape()[0];
+  unsigned obs = outputs[0]->get_tensor()->get_shape()[0]/output_tensors_[0]->get_shape()[0];
+
   unsigned inputBs;
   if ((inputs.size()/input_tensors_.size())>1)
     inputBs = inputs.size()/input_tensors_.size();
   else
-    inputBs = bs;
-  if ((bs != obs) || (inputBs > BATCHSIZE) )
+    inputBs = ibs;
+  if ((ibs < obs) || (inputBs > BATCHSIZE) )
     throw std::runtime_error("Error: size of tensorbuffer not supported");
 
   if(ENV_PARAM(ENABLE_TB_CREATE)) {
@@ -453,9 +454,10 @@ void DpuV3meController::run(const std::vector<vart::TensorBuffer*> &inputs,
       unsigned cnt=0;
       for (unsigned j=0; j < inputs.size(); j++) {
         if (input_tensors_[i]->get_name().find(inputs[j]->get_tensor()->get_name()) != std::string::npos) {
-          if (bs == inputBs) { //one tensrobuffer store batch
-            for (unsigned b=0; b < bs; b++) {
+          if (ibs == inputBs) { //one tensrobuffer store batch
+            for (unsigned b=0; b < ibs; b++) {
               memcpy((void*)input_tensor_buffers[b*input_tensors_.size()+i]->data().first,(char*)inputs[j]->data().first+b*input_tensors_[i]->get_element_num(),input_tensors_[i]->get_element_num());
+              cnt++;
             }
           }
           else {
@@ -465,6 +467,8 @@ void DpuV3meController::run(const std::vector<vart::TensorBuffer*> &inputs,
 
         }
       }
+      if (cnt == 0)
+        throw std::runtime_error("Error: invilad tensorbuffer input");
     }
   }
   else {
@@ -755,9 +759,10 @@ auto trigger_dpu_func = [&](){
       unsigned cnt=0;
       for (unsigned j=0; j < outputs.size(); j++) {
         if (output_tensors_[i]->get_name().find(outputs[j]->get_tensor()->get_name()) != std::string::npos) {
-          if (bs == inputBs) {
+          if (ibs == inputBs) {
             for (unsigned b=0; b < obs; b++) {
               memcpy((char*)outputs[j]->data().first+b*output_tensors_[i]->get_element_num(), (void*)output_tensor_buffers[b*output_tensors_.size()+i]->data().first,output_tensors_[i]->get_element_num());
+              cnt++;
             }
           }
           else {
@@ -769,6 +774,8 @@ auto trigger_dpu_func = [&](){
 
         }
       }
+      if (cnt == 0)
+        throw std::runtime_error("Error: invilad tensorbuffer output");
     }
   }
 }
