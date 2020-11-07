@@ -80,7 +80,7 @@ DeviceBuffer* XclDpuController<Dhandle, DbufIn, DbufOut>::get_device_buffer(vart
   std::unique_lock<std::mutex> lock(tbuf_mtx_);
   auto it = tbuf2dbuf_.find(tbuf);
   if (it == tbuf2dbuf_.end())
-    throw std::runtime_error("Error: DeviceBuffer not found for TensorBuffer");
+    return NULL;
   return it->second.get();
 }
 
@@ -135,7 +135,7 @@ XclDpuController<Dhandle, DbufIn, DbufOut>::get_outputs() {
 template <class Dhandle, class DbufIn, class DbufOut>
 std::vector<vart::TensorBuffer*> 
 XclDpuController<Dhandle, DbufIn, DbufOut>::create_tensor_buffers(
-  const std::vector<const xir::Tensor*> &tensors, bool isInput, unsigned int ddr_bank = 0) {
+  const std::vector<const xir::Tensor*> &tensors, bool isInput, int ddrBank) {
   std::vector<vart::TensorBuffer*> tbufs;
   for (unsigned ti=0; ti < tensors.size(); ti++)
   {
@@ -155,10 +155,10 @@ XclDpuController<Dhandle, DbufIn, DbufOut>::create_tensor_buffers(
     std::unique_ptr<DeviceBuffer> dbuf;
     if (isInput)
       dbuf.reset(
-        new DbufIn(handle_.get(), tbuf.get(), ddr_bank? ddr_bank: handle_->get_device_info().ddr_bank));
+        new DbufIn(handle_.get(), tbuf.get(), ddrBank < 0? handle_->get_device_info().ddr_bank : ddrBank));
     else
       dbuf.reset(
-        new DbufOut(handle_.get(), tbuf.get(), ddr_bank? ddr_bank: handle_->get_device_info().ddr_bank));
+        new DbufOut(handle_.get(), tbuf.get(), ddrBank < 0? handle_->get_device_info().ddr_bank : ddrBank));
 
     // register this TensorBuffer->DeviceBuffer pair
     {
@@ -168,6 +168,23 @@ XclDpuController<Dhandle, DbufIn, DbufOut>::create_tensor_buffers(
     }
   }
   return tbufs;
+}
+
+template <class Dhandle, class DbufIn, class DbufOut>
+void
+XclDpuController<Dhandle, DbufIn, DbufOut>::free_tensor_buffers(std::vector<vart::TensorBuffer*> &tbufs) {
+  std::unique_lock<std::mutex> lock(tbuf_mtx_);
+  for (unsigned ti=0; ti < tbufs.size(); ti++)
+  {
+    tbuf2dbuf_.erase(tbufs[ti]);
+
+    for (auto it=tbufs_.begin(); it != tbufs_.end(); it++)
+      if (it->get() == tbufs[ti])
+      {
+        tbufs_.erase(it);
+        break;
+      }
+  }
 }
 
 /*
