@@ -236,7 +236,8 @@ void DpuV4eController::init_graph(const xir::Subgraph* subgraph) {
     layer.inputs.emplace_back(address_info(out->get_attr<std::int32_t>("ddr_addr"), 
       out->get_data_size(), layer_info::name_map(out->get_name()))); 
     
-    xir::Tensor *tensor = xir::Tensor::create(out->get_name(), out->get_shape(), xir::DataType{xir::DataType::INT, 8}).release();
+    xir::Tensor *tensor = xir::Tensor::create(out->get_name(), out->get_shape(), out->get_data_type()).release();
+    std::cout << tensor->get_data_type().type << tensor->get_data_type().bit_width<<std::endl;
       //std::unique_ptr<xir::Tensor> tensor(
       //  new xir::Tensor(in_name, out->get_shape(),xir::Tensor::DataType::INT8));
     //input_tensors_.emplace_back(tensor.get());
@@ -258,7 +259,7 @@ void DpuV4eController::init_graph(const xir::Subgraph* subgraph) {
 
     //std::unique_ptr<xir::Tensor> tensor(
     //  new xir::Tensor(out_name, out->get_shape(),xir::Tensor::DataType::INT8));
-    xir::Tensor *tensor = xir::Tensor::create(out->get_name(), out->get_shape(), xir::DataType{xir::DataType::INT, 8}).release();
+    xir::Tensor *tensor = xir::Tensor::create(out->get_name(), out->get_shape(), out->get_data_type()).release();
     //auto tensor = out;
     output_tensors_.emplace_back(tensor);
 
@@ -451,20 +452,16 @@ void DpuV4eController::run(const std::vector<vart::TensorBuffer*> &inputs,
             for (unsigned b=0; b < ibs; b++) {
               if (inputs[j]->get_tensor()->get_data_type().type == xir::DataType::FLOAT)
                 data_float2fix((int8_t*)input_tensor_buffers[b*input_tensors_.size()+i]->data().first,(float*)inputs[j]->data().first+b*input_tensors_[i]->get_element_num(),input_tensors_[i]->get_element_num(), input_scales_[i]);
-              else if (inputs[j]->get_tensor()->get_data_type().type == xir::DataType::XINT)
-                memcpy((int8_t*)input_tensor_buffers[b*input_tensors_.size()+i]->data().first,(int8_t*)inputs[j]->data().first+b*input_tensors_[i]->get_element_num(),input_tensors_[i]->get_element_num());
               else
-                throw std::runtime_error("Error: unsupported input datatype");
+                memcpy((int8_t*)input_tensor_buffers[b*input_tensors_.size()+i]->data().first,(int8_t*)inputs[j]->data().first+b*input_tensors_[i]->get_element_num(),input_tensors_[i]->get_element_num());
               cnt++;
             }
           }
           else {
             if (inputs[j]->get_tensor()->get_data_type().type == xir::DataType::FLOAT)
               data_float2fix((int8_t*)input_tensor_buffers[cnt*input_tensors_.size()+i]->data().first,(float*)inputs[j]->data().first,input_tensors_[i]->get_element_num(), input_scales_[i]);
-            else if (inputs[j]->get_tensor()->get_data_type().type == xir::DataType::XINT)
-              memcpy((int8_t*)input_tensor_buffers[cnt*input_tensors_.size()+i]->data().first,(int8_t*)inputs[j]->data().first,inputs[j]->get_tensor()->get_element_num());
             else
-              throw std::runtime_error("Error: unsupported input datatype");
+              memcpy((int8_t*)input_tensor_buffers[cnt*input_tensors_.size()+i]->data().first,(int8_t*)inputs[j]->data().first,inputs[j]->get_tensor()->get_element_num());
             cnt++;
           }
 
@@ -719,20 +716,16 @@ void DpuV4eController::run(const std::vector<vart::TensorBuffer*> &inputs,
             for (unsigned b=0; b < obs; b++) {
               if (outputs[j]->get_tensor()->get_data_type().type == xir::DataType::FLOAT)
                 data_fix2float((float*)outputs[j]->data().first+b*output_tensors_[i]->get_element_num(), (int8_t*)output_tensor_buffers[b*output_tensors_.size()+i]->data().first,output_tensors_[i]->get_element_num(),output_scales_[i]);
-              else if (outputs[j]->get_tensor()->get_data_type().type == xir::DataType::XINT)
-                memcpy((char*)outputs[j]->data().first+b*output_tensors_[i]->get_element_num(), (void*)output_tensor_buffers[b*output_tensors_.size()+i]->data().first,output_tensors_[i]->get_element_num());
               else
-                throw std::runtime_error("Error: unsupported output datatype");
+                memcpy((char*)outputs[j]->data().first+b*output_tensors_[i]->get_element_num(), (void*)output_tensor_buffers[b*output_tensors_.size()+i]->data().first,output_tensors_[i]->get_element_num());
               cnt++;
             }
           }
           else {
             if (outputs[j]->get_tensor()->get_data_type().type == xir::DataType::FLOAT)
               data_fix2float((float*)outputs[j]->data().first,(int8_t*)output_tensor_buffers[cnt*output_tensors_.size()+i]->data().first,output_tensors_[i]->get_element_num(),output_scales_[i]);
-            else if (outputs[j]->get_tensor()->get_data_type().type == xir::DataType::XINT)
-              memcpy((int8_t*)outputs[j]->data().first,(int8_t*)output_tensor_buffers[cnt*output_tensors_.size()+i]->data().first,outputs[j]->get_tensor()->get_element_num());
             else
-              throw std::runtime_error("Error: unsupported output datatype");
+              memcpy((int8_t*)outputs[j]->data().first,(int8_t*)output_tensor_buffers[cnt*output_tensors_.size()+i]->data().first,outputs[j]->get_tensor()->get_element_num());
             cnt++;
 
           }
