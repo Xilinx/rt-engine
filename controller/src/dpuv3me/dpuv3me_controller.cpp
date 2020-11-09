@@ -111,8 +111,8 @@ std::vector<vart::TensorBuffer*> DpuV3meController::init_tensor_buffer(std::vect
         new vart::CpuFlatTensorBuffer(data, tensors[ti]));
       tbufs.emplace_back(tbuf.get());
       {
-        std::unique_lock<std::mutex> lock(tbuf_mtx_);
-        tbufs_.emplace_back(std::move(tbuf));
+        std::unique_lock<std::mutex> lock(hwbuf_mtx_);
+        bufs_.emplace_back(std::move(tbuf));
         //if(isInput)
         //  input_tensor_buffers_.emplace_back(std::move(tbuf));
         //else
@@ -446,8 +446,12 @@ void DpuV3meController::run(const std::vector<vart::TensorBuffer*> &inputs,
     inputBs = ibs;
   if ((ibs < obs) || (inputBs > BATCHSIZE) )
     throw std::runtime_error("Error: size of tensorbuffer not supported");
-
-  if(ENV_PARAM(ENABLE_TB_CREATE)) {
+  bool create_tb_outside=false;
+  if (NULL==dynamic_cast<XrtDeviceBuffer*>(get_device_buffer(outputs[0])))
+  {
+    create_tb_outside=true;
+  }
+  if(create_tb_outside) {
     input_tensor_buffers = get_inputs();
     output_tensor_buffers = get_outputs();
     for (unsigned i=0; i < input_tensors_.size(); i++ ) {
@@ -754,7 +758,7 @@ auto trigger_dpu_func = [&](){
     }
   }
   __TOC__(OUTPUT_D2H)
-  if(ENV_PARAM(ENABLE_TB_CREATE)) {
+  if(create_tb_outside) {
     for (unsigned i=0; i < output_tensors_.size(); i++  ) {
       unsigned cnt=0;
       for (unsigned j=0; j < outputs.size(); j++) {

@@ -25,7 +25,7 @@ class DpuV3meController
   std::pair<uint64_t,int32_t> alloc_and_fill_device_memory(xclDeviceHandle handle, std::vector<char> code);
   std::unordered_map<vart::TensorBuffer*, vart::TensorBuffer*> tbuf2hwbuf_;
   std::mutex hwbuf_mtx_;
-
+  std::list<std::unique_ptr<vart::TensorBuffer>> bufs_;
   std::vector<std::unique_ptr<XrtContext>> contexts_;
   uint64_t code_addr_;
   uint64_t reg0_addr_;
