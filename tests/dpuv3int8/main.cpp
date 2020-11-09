@@ -18,6 +18,7 @@ int main(int argc, char** argv) {
     ("p,noPrintMetrics", "don't print metrics", cxxopts::value<bool>()->default_value("false"))
     ("h,singlequery", "execute single query on fpga", cxxopts::value<bool>()->default_value("false"))
     ("c,numCUs", "Number of CUs To Utilize", cxxopts::value<int>()->default_value("1"))
+    ("e,numThreads", "Number of Threads for multi thread test", cxxopts::value<int>()->default_value("-1"))
     ;
   auto result = options.parse(argc, argv);
   if (!result.count("runnermeta"))
@@ -33,6 +34,7 @@ int main(int argc, char** argv) {
   const bool noPrintMetrics = result["noPrintMetrics"].as<bool>();
   const bool singleQuery = result["singlequery"].as<bool>();
   const int numCUs = result["numCUs"].as<int>();
+  const int numThreadsMt = result["numThreads"].as<int>();
 
   if(singleQuery)
   {
@@ -142,7 +144,8 @@ int main(int argc, char** argv) {
         }
       }
     }
-
+    if(numThreadsMt!=-1)
+      numThreads = numThreadsMt;
     std::cout << std::endl << "Test Classify Multi Thread..." << std::endl;
     auto t3 = std::chrono::high_resolution_clock::now();
     TestClassifyMultiThread testClassifyMultiThread(runnerMeta, numQueries, numThreads, numCUs, imgDir, golden, verbose);
