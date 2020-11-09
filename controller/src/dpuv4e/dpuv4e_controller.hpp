@@ -40,7 +40,8 @@ class DpuV4eController
   std::vector<float> input_scales_;
   std::vector<float> output_scales_;
 
-
+  void data_float2fix(int8_t* dataDst, float* dataSrc, int size, float scale);
+  void data_fix2float(float* dataDst, int8_t* dataSrc, int size, float scale);
   //****************************************************
   // Debug instruction support
   //****************************************************
