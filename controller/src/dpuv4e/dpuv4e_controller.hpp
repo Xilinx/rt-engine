@@ -24,7 +24,7 @@ class DpuV4eController
   std::vector<vart::TensorBuffer*> init_tensor_buffer(std::vector<const xir::Tensor*> tensors);
   std::unordered_map<vart::TensorBuffer*, vart::TensorBuffer*> tbuf2hwbuf_;
   std::mutex hwbuf_mtx_;
-
+  std::list<std::unique_ptr<vart::TensorBuffer>> bufs_;
   std::vector<std::unique_ptr<XrtContext>> contexts_;
   uint64_t code_addr_;
   uint64_t reg0_addr_;

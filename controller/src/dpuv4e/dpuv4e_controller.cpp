@@ -111,8 +111,8 @@ std::vector<vart::TensorBuffer*> DpuV4eController::init_tensor_buffer(std::vecto
         new vart::CpuFlatTensorBuffer(data, tensors[ti]));
       tbufs.emplace_back(tbuf.get());
       {
-        std::unique_lock<std::mutex> lock(tbuf_mtx_);
-        tbufs_.emplace_back(std::move(tbuf));
+        std::unique_lock<std::mutex> lock(hwbuf_mtx_);
+        bufs_.emplace_back(std::move(tbuf));
         //if(isInput)
         //  input_tensor_buffers_.emplace_back(std::move(tbuf));
         //else
@@ -242,10 +242,6 @@ void DpuV4eController::init_graph(const xir::Subgraph* subgraph) {
     //input_tensors_.emplace_back(tensor.get());
     //auto tensor = out;
     input_tensors_.emplace_back(tensor);
-      //{
-      //  std::unique_lock<std::mutex> lock(tbuf_mtx_);
-      //  tensors_.emplace_back(std::move(tensor));
-      //}
 
   }
 
@@ -265,10 +261,6 @@ void DpuV4eController::init_graph(const xir::Subgraph* subgraph) {
     xir::Tensor *tensor = xir::Tensor::create(out->get_name(), out->get_shape(), xir::DataType{xir::DataType::INT, 8}).release();
     //auto tensor = out;
     output_tensors_.emplace_back(tensor);
-    //{
-    //  std::unique_lock<std::mutex> lock(tbuf_mtx_);
-    //  tensors_.emplace_back(std::move(tensor));
-    //}
 
   }
   
@@ -434,8 +426,12 @@ void DpuV4eController::run(const std::vector<vart::TensorBuffer*> &inputs,
     inputBs = ibs;
   if ((ibs < obs) || (inputBs > BATCHSIZE) )
     throw std::runtime_error("Error: size of tensorbuffer not supported");
-
-  if(ENV_PARAM(ENABLE_TB_CREATE)) {
+  bool create_tb_outside=false;
+  if (NULL==dynamic_cast<XrtDeviceBuffer*>(get_device_buffer(outputs[0])))
+  {
+    create_tb_outside=true;
+  }
+  if(create_tb_outside) {
     input_tensor_buffers = get_inputs();
     output_tensor_buffers = get_outputs();
     for (unsigned i=0; i < input_tensors_.size(); i++ ) {
@@ -695,7 +691,7 @@ void DpuV4eController::run(const std::vector<vart::TensorBuffer*> &inputs,
     }
   }
   __TOC__(OUTPUT_D2H)
-  if(ENV_PARAM(ENABLE_TB_CREATE)) {
+  if(create_tb_outside) {
     for (unsigned i=0; i < output_tensors_.size(); i++  ) {
       unsigned cnt=0;
       for (unsigned j=0; j < outputs.size(); j++) {
