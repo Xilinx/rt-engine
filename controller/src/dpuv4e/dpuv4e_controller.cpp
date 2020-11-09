@@ -237,11 +237,6 @@ void DpuV4eController::init_graph(const xir::Subgraph* subgraph) {
       out->get_data_size(), layer_info::name_map(out->get_name()))); 
     
     xir::Tensor *tensor = xir::Tensor::create(out->get_name(), out->get_shape(), out->get_data_type()).release();
-    std::cout << tensor->get_data_type().type << tensor->get_data_type().bit_width<<std::endl;
-      //std::unique_ptr<xir::Tensor> tensor(
-      //  new xir::Tensor(in_name, out->get_shape(),xir::Tensor::DataType::INT8));
-    //input_tensors_.emplace_back(tensor.get());
-    //auto tensor = out;
     input_tensors_.emplace_back(tensor);
 
   }
