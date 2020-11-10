@@ -146,6 +146,8 @@ int main(int argc, char** argv) {
     }
     if(numThreadsMt!=-1)
       numThreads = numThreadsMt;
+    if(numQueries%numThreads!=0)
+     throw std::runtime_error("Error: non-integer division of queries and threads, not supported at the moment");
     std::cout << std::endl << "Test Classify Multi Thread..." << std::endl;
     auto t3 = std::chrono::high_resolution_clock::now();
     TestClassifyMultiThread testClassifyMultiThread(runnerMeta, numQueries, numThreads, numCUs, imgDir, golden, verbose);
