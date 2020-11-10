@@ -35,7 +35,8 @@ void TestClassifyMultiThread::run() {
   auto t2 = std::chrono::high_resolution_clock::now();
   std::chrono::duration<double> elapsed = t2-t1;
   std::cout << "Elapsed Threads: " << elapsed.count() << std::endl;
-
+  std::cout<<"NumThreads: "<<num_threads_<<std::endl;
+  std::cout<<"NumRunners: "<<runners_.size()<<std::endl;
   cpuUtilobj_->printtop1top5(num_queries_);
 
 }
@@ -62,7 +63,7 @@ void TestClassifyMultiThread::run_thread(unsigned tidx, unsigned ridx, unsigned 
   {
     cpuUtilobj_->fillInData(i, inputs);
     auto ret = runner->execute_async(inputs, outputs);
-    runner->wait(uint32_t(ret.first), -1);
+    runner->wait(uint32_t(ret.first), 20000);
     cpuUtilobj_->postProcess(outputs, i);
   }
 
