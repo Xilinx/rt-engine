@@ -171,6 +171,29 @@ void DpuV4eController::init(const std::string &meta) {
   }
   init_graph(subgraph[0]);
 }
+static const xir::Tensor* find_tensor(const xir::Tensor* in_tensor, const xir::Subgraph* subgraph) {
+    auto op_tmp = in_tensor->get_producer();
+    auto out = op_tmp->get_output_tensor();
+    if (op_tmp->get_type() == "download") {
+      auto input_ops = op_tmp->get_input_ops("input");
+      out = input_ops[0]->get_output_tensor();
+    } else if (!out->has_attr("reg_id")) {
+
+      auto fanout_ops = op_tmp->get_fanout_ops();
+cout << fanout_ops[0]->get_name()<<endl;
+      auto subgraph_ops = subgraph->get_ops();
+      auto ops = std::vector<const xir::Op*>();
+      std::set_intersection(fanout_ops.begin(), fanout_ops.end(),
+                            subgraph_ops.begin(), subgraph_ops.end(),
+                            std::back_inserter(ops));
+      auto upload_op = ops.front();
+cout << upload_op->get_name()<<endl;
+      out = upload_op->get_output_tensor();
+
+  }
+  return out;
+
+}
 void DpuV4eController::init_graph(const xir::Subgraph* subgraph) {
   auto handle = contexts_[0]->get_dev_handle();
   xclBOProperties boProp;
@@ -192,7 +215,7 @@ void DpuV4eController::init_graph(const xir::Subgraph* subgraph) {
   }
 
 
-  auto graph = subgraph->get_graph();
+  //auto graph = subgraph->get_graph();
   // Get one subgraph
   const xir::Subgraph* subgraph_ = subgraph; // check subgraph_->get_name()
 
@@ -226,36 +249,36 @@ void DpuV4eController::init_graph(const xir::Subgraph* subgraph) {
 
   layer_info layer(subgraph_->get_name()); 
   // Get input offset
-  auto input_ops_name = subgraph_->get_attr<std::vector<std::string>>("input_ops_name");
-  for (auto &in_name : input_ops_name) {
-    auto op = graph->get_op(in_name);
-    auto out = op->get_output_tensor();
-    xdpu_io_input_offset.emplace_back(out->get_attr<std::int32_t>("ddr_addr"));
-    input_scales_.push_back(pow(2,out->get_attr<std::int32_t>("fix_point")));
-    input_dims.emplace_back(out->get_shape());
-    layer.inputs.emplace_back(address_info(out->get_attr<std::int32_t>("ddr_addr"), 
-      out->get_data_size(), layer_info::name_map(out->get_name()))); 
+  auto input_tensors = subgraph_->get_input_tensors();
+  auto output_tensors = subgraph_->get_output_tensors();
+  for (auto &in_tensor : input_tensors) {
+    auto out = find_tensor(in_tensor,subgraph_);
+    auto ddr_addr = out->get_attr<std::int32_t>("ddr_addr");
+    xdpu_io_input_offset.emplace_back(ddr_addr);
+    input_scales_.push_back(pow(2,in_tensor->get_attr<std::int32_t>("fix_point")));
+    input_dims.emplace_back(in_tensor->get_shape());
+    layer.inputs.emplace_back(address_info(ddr_addr, 
+      in_tensor->get_data_size(), layer_info::name_map(in_tensor->get_name()))); 
     auto attrs = out->get_attrs(); 
-    xir::Tensor *tensor = xir::Tensor::create(out->get_name(), out->get_shape(), out->get_data_type()).release();
+    xir::Tensor *tensor = xir::Tensor::create(in_tensor->get_name(), in_tensor->get_shape(), in_tensor->get_data_type()).release();
     tensor->set_attrs(std::move(attrs));
     input_tensors_.emplace_back(tensor);
 
   }
 
   // Get output offset
-  auto output_ops_name = subgraph_->get_attr<std::vector<std::string>>("output_ops_name");
-  for(auto &out_name : output_ops_name) {
-    auto op = graph->get_op(out_name);
-    auto out = op->get_output_tensor();
-    xdpu_io_output_offset.emplace_back(out->get_attr<std::int32_t>("ddr_addr"));
-    output_scales_.push_back(pow(2,(-1)*out->get_attr<std::int32_t>("fix_point")));
+  for(auto &out_tensor : output_tensors) {
+    auto out = find_tensor(out_tensor,subgraph_);
+    auto ddr_addr = out->get_attr<std::int32_t>("ddr_addr");
+    xdpu_io_output_offset.emplace_back(ddr_addr);
+    output_scales_.push_back(pow(2,(-1)*out_tensor->get_attr<std::int32_t>("fix_point")));
     output_dims.emplace_back(out->get_shape()); 
-    layer.outputs.emplace_back(std::make_tuple(out->get_attr<std::int32_t>("ddr_addr"), 
-        out->get_data_size(), layer_info::name_map(out->get_name())));
+    layer.outputs.emplace_back(std::make_tuple(ddr_addr, 
+        out_tensor->get_data_size(), layer_info::name_map(out_tensor->get_name())));
     auto attrs = out->get_attrs();
     //std::unique_ptr<xir::Tensor> tensor(
     //  new xir::Tensor(out_name, out->get_shape(),xir::Tensor::DataType::INT8));
-    xir::Tensor *tensor = xir::Tensor::create(out->get_name(), out->get_shape(), out->get_data_type()).release();
+    xir::Tensor *tensor = xir::Tensor::create(out_tensor->get_name(), out_tensor->get_shape(), out_tensor->get_data_type()).release();
     tensor->set_attrs(std::move(attrs));
     //auto tensor = out;
     output_tensors_.emplace_back(tensor);
