@@ -72,6 +72,23 @@ DEF_ENV_PARAM(ENABLE_TB_CREATE, "0");
 //static size_t XDPU_IO_INPUT_OFFSET;
 //static size_t XDPU_IO_OUTPUT_OFFSET;
 //static size_t XDPU_IO_TOTAL_SIZE;
+#define DPUREG_MISC_END 0x84
+#define DPUREG_CONV_END 0x88
+#define DPUREG_SAVE_END 0x8c
+#define DPUREG_LOAD_END 0x90
+#define DPUREG_MISC_START 0x94
+#define DPUREG_CONV_START 0x98
+#define DPUREG_SAVE_START 0x9c
+#define DPUREG_LOAD_START 0xa0
+#define DPUREG_CYCLE_COUNTER 0xa8
+#define VERSION_CODE_L 0x1f0
+#define VERSION_CODE_H 0x1f4
+
+static uint32_t read32_dpu_reg(xclDeviceHandle dpu_handle, uint64_t offset) {
+  uint32_t val;
+  xclRead(dpu_handle, XCL_ADDR_KERNEL_CTRL, offset, (void *)(&val), 4);
+  return val;
+}
 
 DpuV4eController::DpuV4eController(std::string meta) 
   : XclDpuController<XrtDeviceHandle, XrtDeviceBuffer, XrtDeviceBuffer>(meta),dump_mode_(false),debug_mode_(false) {
@@ -196,8 +213,21 @@ cout << upload_op->get_name()<<endl;
 }
 void DpuV4eController::init_graph(const xir::Subgraph* subgraph) {
   auto handle = contexts_[0]->get_dev_handle();
-  xclBOProperties boProp;
+  if (subgraph->has_attr("dpu_fingerprint")) {
+    const uint64_t fingerprint = subgraph->get_attr<std::uint64_t>("dpu_fingerprint");
+    uint32_t low = read32_dpu_reg(handle,  0+ VERSION_CODE_L);
+    uint32_t high = read32_dpu_reg(handle,  0+ VERSION_CODE_H);
+    uint64_t version = high;
+    version = (version << 32) + low;
+    cout << fingerprint << " " << version <<endl;
+    if (version != fingerprint)
+      throw std::runtime_error("Error: subgraph's version is mismatch with xclbin");
+  } else {
 
+    throw std::runtime_error("Error: no hardware info in subgraph");
+
+  }
+  xclBOProperties boProp;
   dump_mode_ = dump_mode_|| ENV_PARAM(XLNX_ENABLE_DUMP);
   debug_mode_ = debug_mode_|| ENV_PARAM(XLNX_ENABLE_DEBUG_MODE);
   if(dump_mode_) {
@@ -416,20 +446,6 @@ std::vector<vart::TensorBuffer*> DpuV4eController::get_outputs() {
   return tbufs;
 }
 
-#define DPUREG_MISC_END 0x84
-#define DPUREG_CONV_END 0x88
-#define DPUREG_SAVE_END 0x8c
-#define DPUREG_LOAD_END 0x90
-#define DPUREG_MISC_START 0x94
-#define DPUREG_CONV_START 0x98
-#define DPUREG_SAVE_START 0x9c
-#define DPUREG_LOAD_START 0xa0
-#define DPUREG_CYCLE_COUNTER 0xa8
-static uint32_t read32_dpu_reg(xclDeviceHandle dpu_handle, uint64_t offset) {
-  uint32_t val;
-  xclRead(dpu_handle, XCL_ADDR_KERNEL_CTRL, offset, (void *)(&val), 4);
-  return val;
-}
 void DpuV4eController::data_fix2float(float* dataDst, int8_t* dataSrc, int size, float scale) {
   for (int i = 0; i < size; i++)
     dataDst[i] = (float)(dataSrc[i]*scale);
