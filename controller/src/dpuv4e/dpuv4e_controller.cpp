@@ -235,8 +235,9 @@ void DpuV4eController::init_graph(const xir::Subgraph* subgraph) {
     input_dims.emplace_back(out->get_shape());
     layer.inputs.emplace_back(address_info(out->get_attr<std::int32_t>("ddr_addr"), 
       out->get_data_size(), layer_info::name_map(out->get_name()))); 
-    
+    auto attrs = out->get_attrs(); 
     xir::Tensor *tensor = xir::Tensor::create(out->get_name(), out->get_shape(), out->get_data_type()).release();
+    tensor->set_attrs(std::move(attrs));
     input_tensors_.emplace_back(tensor);
 
   }
@@ -251,10 +252,11 @@ void DpuV4eController::init_graph(const xir::Subgraph* subgraph) {
     output_dims.emplace_back(out->get_shape()); 
     layer.outputs.emplace_back(std::make_tuple(out->get_attr<std::int32_t>("ddr_addr"), 
         out->get_data_size(), layer_info::name_map(out->get_name())));
-
+    auto attrs = out->get_attrs();
     //std::unique_ptr<xir::Tensor> tensor(
     //  new xir::Tensor(out_name, out->get_shape(),xir::Tensor::DataType::INT8));
     xir::Tensor *tensor = xir::Tensor::create(out->get_name(), out->get_shape(), out->get_data_type()).release();
+    tensor->set_attrs(std::move(attrs));
     //auto tensor = out;
     output_tensors_.emplace_back(tensor);
 
@@ -407,12 +409,12 @@ static uint32_t read32_dpu_reg(xclDeviceHandle dpu_handle, uint64_t offset) {
 }
 void DpuV4eController::data_fix2float(float* dataDst, int8_t* dataSrc, int size, float scale) {
   for (int i = 0; i < size; i++)
-    dataDst[i] = (float)dataSrc[i]*scale;
+    dataDst[i] = (float)(dataSrc[i]*scale);
 }
 
 void DpuV4eController::data_float2fix(int8_t* dataDst, float* dataSrc, int size, float scale) {
   for (int i = 0; i < size; i++)
-    dataDst[i] = (int8_t)dataSrc[i]*scale;
+    dataDst[i] = (int8_t)(dataSrc[i]*scale);
 }
 
 void DpuV4eController::run(const std::vector<vart::TensorBuffer*> &inputs, 
