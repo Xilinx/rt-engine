@@ -58,7 +58,7 @@ using namespace chrono;
 DEF_ENV_PARAM(DPU_IP_LATENCY, "0");
 DEF_ENV_PARAM(XLNX_ENABLE_DUMP, "0");
 DEF_ENV_PARAM(XLNX_ENABLE_DEBUG_MODE, "0");
-DEF_ENV_PARAM(XLNX_ENABLE_FINGERPRINT_CHECK, "0");
+DEF_ENV_PARAM(XLNX_ENABLE_FINGERPRINT_CHECK, "1");
 /*
  * a contiguous memory block is allocated for each requests' I/O
  * layout:
