@@ -82,8 +82,8 @@ int main(int argc, char* argv[]) {
  
   auto r = vart::Runner::create_runner(subgraph[0], "run");
   auto runner = r.get();
-  auto inputs = dynamic_cast<vart::dpu::DpuRunnerExt*>(runner)->get_inputs();
-  auto outputs = dynamic_cast<vart::dpu::DpuRunnerExt*>(runner)->get_outputs();
+  auto inputs = dynamic_cast<vart::RunnerExt*>(runner)->get_inputs();
+  auto outputs = dynamic_cast<vart::RunnerExt*>(runner)->get_outputs();
  
   std::cout << std::endl << "Testing single thread..." << std::endl;
   auto t1 = std::chrono::high_resolution_clock::now();

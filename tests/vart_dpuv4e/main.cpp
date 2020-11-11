@@ -87,8 +87,8 @@ int main(int argc, char* argv[]) {
 
   auto r = vart::Runner::create_runner(subgraph[0], "run");
   auto runner = r.get();
-  auto inputs = dynamic_cast<vart::dpu::DpuRunnerExt*>(runner)->get_inputs();
-  auto outputs = dynamic_cast<vart::dpu::DpuRunnerExt*>(runner)->get_outputs();
+  auto inputs = dynamic_cast<vart::RunnerExt*>(runner)->get_inputs();
+  auto outputs = dynamic_cast<vart::RunnerExt*>(runner)->get_outputs();
   auto output_tensors = runner->get_output_tensors(); 
   //std::unique_ptr<cpuUtil> cpuUtilobj_;
   //cpuUtilobj_.reset(new cpuUtil(meta, goldenAvailable, verbose, img_dir, num_queries_));
