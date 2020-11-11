@@ -25,4 +25,5 @@ export DPUV3INT8_DEBUGMODE=0
 cd ../../
 
 # dpuv3int8 - vart resnet50 sample
-./build/tests/vart_dpuv3int8.exe tests/dpuv3int8/models/dpuv3int8_xir/resnet50_handwritten.xmodel tests/dpuv3int8/models/dpuv3int8_xir/meta.json tests/dpuv3int8/models/commonImgLabelDir/imageDir/
+./build/tests/vart_dpuv3int8.exe tests/dpuv3int8/models/dpuv3int8_xir/resnet50_handwritten.xmodel tests/dpuv3int8/models/commonImgLabelDir/imageDir/
+

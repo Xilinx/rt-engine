@@ -13,30 +13,19 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
- 
- #ifndef DPUV1_RUNNER_EXT_HPP
-#define DPUV1_RUNNER_EXT_HPP
-
-#include "vart/runner.hpp"
-#include <memory>
-#include <string>
-#include <future>
-#include <map>
-#include <queue>
-#include <mutex>
-#include <condition_variable>
-
+#pragma once
+#include <vart/runner.hpp>
 namespace vart {
-namespace dpu {
-class DpuRunnerExt : public vart::Runner {
+
+class RunnerExt : public vart::Runner {
  public:
- 
-   explicit DpuRunnerExt() = default;
+ public:
+  explicit RunnerExt() = default;
 
-  DpuRunnerExt(const DpuRunnerExt&) = delete;
-  DpuRunnerExt& operator=(const DpuRunnerExt& other) = delete;
+  RunnerExt(const RunnerExt&) = delete;
+  RunnerExt& operator=(const RunnerExt& other) = delete;
 
-  virtual ~DpuRunnerExt() = default;
+  virtual ~RunnerExt() = default;
 
  public:
   /** @brief return the allocated input tensor buffers.
@@ -49,16 +38,14 @@ class DpuRunnerExt : public vart::Runner {
    * potentially more efficient
    * */
   virtual std::vector<vart::TensorBuffer*> get_outputs() = 0;
-
-  /** @brief return the input scale for conversion from float to fix point
-   * */
-  virtual std::vector<float> get_input_scale() const = 0;
-
-  /** @brief return the input scale for conversion from fix point to float
-   * */
-  virtual std::vector<float> get_output_scale() const = 0;
 };
-}  // namespace dpu
+
+std::vector<float> get_input_scale(
+    std::vector<const xir::Tensor*> input_tensors);
+std::vector<float> get_output_scale(
+    std::vector<const xir::Tensor*> output_tensors);
+float get_input_scale(const xir::Tensor* input_tensor);
+float get_output_scale(const xir::Tensor* output_tensor);
+
 }  // namespace vart
 
-#endif

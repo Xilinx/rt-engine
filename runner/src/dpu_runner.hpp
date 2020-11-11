@@ -24,7 +24,7 @@
 
 namespace vart {
 
-class DpuRunner: public vart::dpu::DpuRunnerExt {
+class DpuRunner: public vart::RunnerExt {
   public:
     DpuRunner(const xir::Subgraph* subgraph);
     DpuRunner(std::string meta);
@@ -48,15 +48,11 @@ class DpuRunner: public vart::dpu::DpuRunnerExt {
     virtual std::vector<vart::TensorBuffer*> get_outputs() override;
     virtual std::vector<vart::TensorBuffer*> make_inputs(); 
     virtual std::vector<vart::TensorBuffer*> make_outputs();
-    virtual std::vector<float> get_input_scale() const override;
-    virtual std::vector<float> get_output_scale() const override;
 
   protected:
     std::shared_ptr<DpuController> dpu_controller_;
     std::vector<vart::TensorBuffer*> in_bufs;
     std::vector<vart::TensorBuffer*> out_bufs;
-    //std::vector<float> ip_scale;
-    //std::vector<float> op_scale;
 };
 
 class CpuFlatTensorBuffer : public vart::TensorBuffer {

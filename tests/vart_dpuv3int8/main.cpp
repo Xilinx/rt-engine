@@ -71,18 +71,18 @@ std::vector<const xir::Subgraph*> get_dpu_subgraph(
  */
 int main(int argc, char* argv[]) {
   // Check args
-  if (argc != 4) {
-    cout << "Usage of resnet50 demo: ./resnet50 [xmodel_file] [meta.json] [imageDir]" << endl;
+  if (argc != 3) {
+    cout << "Usage of resnet50 demo: ./resnet50 [xmodel_file] [imageDir]" << endl;
     return -1;
   }
 
   string xmodel_filename = argv[1];
   int numImgs = 4;
   int batchSz = 4; 
-  string meta = argv[2];
+  string meta = argv[1];
   bool goldenAvailable = 0;
   bool verbose = 1;
-  string img_dir = argv[3];
+  string img_dir = argv[2];
   assert((numImgs%batchSz)==0);
   const unsigned num_queries_ = numImgs/batchSz;
 
@@ -100,8 +100,8 @@ int main(int argc, char* argv[]) {
 
   auto r = vart::Runner::create_runner(subgraph[0], "run");
   auto runner = r.get();
-  auto inputs = dynamic_cast<vart::dpu::DpuRunnerExt*>(runner)->get_inputs();
-  auto outputs = dynamic_cast<vart::dpu::DpuRunnerExt*>(runner)->get_outputs();
+  auto inputs = dynamic_cast<vart::RunnerExt*>(runner)->get_inputs();
+  auto outputs = dynamic_cast<vart::RunnerExt*>(runner)->get_outputs();
   
   std::unique_ptr<cpuUtil> cpuUtilobj_;
   cpuUtilobj_.reset(new cpuUtil(meta, goldenAvailable, verbose, img_dir, num_queries_));
