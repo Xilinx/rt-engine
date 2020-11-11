@@ -58,7 +58,7 @@ using namespace chrono;
 DEF_ENV_PARAM(DPU_IP_LATENCY, "0");
 DEF_ENV_PARAM(XLNX_ENABLE_DUMP, "0");
 DEF_ENV_PARAM(XLNX_ENABLE_DEBUG_MODE, "0");
-DEF_ENV_PARAM(ENABLE_TB_CREATE, "0");
+DEF_ENV_PARAM(XLNX_ENABLE_FINGERPRINT_CHECK, "0");
 /*
  * a contiguous memory block is allocated for each requests' I/O
  * layout:
@@ -197,14 +197,12 @@ static const xir::Tensor* find_tensor(const xir::Tensor* in_tensor, const xir::S
     } else if (!out->has_attr("reg_id")) {
 
       auto fanout_ops = op_tmp->get_fanout_ops();
-cout << fanout_ops[0]->get_name()<<endl;
       auto subgraph_ops = subgraph->get_ops();
       auto ops = std::vector<const xir::Op*>();
       std::set_intersection(fanout_ops.begin(), fanout_ops.end(),
                             subgraph_ops.begin(), subgraph_ops.end(),
                             std::back_inserter(ops));
       auto upload_op = ops.front();
-cout << upload_op->get_name()<<endl;
       out = upload_op->get_output_tensor();
 
   }
@@ -213,19 +211,20 @@ cout << upload_op->get_name()<<endl;
 }
 void DpuV4eController::init_graph(const xir::Subgraph* subgraph) {
   auto handle = contexts_[0]->get_dev_handle();
-  if (subgraph->has_attr("dpu_fingerprint")) {
-    const uint64_t fingerprint = subgraph->get_attr<std::uint64_t>("dpu_fingerprint");
-    uint32_t low = read32_dpu_reg(handle,  0+ VERSION_CODE_L);
-    uint32_t high = read32_dpu_reg(handle,  0+ VERSION_CODE_H);
-    uint64_t version = high;
-    version = (version << 32) + low;
-    cout << fingerprint << " " << version <<endl;
-    if (version != fingerprint)
-      throw std::runtime_error("Error: subgraph's version is mismatch with xclbin");
-  } else {
+  if(ENV_PARAM(XLNX_ENABLE_FINGERPRINT_CHECK)) {
+    if (subgraph->has_attr("dpu_fingerprint")) {
+      const uint64_t fingerprint = subgraph->get_attr<std::uint64_t>("dpu_fingerprint");
+      uint32_t low = read32_dpu_reg(handle,  0+ VERSION_CODE_L);
+      uint32_t high = read32_dpu_reg(handle,  0+ VERSION_CODE_H);
+      uint64_t version = high;
+      version = (version << 32) + low;
+      if (version != fingerprint)
+        throw std::runtime_error("Error: subgraph's version is mismatch with xclbin");
+    } else {
 
-    throw std::runtime_error("Error: no hardware info in subgraph");
+      throw std::runtime_error("Error: no hardware info in subgraph");
 
+    }
   }
   xclBOProperties boProp;
   dump_mode_ = dump_mode_|| ENV_PARAM(XLNX_ENABLE_DUMP);
