@@ -22,6 +22,7 @@ class DpuV3meController
   void init_graph(const xir::Subgraph* subgraph);
   std::vector<const xir::Tensor*> get_merged_io_tensors() const;
   std::vector<vart::TensorBuffer*> init_tensor_buffer(std::vector<const xir::Tensor*> tensors);
+  void free_buffers(std::vector<vart::TensorBuffer*> &tbufs, bool isInput);
   std::tuple<uint64_t,int32_t,std::string> alloc_and_fill_device_memory(xclDeviceHandle handle, std::vector<char> code);
   std::unordered_map<vart::TensorBuffer*, vart::TensorBuffer*> tbuf2hwbuf_;
   std::mutex hwbuf_mtx_;

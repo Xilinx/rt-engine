@@ -307,7 +307,7 @@ void DpuV3meController::init_graph(const xir::Subgraph* subgraph) {
     input_scales_.push_back(pow(2,in_tensor->get_attr<std::int32_t>("fix_point")));
     input_dims.emplace_back(in_tensor->get_shape());
     layer.inputs.emplace_back(address_info(ddr_addr, 
-      in_tensor->get_data_size(), layer_info::name_map(in_tensor->get_name()))); 
+      in_tensor->get_data_size(), layer_info::name_map(out->get_name())));
     auto attrs = out->get_attrs(); 
     xir::Tensor *tensor = xir::Tensor::create(in_tensor->get_name(), in_tensor->get_shape(), in_tensor->get_data_type()).release();
     tensor->set_attrs(std::move(attrs));
@@ -323,7 +323,7 @@ void DpuV3meController::init_graph(const xir::Subgraph* subgraph) {
     output_scales_.push_back(pow(2,(-1)*out_tensor->get_attr<std::int32_t>("fix_point")));
     output_dims.emplace_back(out->get_shape()); 
     layer.outputs.emplace_back(std::make_tuple(ddr_addr, 
-        out_tensor->get_data_size(), layer_info::name_map(out_tensor->get_name())));
+        out_tensor->get_data_size(), layer_info::name_map(out->get_name())));
     auto attrs = out->get_attrs();
     //std::unique_ptr<xir::Tensor> tensor(
     //  new xir::Tensor(out_name, out->get_shape(),xir::Tensor::DataType::INT8));
@@ -465,6 +465,45 @@ void DpuV3meController::data_float2fix(int8_t* dataDst, float* dataSrc, int size
     dataDst[i] = (int8_t)(dataSrc[i]*scale);
 }
 
+void DpuV3meController::free_buffers(std::vector<vart::TensorBuffer*> &tbufs, bool isInput) {
+  if (isInput) {
+    std::unique_lock<std::mutex> lock(hwbuf_mtx_);
+    for (unsigned ti=0; ti < tbufs.size(); ti++)
+    {
+      for (auto it=bufs_.begin(); it != bufs_.end(); it++)
+        if (it->get() == tbufs[ti])
+        {
+          bufs_.erase(it);
+          break;
+        }
+    }
+
+  } else {
+    std::unique_lock<std::mutex> lock(hwbuf_mtx_);
+    for (unsigned ti=0; ti < tbufs.size(); ti++)
+    {
+      {
+        std::unique_lock<std::mutex> lock(tbuf_mtx_);
+        tbuf2dbuf_.erase(tbuf2hwbuf_[tbufs[ti]]);
+        for (auto it=tbufs_.begin(); it != tbufs_.end(); it++)
+          if (it->get() == tbuf2hwbuf_[tbufs[ti]])
+          {
+             tbufs_.erase(it);
+             break;
+          }
+
+      }
+      tbuf2hwbuf_.erase(tbufs[ti]);
+      for (auto it=bufs_.begin(); it != bufs_.end(); it++)
+        if (it->get() == tbufs[ti])
+        {
+           bufs_.erase(it);
+           break;
+        }
+    }
+  }
+}
+
 void DpuV3meController::run(const std::vector<vart::TensorBuffer*> &inputs,
     const std::vector<vart::TensorBuffer*> &outputs) {
   std::vector<vart::TensorBuffer*> input_tensor_buffers;
@@ -482,7 +521,8 @@ void DpuV3meController::run(const std::vector<vart::TensorBuffer*> &inputs,
   if ((ibs < obs) || (inputBs > BATCHSIZE) )
     throw std::runtime_error("Error: size of tensorbuffer not supported");
   bool create_tb_outside=false;
-  if (NULL==dynamic_cast<XrtDeviceBuffer*>(get_device_buffer(outputs[0])))
+  auto it = tbuf2hwbuf_.find(outputs[0]);
+  if (it == tbuf2hwbuf_.end())
   {
     create_tb_outside=true;
   }
@@ -506,11 +546,12 @@ void DpuV3meController::run(const std::vector<vart::TensorBuffer*> &inputs,
             if (inputs[j]->get_tensor()->get_data_type().type == xir::DataType::FLOAT)
               data_float2fix((int8_t*)input_tensor_buffers[cnt*input_tensors_.size()+i]->data().first,(float*)inputs[j]->data().first,input_tensors_[i]->get_element_num(), input_scales_[i]);
             else
-              memcpy((int8_t*)input_tensor_buffers[cnt*input_tensors_.size()+i]->data().first,(int8_t*)inputs[j]->data().first,inputs[j]->get_tensor()->get_element_num());
+              memcpy((int8_t*)input_tensor_buffers[cnt*input_tensors_.size()+i]->data().first,(int8_t*)inputs[j]->data().first,input_tensors_[i]->get_element_num());
             cnt++;
           }
 
         }
+        
       }
       if (cnt == 0)
         throw std::runtime_error("Error: invilad tensorbuffer input");
@@ -817,7 +858,7 @@ auto trigger_dpu_func = [&](){
             if (outputs[j]->get_tensor()->get_data_type().type == xir::DataType::FLOAT)
               data_fix2float((float*)outputs[j]->data().first,(int8_t*)output_tensor_buffers[cnt*output_tensors_.size()+i]->data().first,output_tensors_[i]->get_element_num(),output_scales_[i]);
             else
-              memcpy((int8_t*)outputs[j]->data().first,(int8_t*)output_tensor_buffers[cnt*output_tensors_.size()+i]->data().first,outputs[j]->get_tensor()->get_element_num());
+              memcpy((int8_t*)outputs[j]->data().first,(int8_t*)output_tensor_buffers[cnt*output_tensors_.size()+i]->data().first,output_tensors_[i]->get_element_num());
             cnt++;
 
           }
@@ -827,5 +868,8 @@ auto trigger_dpu_func = [&](){
       if (cnt == 0)
         throw std::runtime_error("Error: invilad tensorbuffer output");
     }
+    free_buffers(input_tensor_buffers,true);
+    free_buffers(output_tensor_buffers,false);
   }
 }
+
