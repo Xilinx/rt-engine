@@ -58,8 +58,8 @@ class DpuV3meController
   struct layer_info {
     layer_info(std::string name){
       this->name = name;
-      std::get<0>(preload_code_addr) = 0x0ul;
-      std::get<1>(this->code_addr) = 0x0ul;
+      std::get<0>(this->preload_code_addr) = 0x0ul;
+      std::get<0>(this->code_addr) = 0x0ul;
     }
     std::string name;
     address_info preload_code_addr;
