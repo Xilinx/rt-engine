@@ -472,7 +472,8 @@ void DpuV4eController::run(const std::vector<vart::TensorBuffer*> &inputs,
   if ((ibs < obs) || (inputBs > BATCHSIZE) )
     throw std::runtime_error("Error: size of tensorbuffer not supported");
   bool create_tb_outside=false;
-  if (NULL==dynamic_cast<XrtDeviceBuffer*>(get_device_buffer(outputs[0])))
+  auto it = tbuf2hwbuf_.find(outputs[0]);
+  if (it == tbuf2hwbuf_.end())
   {
     create_tb_outside=true;
   }
