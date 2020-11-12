@@ -105,7 +105,15 @@ outputLayerParams::outputLayerParams(const xir::Subgraph *subgraph, bool multiFo
 uint32_t Xmodel::getInW(){return inputParams_[0].inW_;}
 uint32_t Xmodel::getInH(){return inputParams_[0].inH_;}
 uint32_t Xmodel::getInCh(){return inputParams_[0].inCh_;}
-uint32_t Xmodel::getOutSize(){return outputParams_[0].outSize_;}
+uint32_t Xmodel::getOutSize()
+{
+   int totalOutputDdrSize = 0;
+   for(int i=0; i<outputParams_.size(); i++)
+   {
+     totalOutputDdrSize = totalOutputDdrSize + outputParams_[i].outSize_;
+   }
+   return totalOutputDdrSize;
+}
 uint32_t Xmodel::getInKernelW(){return inputParams_[0].inKernelW_;}
 uint32_t Xmodel::getPadLft(){return inputParams_[0].padLft_;}
 uint32_t Xmodel::getPadRgt(){return inputParams_[0].padRgt_;}
