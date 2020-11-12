@@ -67,7 +67,7 @@ int main(int argc, char* argv[]) {
   string meta = argv[2];
   string img_dir = argv[3];
   assert((numImgs%batchSz)==0);
-  const unsigned num_queries_ = numImgs/batchSz;
+  const unsigned num_queries_ = 1;//numImgs/batchSz;
 
   std::unique_ptr<xir::Graph> graph0 = xir::Graph::deserialize(xmodel_filename);
   auto subgraph0 = graph0->get_root_subgraph();
@@ -95,7 +95,10 @@ int main(int argc, char* argv[]) {
   }
   auto t2 = std::chrono::high_resolution_clock::now();
   std::chrono::duration<double> elapsed = t2-t1;
+  std::chrono::duration<double, std::micro> elapsed_micro = t2 - t1;
+
   std::cout << "Elapsed: " << elapsed.count() << std::endl;
+  std::cout << "Elapsed-micro: " << elapsed_micro.count() << std::endl;
   std::cout << "QPS: " << num_queries_/elapsed.count() << std::endl;
   return 0;
 }

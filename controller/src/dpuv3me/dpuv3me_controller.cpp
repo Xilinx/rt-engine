@@ -55,13 +55,22 @@ using namespace chrono;
 
 #define BATCHSIZE 1
 
+
 DEF_ENV_PARAM(DPU_HBM_START, "0");
 DEF_ENV_PARAM(DPU_OUTPUT_ADDR, "0");
 DEF_ENV_PARAM(DPU_HW_POST, "0");
-DEF_ENV_PARAM(DPU_IP_LATENCY, "0");
+
 DEF_ENV_PARAM(XLNX_ENABLE_DUMP, "0");
 DEF_ENV_PARAM(XLNX_ENABLE_DEBUG_MODE, "0");
 DEF_ENV_PARAM(XLNX_ENABLE_FINGERPRINT_CHECK, "0");
+DEF_ENV_PARAM(ENABLE_TB_CREATE, "0");
+
+DEF_ENV_PARAM(CTRLER_RUN, "0");
+DEF_ENV_PARAM(XCLEXECBUF, "0");
+DEF_ENV_PARAM(DPU_IP_COUNTER, "0");
+DEF_ENV_PARAM(DPU_DUMP_REG, "0");
+DEF_ENV_PARAM(XRT_STAT, "0");
+
 /*
  * a contiguous memory block is allocated for each requests' I/O
  * layout:
@@ -86,6 +95,72 @@ DEF_ENV_PARAM(XLNX_ENABLE_FINGERPRINT_CHECK, "0");
 #define DPUREG_CYCLE_COUNTER 0xa8
 #define VERSION_CODE_L 0x1f0
 #define VERSION_CODE_H 0x1f4
+
+
+
+/*
+ * latency checking under XRT API.
+*/
+#include <getopt.h>
+#include <iostream>
+#include <stdexcept>
+#include <string>
+#include <cstring>
+#include <vector>
+#include <algorithm>
+#include <time.h>
+
+#include "xrt.h"
+#include "ert.h"
+
+#define	SAMPLES 10
+
+/* Full cycle of a CU cmd:
+ * App -> driver -> CU -> driver -> App
+ */
+struct timestamps {
+    uint64_t total;
+    uint64_t to_driver;
+    uint64_t to_cu;
+    uint64_t cu_complete;
+    uint64_t done;
+};
+
+static inline uint64_t
+tp2ns(struct timespec *tp)
+{
+    return (uint64_t)tp->tv_sec * 1000000000UL + tp->tv_nsec;
+}
+
+static void
+print_one_timestamp(timestamps& ts)
+{
+    std::cout << "Total: " << ts.total / 1000 << "us\t"
+              << "ToDriver: " << ts.to_driver / 1000 << "us\t"
+              << "ToCU: " << ts.to_cu / 1000 << "us\t"
+              << "Complete: " << ts.cu_complete / 1000 << "us\t"
+              << "Done: " << ts.done / 1000 << "us"
+              << std::endl;
+}
+
+static bool
+timestamp_comp(const timestamps& ts1, const timestamps& ts2)
+{
+    return ts1.total < ts2.total;
+}
+
+static void
+print_timestamps(std::vector<timestamps>& tslist)
+{
+    std::sort(tslist.begin(), tslist.end(), timestamp_comp);
+    int step = tslist.size() / SAMPLES;
+    if (step == 0)
+        step = 1;
+    for (unsigned int i = 0; i < tslist.size(); i += step)
+        print_one_timestamp(tslist[i]);
+}
+
+
 
 static uint32_t read32_dpu_reg(xclDeviceHandle dpu_handle, uint64_t offset) {
   uint32_t val;
@@ -548,7 +623,7 @@ void DpuV3meController::free_buffers(std::vector<vart::TensorBuffer*> &tbufs, bo
 }
 
 static void _show_regs(xclDeviceHandle xcl_handle){
-  for(unsigned long offset : {0x1800000, 0x1810000}){
+  for(unsigned long offset : {0x1800000}){
     std::cout << "LOAD START:" << read32_dpu_reg(xcl_handle,  offset+ DPUREG_LOAD_START) << std::endl;
     std::cout << "LOAD END  :" << read32_dpu_reg(xcl_handle,  offset+ DPUREG_LOAD_END) << std::endl;
     std::cout << "SAVE START:" << read32_dpu_reg(xcl_handle,  offset+ DPUREG_SAVE_START) << std::endl;
@@ -736,6 +811,9 @@ void DpuV3meController::run(const std::vector<vart::TensorBuffer*> &inputs,
 
 
 auto trigger_dpu_func = [&](){
+
+  auto t1 = std::chrono::high_resolution_clock::now();
+
   std::vector<std::pair<int, int> > regVals;
   if (0 == program_once_complete) {
 
@@ -807,6 +885,15 @@ auto trigger_dpu_func = [&](){
   }
   ecmd->count = 1 + p;
 
+  auto t11 = std::chrono::high_resolution_clock::now();
+
+  std::vector<timestamps> ts_list;
+  struct timespec tp;
+  struct timestamps ts;
+
+  clock_gettime(CLOCK_MONOTONIC, &tp);
+  uint64_t start = tp2ns(&tp);
+
   // exec kernel
   exec_buf_result = xclExecBuf(xcl_handle, bo_handle);
   if (exec_buf_result)
@@ -816,16 +903,49 @@ auto trigger_dpu_func = [&](){
   for (int wait_count=0; wait_count < 15 && xclExecWait(xcl_handle, 1000) == 0
             && ecmd->state != ERT_CMD_STATE_COMPLETED; wait_count++);
 
+
+  if(ENV_PARAM(XRT_STAT)){
+    clock_gettime(CLOCK_MONOTONIC, &tp);
+    uint64_t end = tp2ns(&tp);
+
+    auto c = ert_start_kernel_timestamps(ecmd);
+    ts.total = end - start;
+    ts.to_driver = c->skc_timestamps[ERT_CMD_STATE_NEW] - start;
+    ts.to_cu = c->skc_timestamps[ERT_CMD_STATE_RUNNING] -
+        c->skc_timestamps[ERT_CMD_STATE_NEW];
+    ts.cu_complete = c->skc_timestamps[ERT_CMD_STATE_COMPLETED] -
+        c->skc_timestamps[ERT_CMD_STATE_RUNNING];
+    ts.done = end - c->skc_timestamps[ERT_CMD_STATE_COMPLETED];
+    ts_list.push_back(ts);
+
+    print_timestamps(ts_list);
+  }
+
+  if(ENV_PARAM(XCLEXECBUF)){
+    auto t22 = std::chrono::high_resolution_clock::now();
+    std::chrono::duration<double, std::micro> fp_us = t22 - t11;
+    std::cout << "xclExecBuf: us " << fp_us.count() << std::endl;
+  }
+
   if (ecmd->state != ERT_CMD_STATE_COMPLETED)
   {
     _show_regs(xcl_handle);
     std::cout << "Error: CU timeout " << std::endl;
     throw std::runtime_error("Error: CU timeout " + std::to_string(handle_->get_device_info().cu_index));
   }
-  if(ENV_PARAM(DPU_IP_LATENCY)){
+  if(ENV_PARAM(DPU_IP_COUNTER)){
     _show_regs(xcl_handle);
   }
+
+
+  auto t2 = std::chrono::high_resolution_clock::now();
+  std::chrono::duration<double, std::micro> fp_us = t2 - t1;
+  std::cout << "dpu trigger: us " << fp_us.count() << std::endl;
+
 };
+
+ auto t1 = std::chrono::high_resolution_clock::now();
+
   // program DPU request
   if(!debug_mode_) { //=== run release instructions
     if(dump_mode_ ) { // dump input
@@ -978,5 +1098,12 @@ auto trigger_dpu_func = [&](){
     free_buffers(input_tensor_buffers,true);
     free_buffers(output_tensor_buffers,false);
   }
+
+if(ENV_PARAM(CTRLER_RUN)){
+  auto t2 = std::chrono::high_resolution_clock::now();
+  std::chrono::duration<double, std::micro> fp_us = t2 - t1;
+  std::cout << "CTRLER_RUN: us " << fp_us.count() << std::endl;
+}
+
 }
 
