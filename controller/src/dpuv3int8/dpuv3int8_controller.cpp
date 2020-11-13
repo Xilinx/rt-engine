@@ -136,10 +136,10 @@ void Dpuv3Int8Controller::initializeTaskDRUVariables()
       reg_val[REG_IDX_TASK_DRU_KW]             = kW-1;
       reg_val[REG_IDX_TASK_DRU_SW]             = sW-1;
       reg_val[REG_IDX_TASK_DRU_IC]             = inCh-1;
-      reg_val[REG_IDX_TASK_DRU_OW]             = druOw-1;
+      reg_val[REG_IDX_TASK_DRU_OW]             = druOw;
       reg_val[REG_IDX_TASK_DRU_OH]             = inH-1;
-      reg_val[REG_IDX_TASK_DRU_SRC_NTRANS]     = std::ceil((inH*inW*inCh)/64)+1;
-      reg_val[REG_IDX_TASK_DRU_DST_NTRANS]     = (4*inH*outW*16*(std::ceil(inCh*kW/16)))/64;
+      reg_val[REG_IDX_TASK_DRU_SRC_NTRANS]     = std::ceil((inH*inW*inCh)/64.0)+1;
+      reg_val[REG_IDX_TASK_DRU_DST_NTRANS]     = (4*inH*outW*16*(std::ceil(inCh*kW/16.0)))/64.0;
       reg_val[REG_IDX_TASK_DRU_PL_CORR]        = padL*inCh;
       reg_val[REG_IDX_TASK_DRU_PR_CORR]        = (padR+inW)*inCh;
       reg_val[REG_IDX_TASK_DRU_IW_CORR]        = inW*inCh;
