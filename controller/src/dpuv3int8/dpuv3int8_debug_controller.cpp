@@ -7,8 +7,7 @@ using namespace std;
 
 Dpuv3Int8DebugController::Dpuv3Int8DebugController(std::string meta) : Dpuv3Int8Controller(meta) {
   
-  dumpDmem_ =
-      std::getenv("DPUV3INT8_DEBUGMODE_DUMPDMEM") ? atoi(std::getenv("DPUV3INT8_DEBUGMODE_DUMPDMEM")) == 1 : false;
+  dumpDmem_ = std::getenv("DPUV3INT8_DEBUGMODE_DUMPDMEM") ? atoi(std::getenv("DPUV3INT8_DEBUGMODE_DUMPDMEM")) == 1 : false;
   xmodel_.reset(new Xmodel(meta, true));
 
   loadBinFile(xmodel_->getDebugDinFilename(), true);
@@ -26,7 +25,8 @@ Dpuv3Int8DebugController::Dpuv3Int8DebugController(std::string meta) : Dpuv3Int8
 
 Dpuv3Int8DebugController::Dpuv3Int8DebugController(const xir::Subgraph *subgraph) : Dpuv3Int8Controller(subgraph)
 {
-
+  
+  dumpDmem_ = std::getenv("DPUV3INT8_DEBUGMODE_DUMPDMEM") ? atoi(std::getenv("DPUV3INT8_DEBUGMODE_DUMPDMEM")) == 1 : false;
   xmodel_.reset(new Xmodel(subgraph, true));
   loadBinFile(xmodel_->getDebugDinFilename(), true);
   loadBinFile(xmodel_->getDebugGoldenFilename(), false);
