@@ -131,9 +131,10 @@ class Dpuv3Int8DebugController : public Dpuv3Int8Controller {
     std::vector<int8_t> debugGolden_;
     std::vector<int8_t> debugChAug_;
     std::vector<int8_t> debugBatchInterleaved_;
-    
+        
     std::ofstream debug_dumpvals_;
-
+    
+    bool dumpDmem_;
 };
 
 

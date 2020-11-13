@@ -7,10 +7,13 @@ using namespace std;
 
 Dpuv3Int8DebugController::Dpuv3Int8DebugController(std::string meta) : Dpuv3Int8Controller(meta) {
   
+  dumpDmem_ =
+      std::getenv("DPUV3INT8_DEBUGMODE_DUMPDMEM") ? atoi(std::getenv("DPUV3INT8_DEBUGMODE_DUMPDMEM")) == 1 : false;
   xmodel_.reset(new Xmodel(meta, true));
+
   loadBinFile(xmodel_->getDebugDinFilename(), true);
   loadBinFile(xmodel_->getDebugGoldenFilename(), false);
- if(not xmodel_->getSinglePoolDebug())
+  if(not xmodel_->getSinglePoolDebug())
   {
     debugDumpParams((void*)params_.data(), params_.size()*BATCH_SIZE);
     debugDumpParamsDdrFormat();
@@ -18,7 +21,7 @@ Dpuv3Int8DebugController::Dpuv3Int8DebugController(std::string meta) : Dpuv3Int8
 
   debugDumpInstr();
   debugDumpInstrAcCode(); 
-
+  
 }
 
 Dpuv3Int8DebugController::Dpuv3Int8DebugController(const xir::Subgraph *subgraph) : Dpuv3Int8Controller(subgraph)
@@ -101,8 +104,9 @@ void Dpuv3Int8DebugController::debugDumpParams(void *params_data, int params_siz
       {
         paramsData[k]=*(int8_t *)((long long) params_data+k);
       }
-
-      convert2DmemFormat(paramsData, "params", xmodel_->getDebugDumpdir()+"paramsdmem.txt");
+      
+      if(dumpDmem_)
+        convert2DmemFormat(paramsData, "params", xmodel_->getDebugDumpdir()+"paramsdmem.txt");
 
 }
 
@@ -311,7 +315,6 @@ void Dpuv3Int8DebugController::convert2DmemFormat(std::vector<int8_t> &flattened
   {
     oFile<<dwData[k]<<"\n";
   }
-
 }
 
 void Dpuv3Int8DebugController::loadBinFile(std::string binFileName, bool isInput)
@@ -323,7 +326,9 @@ void Dpuv3Int8DebugController::loadBinFile(std::string binFileName, bool isInput
   {
     debugInput_.resize(contents.size());
     debugInput_=contents;
-    convert2DmemFormat(debugInput_, "input", xmodel_->getDebugDumpdir()+"inputDmem.txt");
+    
+    if(dumpDmem_)
+      convert2DmemFormat(debugInput_, "input", xmodel_->getDebugDumpdir()+"inputDmem.txt");
 
     std::cout<<"Number of input int8 values: "<<debugInput_.size()<<std::endl;
 
@@ -340,7 +345,8 @@ void Dpuv3Int8DebugController::loadBinFile(std::string binFileName, bool isInput
     }
     debug_dumpvals_.close();
     
-    convert2DmemFormat(debugGolden_, "golden output", xmodel_->getDebugDumpdir()+"goldenOutputDmem.txt");
+    if(dumpDmem_)
+      convert2DmemFormat(debugGolden_, "golden output", xmodel_->getDebugDumpdir()+"goldenOutputDmem.txt");
     
     std::cout<<"Number of golden output int8 values: "<<debugGolden_.size()<<std::endl;
   }
@@ -530,7 +536,8 @@ void Dpuv3Int8DebugController::batchInterleave()
   }
   debug_dumpvals_.close();
   
-  convert2DmemFormat(debugBatchInterleaved_, "inputBatchInterleaved", xmodel_->getDebugDumpdir()+"inputBatchInterleaveDmem.txt");
+  if(dumpDmem_)
+    convert2DmemFormat(debugBatchInterleaved_, "inputBatchInterleaved", xmodel_->getDebugDumpdir()+"inputBatchInterleaveDmem.txt");
 
 }
 
@@ -650,7 +657,8 @@ void Dpuv3Int8DebugController::debugDumpOutputs(void *std_data, void *result_dat
         debug_dumpvals_<<std::dec<<"idx: "<<j<<" int8 val: "<<(int32_t)*(int8_t *)((long long)result_data+j)<<"\n";
         outBoard[j] = *(int8_t *)((long long)result_data+j);
       }
-      convert2DmemFormat(outBoard, "outputs straight from board, not converted to std format", xmodel_->getDebugDumpdir()+"outBoardDmem.txt");
+      if(dumpDmem_)
+        convert2DmemFormat(outBoard, "outputs straight from board, not converted to std format", xmodel_->getDebugDumpdir()+"outBoardDmem.txt");
       debug_dumpvals_.close();
 
       debug_dumpvals_.open(xmodel_->getDebugDumpdir()+"outStdFormat.txt");
@@ -662,7 +670,8 @@ void Dpuv3Int8DebugController::debugDumpOutputs(void *std_data, void *result_dat
         debug_dumpvals_<<"idx: "<<j<<" int8 val: "<<(int32_t)*(int8_t *)((long long)std_data+j)<<"\n";
         outputStdFormat[j]=*(int8_t *)((long long)std_data+j);
       }
-      convert2DmemFormat(outputStdFormat, "outputs converted to std NHWC format", xmodel_->getDebugDumpdir()+"outStdDmem.txt");
+      if(dumpDmem_)
+        convert2DmemFormat(outputStdFormat, "outputs converted to std NHWC format", xmodel_->getDebugDumpdir()+"outStdDmem.txt");
       debug_dumpvals_.close();
 
 }
