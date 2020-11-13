@@ -188,14 +188,13 @@ void DpuV4eController::init(const std::string &meta) {
   }
   init_graph(subgraph[0]);
 }
-static const xir::Tensor* find_tensor(const xir::Tensor* in_tensor, const xir::Subgraph* subgraph) {
+static const xir::Tensor* find_tensor(const xir::Tensor* in_tensor, const xir::Subgraph* subgraph,bool isInput) {
     auto op_tmp = in_tensor->get_producer();
     auto out = op_tmp->get_output_tensor();
-    if (op_tmp->get_type() == "download") {
+    if ((!isInput)&&(op_tmp->get_type() == "download")) {
       auto input_ops = op_tmp->get_input_ops("input");
       out = input_ops[0]->get_output_tensor();
     } else if (!out->has_attr("reg_id")) {
-
       auto fanout_ops = op_tmp->get_fanout_ops();
       auto subgraph_ops = subgraph->get_ops();
       auto ops = std::vector<const xir::Op*>();
@@ -281,7 +280,7 @@ void DpuV4eController::init_graph(const xir::Subgraph* subgraph) {
   auto input_tensors = subgraph_->get_input_tensors();
   auto output_tensors = subgraph_->get_output_tensors();
   for (auto &in_tensor : input_tensors) {
-    auto out = find_tensor(in_tensor,subgraph_);
+    auto out = find_tensor(in_tensor,subgraph_,true);
     auto ddr_addr = out->get_attr<std::int32_t>("ddr_addr");
     xdpu_io_input_offset.emplace_back(ddr_addr);
     input_scales_.push_back(pow(2,in_tensor->get_attr<std::int32_t>("fix_point")));
@@ -297,7 +296,7 @@ void DpuV4eController::init_graph(const xir::Subgraph* subgraph) {
 
   // Get output offset
   for(auto &out_tensor : output_tensors) {
-    auto out = find_tensor(out_tensor,subgraph_);
+    auto out = find_tensor(out_tensor,subgraph_,false);
     auto ddr_addr = out->get_attr<std::int32_t>("ddr_addr");
     xdpu_io_output_offset.emplace_back(ddr_addr);
     output_scales_.push_back(pow(2,(-1)*out_tensor->get_attr<std::int32_t>("fix_point")));
