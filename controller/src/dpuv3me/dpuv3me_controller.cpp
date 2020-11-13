@@ -317,7 +317,7 @@ void DpuV3meController::init_graph(const xir::Subgraph* subgraph) {
 
   // Get output offset
   for(auto &out_tensor : output_tensors) {
-    auto out = find_tensor(out_tensor,subgraph_.false);
+    auto out = find_tensor(out_tensor,subgraph_,false);
     auto ddr_addr = out->get_attr<std::int32_t>("ddr_addr");
     xdpu_io_output_offset.emplace_back(ddr_addr);
     output_scales_.push_back(pow(2,(-1)*out_tensor->get_attr<std::int32_t>("fix_point")));
