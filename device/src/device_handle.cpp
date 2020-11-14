@@ -50,10 +50,41 @@ DeviceResource::DeviceResource(std::string kernelName, std::string xclbin) {
       .cu_mask = (1u << cuIdx),
       .xclbin_path = xclbin,
       .full_name = cu_full_name,
-      .device_id = 0, // TODO get actual OCL device_id
+      .device_id = 0,
       .xdev = nullptr,
       .fingerprint = 0,
   });
+
+  int err;
+  cl_platform_id platform_id;
+  char cl_platform_vendor[1001];
+  char cl_platform_name[1001];
+
+  err = clGetPlatformIDs(1, &platform_id, NULL);
+  if (err != CL_SUCCESS)
+    throw std::runtime_error("Error: DeviceResource clGetPlatformIDs");
+
+  err = clGetPlatformInfo(platform_id, CL_PLATFORM_VENDOR, 1000,
+      (void *)cl_platform_vendor, NULL);
+  if (err != CL_SUCCESS) 
+    throw std::runtime_error("Error: DeviceResource clGetPlatformInfo");
+
+  err = clGetPlatformInfo(platform_id, CL_PLATFORM_NAME, 1000,
+                           (void *) cl_platform_name, NULL);
+  if (err != CL_SUCCESS) 
+    throw std::runtime_error("Error: DeviceResource clGetPlatformInfo");
+
+  cl_uint numDevices = 0;
+  cl_device_id devices[100];
+  err = clGetDeviceIDs(platform_id, CL_DEVICE_TYPE_ACCELERATOR,
+      99, &devices[0], &numDevices);
+  if (err != CL_SUCCESS) 
+    throw std::runtime_error("Error: DeviceResource clGetDeviceIDs");
+
+  info_->device_id = devices[info_->device_index];
+  info_->xdev = xclGetXrtDevice(info_->device_id, &err);
+	if (err)
+    throw(std::runtime_error("Error: DeviceResource failed to get xdev"));
 }
 
 DeviceResource::~DeviceResource() {
