@@ -430,6 +430,72 @@ static uint32_t read32_dpu_reg(xclDeviceHandle dpu_handle, uint64_t offset) {
   return val;
 }
 
+static void _show_regs(xclDeviceHandle xcl_handle){
+  for(unsigned long offset : {0x1800000, 0x1810000}){
+    std::cout << "LOAD START:" << read32_dpu_reg(xcl_handle,  offset+ DPUREG_LOAD_START) << std::endl;
+    std::cout << "LOAD END  :" << read32_dpu_reg(xcl_handle,  offset+ DPUREG_LOAD_END) << std::endl;
+    std::cout << "SAVE START:" << read32_dpu_reg(xcl_handle,  offset+ DPUREG_SAVE_START) << std::endl;
+    std::cout << "SAVE END  :" << read32_dpu_reg(xcl_handle,  offset+ DPUREG_SAVE_END) << std::endl;
+    std::cout << "CONV START:" << read32_dpu_reg(xcl_handle,  offset+ DPUREG_CONV_START) << std::endl;
+    std::cout << "CONV END  :" << read32_dpu_reg(xcl_handle,  offset+ DPUREG_CONV_END) << std::endl;
+    std::cout << "MISC START:" << read32_dpu_reg(xcl_handle,  offset+ DPUREG_MISC_START) << std::endl;
+    std::cout << "MISC END  :" << read32_dpu_reg(xcl_handle,  offset+ DPUREG_MISC_END) << std::endl;
+
+    std::cout << "IP COUNTER: "<< read32_dpu_reg(xcl_handle,  offset+DPUREG_CYCLE_COUNTER) <<std::endl;
+
+    std::cout << "0x80:" << read32_dpu_reg(xcl_handle,  offset+ 0x80) << std::endl;
+    std::cout << "0x84:" << read32_dpu_reg(xcl_handle,  offset+ 0x84) << std::endl;
+    std::cout << "0x88:" << read32_dpu_reg(xcl_handle,  offset+ 0x88) << std::endl;
+    std::cout << "0x8c:" << read32_dpu_reg(xcl_handle,  offset+ 0x8c) << std::endl;
+
+    std::cout << "0x90:" << read32_dpu_reg(xcl_handle,  offset+ 0x90) << std::endl;
+    std::cout << "0x94:" << read32_dpu_reg(xcl_handle,  offset+ 0x94) << std::endl;
+    std::cout << "0x98:" << read32_dpu_reg(xcl_handle,  offset+ 0x98) << std::endl;
+    std::cout << "0x9c:" << read32_dpu_reg(xcl_handle,  offset+ 0x9c) << std::endl;
+
+    std::cout << "0xa0:" << read32_dpu_reg(xcl_handle,  offset+ 0xa0) << std::endl;
+    std::cout << "0xa8:" << read32_dpu_reg(xcl_handle,  offset+ 0xa8) << std::endl;
+    std::cout << std::endl;
+    std::cout << std::endl;
+
+    std::cout << "0x100:" << read32_dpu_reg(xcl_handle,  offset+ 0x100) << std::endl;
+    std::cout << "0x104:" << read32_dpu_reg(xcl_handle,  offset+ 0x104) << std::endl;
+    std::cout << "0x108:" << read32_dpu_reg(xcl_handle,  offset+ 0x108) << std::endl;
+    std::cout << "0x10c:" << read32_dpu_reg(xcl_handle,  offset+ 0x10c) << std::endl;
+
+    std::cout << "0x110:" << read32_dpu_reg(xcl_handle,  offset+ 0x110) << std::endl;
+    std::cout << "0x114:" << read32_dpu_reg(xcl_handle,  offset+ 0x114) << std::endl;
+    std::cout << "0x118:" << read32_dpu_reg(xcl_handle,  offset+ 0x118) << std::endl;
+    std::cout << "0x11c:" << read32_dpu_reg(xcl_handle,  offset+ 0x11c) << std::endl;
+
+    std::cout << "0x120:" << read32_dpu_reg(xcl_handle,  offset+ 0x120) << std::endl;
+    std::cout << "0x124:" << read32_dpu_reg(xcl_handle,  offset+ 0x124) << std::endl;
+    std::cout << "0x128:" << read32_dpu_reg(xcl_handle,  offset+ 0x128) << std::endl;
+    std::cout << "0x12c:" << read32_dpu_reg(xcl_handle,  offset+ 0x12c) << std::endl;
+
+    std::cout << "0x130:" << read32_dpu_reg(xcl_handle,  offset+ 0x130) << std::endl;
+    std::cout << "0x134:" << read32_dpu_reg(xcl_handle,  offset+ 0x134) << std::endl;
+    std::cout << "0x138:" << read32_dpu_reg(xcl_handle,  offset+ 0x138) << std::endl;
+    std::cout << "0x13c:" << read32_dpu_reg(xcl_handle,  offset+ 0x13c) << std::endl;
+
+    std::cout << "0x140:" << read32_dpu_reg(xcl_handle,  offset+ 0x140) << std::endl;
+    std::cout << "0x144:" << read32_dpu_reg(xcl_handle,  offset+ 0x144) << std::endl;
+    std::cout << std::endl;
+    std::cout << std::endl;
+
+    std::cout << "0x1ec:" << read32_dpu_reg(xcl_handle,  offset+ 0x1ec) << std::endl;
+    std::cout << std::endl;
+    std::cout << std::endl;
+    std::cout << std::endl;
+
+    std::cout << "0x1f0:" << read32_dpu_reg(xcl_handle,  offset+ 0x1f0) << std::endl;
+    std::cout << "0x1f4:" << read32_dpu_reg(xcl_handle,  offset+ 0x1f4) << std::endl;
+    std::cout << "0x1f8:" << read32_dpu_reg(xcl_handle,  offset+ 0x1f8) << std::endl;
+    std::cout << "0x1fc:" << read32_dpu_reg(xcl_handle,  offset+ 0x1fc) << std::endl;
+    std::cout << "###############################"<<std::endl;
+  }
+}
+
 void DpuV3meController::run(const std::vector<vart::TensorBuffer*> &inputs,
     const std::vector<vart::TensorBuffer*> &outputs) {
   std::vector<vart::TensorBuffer*> input_tensor_buffers;
@@ -576,15 +642,8 @@ auto trigger_dpu_func = [&](){
               && ecmd->state != ERT_CMD_STATE_COMPLETED; wait_count++);
 
       if (ecmd->state != ERT_CMD_STATE_COMPLETED) {
+        _show_regs(xcl_handle);
         std::cout << "Error: CU timeout when do preload " << std::endl;
-        std::cout << "LOAD START:" << read32_dpu_reg(xcl_handle,  0+ DPUREG_LOAD_START) << std::endl;
-        std::cout << "LOAD END  :" << read32_dpu_reg(xcl_handle,  0+ DPUREG_LOAD_END) << std::endl;
-        std::cout << "SAVE START:" << read32_dpu_reg(xcl_handle,  0+ DPUREG_SAVE_START) << std::endl;
-        std::cout << "SAVE END  :" << read32_dpu_reg(xcl_handle,  0+ DPUREG_SAVE_END) << std::endl;
-        std::cout << "CONV START:" << read32_dpu_reg(xcl_handle,  0+ DPUREG_CONV_START) << std::endl;
-        std::cout << "CONV END  :" << read32_dpu_reg(xcl_handle,  0+ DPUREG_CONV_END) << std::endl;
-        std::cout << "MISC START:" << read32_dpu_reg(xcl_handle,  0+ DPUREG_MISC_START) << std::endl;
-        std::cout << "MISC END  :" << read32_dpu_reg(xcl_handle,  0+ DPUREG_MISC_END) << std::endl;
         throw std::runtime_error("Error: CU timeout when do preload "
           + std::to_string(handle_->get_device_info().cu_index));
       }
@@ -627,19 +686,13 @@ auto trigger_dpu_func = [&](){
 
   if (ecmd->state != ERT_CMD_STATE_COMPLETED)
   {
+    _show_regs(xcl_handle);
     std::cout << "Error: CU timeout " << std::endl;
-    std::cout << "LOAD START:" << read32_dpu_reg(xcl_handle,  0+ DPUREG_LOAD_START) << std::endl;
-    std::cout << "LOAD END  :" << read32_dpu_reg(xcl_handle,  0+ DPUREG_LOAD_END) << std::endl;
-    std::cout << "SAVE START:" << read32_dpu_reg(xcl_handle,  0+ DPUREG_SAVE_START) << std::endl;
-    std::cout << "SAVE END  :" << read32_dpu_reg(xcl_handle,  0+ DPUREG_SAVE_END) << std::endl;
-    std::cout << "CONV START:" << read32_dpu_reg(xcl_handle,  0+ DPUREG_CONV_START) << std::endl;
-    std::cout << "CONV END  :" << read32_dpu_reg(xcl_handle,  0+ DPUREG_CONV_END) << std::endl;
-    std::cout << "MISC START:" << read32_dpu_reg(xcl_handle,  0+ DPUREG_MISC_START) << std::endl;
-    std::cout << "MISC END  :" << read32_dpu_reg(xcl_handle,  0+ DPUREG_MISC_END) << std::endl;
     throw std::runtime_error("Error: CU timeout " + std::to_string(handle_->get_device_info().cu_index));
   }
-    if(ENV_PARAM(DPU_IP_LATENCY))
-      std::cout << "IP COUNTER:" << read32_dpu_reg(xcl_handle, 0+DPUREG_CYCLE_COUNTER) <<std::endl;
+  if(ENV_PARAM(DPU_IP_LATENCY)){
+    _show_regs(xcl_handle);
+  }
 };
   // program DPU request
   if(!debug_mode_) { //=== run release instructions
