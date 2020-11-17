@@ -153,12 +153,17 @@ XclDpuController<Dhandle, DbufIn, DbufOut>::create_tensor_buffers(
 
     // make corresponding DeviceBuffer for the TensorBuffer
     std::unique_ptr<DeviceBuffer> dbuf;
-    if (isInput)
-      dbuf.reset(
-        new DbufIn(handle_.get(), tbuf.get(), ddrBank < 0? handle_->get_device_info().ddr_bank : ddrBank));
-    else
-      dbuf.reset(
-        new DbufOut(handle_.get(), tbuf.get(), ddrBank < 0? handle_->get_device_info().ddr_bank : ddrBank));
+    try {
+      if (isInput)
+        dbuf.reset(
+          new DbufIn(handle_.get(), tbuf.get(), ddrBank < 0? handle_->get_device_info().ddr_bank : ddrBank));
+      else
+        dbuf.reset(
+          new DbufOut(handle_.get(), tbuf.get(), ddrBank < 0? handle_->get_device_info().ddr_bank : ddrBank));
+    } catch(...) {
+      tbufs.clear();
+      break;
+    }
 
     // register this TensorBuffer->DeviceBuffer pair
     {
