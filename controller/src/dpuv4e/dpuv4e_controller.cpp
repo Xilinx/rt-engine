@@ -509,10 +509,13 @@ void DpuV4eController::run(const std::vector<vart::TensorBuffer*> &inputs,
   if ((ibs < obs) || (inputBs > BATCHSIZE) )
     throw std::runtime_error("Error: size of tensorbuffer not supported");
   bool create_tb_outside=false;
-  auto it = tbuf2hwbuf_.find(outputs[0]);
-  if (it == tbuf2hwbuf_.end())
   {
-    create_tb_outside=true;
+    std::unique_lock<std::mutex> lock(hwbuf_mtx_);
+    auto it = tbuf2hwbuf_.find(outputs[0]);
+    if (it == tbuf2hwbuf_.end())
+    {
+      create_tb_outside=true;
+    }
   }
   if(create_tb_outside) {
     input_tensor_buffers = get_inputs();
