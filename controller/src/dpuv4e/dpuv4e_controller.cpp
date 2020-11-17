@@ -770,7 +770,6 @@ void DpuV4eController::run(const std::vector<vart::TensorBuffer*> &inputs,
     // instead of downloading all {output, input, intermediate},
     // just download output region
     // io_bufs[i]->download();
-    int sumSize=0;
     for (unsigned j=0; j< xdpu_io_output_offset.size(); j++) {
       const auto outSize = get_output_tensors()[j]->get_element_num();
       //__TIC_PROFILING__(OUTPUT)
@@ -779,7 +778,6 @@ void DpuV4eController::run(const std::vector<vart::TensorBuffer*> &inputs,
         io_addrs[i] + xdpu_io_output_offset[j]))
         throw std::runtime_error("Error: download failed");
       //__TOC_PROFILING__(OUTPUT)
-      sumSize += outSize;
     }
   }
   __TOC__(OUTPUT_D2H)
