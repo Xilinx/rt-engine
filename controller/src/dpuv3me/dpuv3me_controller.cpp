@@ -446,11 +446,18 @@ std::vector<vart::TensorBuffer*> DpuV3meController::get_inputs() {
 std::vector<vart::TensorBuffer*> DpuV3meController::get_outputs() {
 //  return get_tensor_buffer_pointer(output_tensor_buffers_);
   auto tbufs = init_tensor_buffer(output_tensors_);
-  auto hwbufs = create_tensor_buffers(get_merged_io_tensors(),false, 16);
+  std::vector<vart::TensorBuffer*>  hwbufs;
+
+  for (int idx=16; idx<32; idx++){
+    hwbufs = create_tensor_buffers(get_merged_io_tensors(),false, idx);
+    if (!hwbufs.empty()) {
+      break;
+    }
+  }
+
   for (int i=0;i<BATCHSIZE; i++) {
     std::unique_lock<std::mutex> lock(hwbuf_mtx_);
     tbuf2hwbuf_.emplace(tbufs[i*output_tensors_.size()], hwbufs[i]);
-    
   }
   return tbufs;
 }
