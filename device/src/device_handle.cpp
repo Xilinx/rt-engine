@@ -134,26 +134,33 @@ ButlerResource::ButlerResource(std::string kernelName, std::string xclbin) {
   if (client_->Ping() != butler::errCode::SUCCESS)
     throw std::runtime_error("Error: cannot ping butler server");
 
-  std::string realKernelName;
+  // first, try to acquire using the given kernelName
+  std::string realKernelName(kernelName);
   std::pair<butler::Alloc, std::vector<butler::xCU>> acquireResult;
-  std::string fnm = std::string(xclbin);
-  xir::XrtBinStream binstream(fnm);
-  // Try to acquire a new CU from xclbin
-  auto cu_num = binstream.get_num_of_cu();
-  for (int cuidx = 0; cuidx < cu_num; cuidx++) {
-    realKernelName = find_kernel_name(binstream.get_cu(cuidx));
-    // Try to acquire a new CU
-    acquireResult = client_->acquireCU(realKernelName, xclbin);
-    auto alloc = acquireResult.first;
-    if (alloc.myErrCode != butler::errCode::SUCCESS) {
-      continue;
+  acquireResult = client_->acquireCU(realKernelName, xclbin);
+  if (acquireResult.first.myErrCode != butler::errCode::SUCCESS
+    && xclbin.find(".xclbin") != std::string::npos)
+  {
+    // that did not work, try to acquire using CU kernel names
+    std::string fnm = std::string(xclbin);
+    xir::XrtBinStream binstream(fnm);
+    // Try to acquire a new CU from xclbin
+    auto cu_num = binstream.get_num_of_cu();
+    for (int cuidx = 0; cuidx < cu_num; cuidx++) {
+      realKernelName = find_kernel_name(binstream.get_cu(cuidx));
+      // Try to acquire a new CU
+      acquireResult = client_->acquireCU(realKernelName, xclbin);
+      auto alloc = acquireResult.first;
+      if (alloc.myErrCode != butler::errCode::SUCCESS) {
+        continue;
+      }
+      break;
     }
-    break;
   }
 
   auto alloc = acquireResult.first;
 
-  // If we can't
+  // If we can't acquire our own resource...
   if (alloc.myErrCode != butler::errCode::SUCCESS) {
     // Try to share one that has previously been acquired by this process
     acquireResult = client_->subscribeService(realKernelName);
