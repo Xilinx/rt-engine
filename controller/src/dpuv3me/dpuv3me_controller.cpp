@@ -215,27 +215,13 @@ std::tuple<uint64_t,int32_t,std::string> DpuV3meController::alloc_and_fill_devic
   std::tuple<uint64_t,int32_t,std::string> data;
   unsigned size = code.size();
   if (posix_memalign(&codePtr, getpagesize(), size)) throw std::bad_alloc();
-
-  for (unsigned i=0; i < size; i++){
-    ((char*)codePtr)[i] = code[i];
-  }
-
-  for (int idx=16; idx<32; idx++) {
-    auto codeMem = xclAllocUserPtrBO(handle, codePtr, size, idx);
-    if (codeMem == NULLBO) {
-      if (idx == 31) {
-        throw std::bad_alloc();
-      }else {
-        continue;
-      }
-    }
-    xclSyncBO(handle, codeMem, XCL_BO_SYNC_BO_TO_DEVICE, size, 0);
-    xclGetBOProperties(handle, codeMem, &boProp);
-    data.first = boProp.paddr;
-    data.second = size;
-    break;
-  }
-  //free(codePtr);
+  for (unsigned i=0; i < size; i++) ((char*)codePtr)[i] = code[i];
+  auto codeMem = xclAllocUserPtrBO(handle, codePtr, size, 16);
+  xclSyncBO(handle, codeMem, XCL_BO_SYNC_BO_TO_DEVICE, size, 0);
+  xclGetBOProperties(handle, codeMem, &boProp);
+  std::get<0>(data) = boProp.paddr;
+  free(codePtr);
+  std::get<1>(data) = size;
   return data;
 }
 void DpuV3meController::init_graph(const xir::Subgraph* subgraph) {
@@ -405,22 +391,12 @@ void DpuV3meController::init_graph(const xir::Subgraph* subgraph) {
     if (posix_memalign(&reg0Ptr, getpagesize(), parameter_size))
       throw std::bad_alloc();
     for (unsigned i=0; i < parameter_size; i++) ((char*)reg0Ptr)[i] = parameter_value[i];
-
-    for (int idx=16; idx<32; idx++) {
-      auto reg0Mem  = xclAllocUserPtrBO(handle, reg0Ptr, parameter_size, idx);
-      if (reg0Mem == NULLBO) {
-        if (idx == 31) {
-          throw std::bad_alloc();
-        }else {
-          continue;
-        }
-      }
-      xclSyncBO(handle, reg0Mem, XCL_BO_SYNC_BO_TO_DEVICE, parameter_size, 0);
-      xclGetBOProperties(handle, reg0Mem, &boProp);
-      reg0_addr_ = boProp.paddr;
-      break;
-    }
-
+    auto reg0Mem
+      = xclAllocUserPtrBO(handle, reg0Ptr, parameter_size, 16);
+    xclSyncBO(handle, reg0Mem, XCL_BO_SYNC_BO_TO_DEVICE, parameter_size, 0);
+    xclGetBOProperties(handle, reg0Mem, &boProp);
+    reg0_addr_ = boProp.paddr;
+    free(reg0Ptr);
   } else {
     reg0_addr_ = 0;
   }
@@ -476,9 +452,6 @@ std::vector<vart::TensorBuffer*> DpuV3meController::get_outputs() {
     hwbufs = create_tensor_buffers(get_merged_io_tensors(),false, idx);
     if (!hwbufs.empty()) {
       break;
-    }
-    if (idx == 31) {
-      throw std::bad_alloc();
     }
   }
 
