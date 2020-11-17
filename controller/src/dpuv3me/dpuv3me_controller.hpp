@@ -22,10 +22,11 @@ class DpuV3meController
   void init_graph(const xir::Subgraph* subgraph);
   std::vector<const xir::Tensor*> get_merged_io_tensors() const;
   std::vector<vart::TensorBuffer*> init_tensor_buffer(std::vector<const xir::Tensor*> tensors);
-  std::pair<uint64_t,int32_t> alloc_and_fill_device_memory(xclDeviceHandle handle, std::vector<char> code);
+  void free_buffers(std::vector<vart::TensorBuffer*> &tbufs, bool isInput);
+  std::tuple<uint64_t,int32_t,std::string> alloc_and_fill_device_memory(xclDeviceHandle handle, std::vector<char> code);
   std::unordered_map<vart::TensorBuffer*, vart::TensorBuffer*> tbuf2hwbuf_;
   std::mutex hwbuf_mtx_;
-
+  std::list<std::unique_ptr<vart::TensorBuffer>> bufs_;
   std::vector<std::unique_ptr<XrtContext>> contexts_;
   uint64_t code_addr_;
   uint64_t reg0_addr_;
@@ -42,11 +43,13 @@ class DpuV3meController
   std::vector<float> input_scales_;
   std::vector<float> output_scales_;
 
+  void data_float2fix(int8_t* dataDst, float* dataSrc, int size, float scale);
+  void data_fix2float(float* dataDst, int8_t* dataSrc, int size, float scale);
   //****************************************************
   // Debug instruction support
   //****************************************************
   /** address info: <offset, size> */
-  using address_info = std::pair<uint64_t,int32_t>;
+  using address_info = std::tuple<uint64_t,int32_t,std::string>; 
   /**
    * layer information
    * @param code_addr: address for instruction
@@ -56,8 +59,8 @@ class DpuV3meController
   struct layer_info {
     layer_info(std::string name){
       this->name = name;
-      this->preload_code_addr.first = 0x0ul;
-      this->code_addr.first = 0x0ul;
+      std::get<0>(this->preload_code_addr) = 0x0ul;
+      std::get<0>(this->code_addr) = 0x0ul;
     }
     std::string name;
     address_info preload_code_addr;
@@ -68,15 +71,15 @@ class DpuV3meController
     std::vector<std::string> outputs_name;
     void dbg_print() {
       std::cout << name << "\n  ";
-      std::cout << "PRELOAD_CODE( " << preload_code_addr.first << " , " << preload_code_addr.second << " )\n  ";
-      std::cout << "CODE( " << code_addr.first << " , " << code_addr.second << " )\n  ";
+      std::cout << "PRELOAD_CODE( " << std::get<0>(preload_code_addr) << " , " << std::get<1>(preload_code_addr) << " )\n  ";
+      std::cout << "CODE( " << std::get<0>(code_addr) << " , " << std::get<1>(code_addr) << " )\n  ";
       std::cout << "IN " << inputs.size() << " : ";
       for(auto& l : inputs)
-        std::cout << "(" << l.first << " , " << l.second << ") ";
+        std::cout << "(" << std::get<0>(l) << " , " << std::get<1>(l) << ") ";
       std::cout << "\n  ";
       std::cout << "OUT " << outputs.size() << " : ";
       for(auto& o : outputs)
-        std::cout << "(" << o.first << " , " << o.second << ") ";
+        std::cout << "(" << std::get<0>(o) << " , " << std::get<1>(o) << ") ";
       std::cout << std::endl;
     }
     static std::string name_map(std::string raw) {
