@@ -119,21 +119,44 @@ createDeviceInfoFromXCU(butler::xCU& xcu,std::string& name) {
     };
 }
 }
+static const std::string find_kernel_name(std::string name) {
+  std::string ret;
+  auto pos = name.find_first_of(':');
+  if (pos != std::string::npos) {
+    ret = name.substr(0, pos);
+  }
+
+  return ret;
+}
 
 ButlerResource::ButlerResource(std::string kernelName, std::string xclbin) {
   client_.reset(new butler::ButlerClient());
   if (client_->Ping() != butler::errCode::SUCCESS)
     throw std::runtime_error("Error: cannot ping butler server");
 
-  // Try to acquire a new CU
+  std::string realKernelName;
   std::pair<butler::Alloc, std::vector<butler::xCU>> acquireResult;
-  acquireResult = client_->acquireCU(kernelName, xclbin);
+  std::string fnm = std::string(xclbin);
+  xir::XrtBinStream binstream(fnm);
+  // Try to acquire a new CU from xclbin
+  auto cu_num = binstream.get_num_of_cu();
+  for (int cuidx = 0; cuidx < cu_num; cuidx++) {
+    realKernelName = find_kernel_name(binstream.get_cu(cuidx));
+    // Try to acquire a new CU
+    acquireResult = client_->acquireCU(realKernelName, xclbin);
+    auto alloc = acquireResult.first;
+    if (alloc.myErrCode != butler::errCode::SUCCESS) {
+      continue;
+    }
+    break;
+  }
+
   auto alloc = acquireResult.first;
 
   // If we can't
   if (alloc.myErrCode != butler::errCode::SUCCESS) {
     // Try to share one that has previously been acquired by this process
-    acquireResult = client_->subscribeService(kernelName);
+    acquireResult = client_->subscribeService(realKernelName);
     alloc = acquireResult.first;
     if (alloc.myErrCode != butler::errCode::SUCCESS) {
       std::cerr << alloc << std::endl;
@@ -162,7 +185,7 @@ ButlerResource::ButlerResource(std::string kernelName, std::string xclbin) {
     handle_ = alloc.myHandle;
     std::vector<butler::handle> handles;
     handles.push_back(alloc.myHandle);
-    client_->publishService(kernelName,handles);
+    client_->publishService(realKernelName,handles);
   }
 }
 
