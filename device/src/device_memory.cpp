@@ -84,7 +84,7 @@ XrtDeviceBuffer::XrtDeviceBuffer(const XrtDeviceHandle *handle, vart::TensorBuff
  : DeviceBuffer(handle, tbuf, bank) {
   auto myHandle = dynamic_cast<const XrtDeviceHandle*>(handle_);
   auto devHandle = myHandle->get_context().get_dev_handle();
-  mem_ = xclAllocUserPtrBO(devHandle, (void*)tbuf->data().first, size_, bank_);
+  mem_ = xclAllocUserPtrBO(devHandle, (void*)tbuf->data().first, size_, 1 << bank_);
 
   xclBOProperties p;
   xclGetBOProperties(devHandle, mem_, &p);
