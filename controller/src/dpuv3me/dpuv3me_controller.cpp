@@ -232,7 +232,7 @@ std::tuple<uint64_t,int32_t,std::string> DpuV3meController::alloc_and_fill_devic
     xclSyncBO(handle, codeMem, XCL_BO_SYNC_BO_TO_DEVICE, size, 0);
     xclGetBOProperties(handle, codeMem, &boProp);
     std::get<0>(data) = boProp.paddr;
-    std::get<0>(data) = size;
+    std::get<1>(data) = size;
     break;
   }
   //free(codePtr);
