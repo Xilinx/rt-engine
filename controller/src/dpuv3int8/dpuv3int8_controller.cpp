@@ -29,12 +29,13 @@ void Dpuv3Int8Controller::initializeTensors()
     std::vector<std::int32_t> inHwDims = { int32_t(BATCH_SIZE*xmodel_->getInW()*xmodel_->getInH()*xmodel_->getInCh())};
     if(not xmodel_->getDruMode())
       inHwDims = { int32_t(xmodel_->getInW()*xmodel_->getInH()*BATCH_SIZE*ceil((float)xmodel_->getInCh()/16)*16)};
-    const std::vector<std::int32_t> outdims = { BATCH_SIZE, 1, 1, int32_t(xmodel_->getOutDdrSize())};
-    
+    const std::vector<std::int32_t> outdims = { BATCH_SIZE, xmodel_->getOutW(), xmodel_->getOutH(), int32_t(xmodel_->getOutCh())};
+    const std::vector<std::int32_t> outHwDims = { BATCH_SIZE, 1, 1, int32_t(xmodel_->getOutDdrSize())};
+   
     xir::Tensor *in_t = xir::Tensor::create("input", indims, xir::DataType{xir::DataType::INT, 8}).release();
     xir::Tensor *in_hw = xir::Tensor::create("inputHw", inHwDims, xir::DataType{xir::DataType::INT, 8}).release();
     xir::Tensor *op = xir::Tensor::create("output", outdims, xir::DataType{xir::DataType::INT, 8}).release();
-    xir::Tensor *op_hw = xir::Tensor::create("outputHw", outdims, xir::DataType{xir::DataType::INT, 8}).release();
+    xir::Tensor *op_hw = xir::Tensor::create("outputHw", outHwDims, xir::DataType{xir::DataType::INT, 8}).release();
     
     in_tensor_.reset(in_t);
     in_hw_tensor_.reset(in_hw);
@@ -230,6 +231,7 @@ void Dpuv3Int8Controller::output_reorg(void *std_data, void *result_data, int re
 {
     int i, mbatch, segment, group;
     std::vector<int> count(BATCH_SIZE,0); 
+    std::vector<int8_t> stdExtraZeroesData(result_size,0);
 
     for (i = 0; i < result_size; i++)
     {
@@ -238,17 +240,17 @@ void Dpuv3Int8Controller::output_reorg(void *std_data, void *result_data, int re
         group = (i - mbatch * (64 * 16*xmodel_->getOutDdrSize()) - segment * 64) / 16;
         switch(mbatch*4+group)
         {
-           case 0: *(int8_t *)((long long) std_data+count[0])=*(int8_t *)((long long)result_data+i);
+           case 0: stdExtraZeroesData[count[0]]=*(int8_t *)((long long)result_data+i);
                    count[0]++;
                    break;
 
-           case 1: *(int8_t *)((long long) std_data+(xmodel_->getOutDdrSize()+count[1]))=*(int8_t *)((long long)result_data+i);
+           case 1: stdExtraZeroesData[xmodel_->getOutDdrSize()+count[1]]=*(int8_t *)((long long)result_data+i);
                    count[1]++;
                    break;
-           case 2: *(int8_t *)((long long) std_data+(xmodel_->getOutDdrSize()*2+count[2]))=*(int8_t *)((long long)result_data+i);
+           case 2: stdExtraZeroesData[xmodel_->getOutDdrSize()*2+count[2]]=*(int8_t *)((long long)result_data+i);
                     count[2]++;
                     break;
-           case 3: *(int8_t *)((long long) std_data+(xmodel_->getOutDdrSize()*3+count[3]))=*(int8_t *)((long long)result_data+i);
+           case 3: stdExtraZeroesData[xmodel_->getOutDdrSize()*3+count[3]]=*(int8_t *)((long long)result_data+i);
                    count[3]++;
         }
         
@@ -259,24 +261,24 @@ void Dpuv3Int8Controller::output_reorg(void *std_data, void *result_data, int re
 
     for(int j=0; j<stdSize; j++)
     {
-      stdDataVec[j] = *(int8_t *)((long long) std_data+j);
+      stdDataVec[j] = stdExtraZeroesData[j];
     }
     int k = 0;
     for(int j=stdSize*1; j<stdSize*2; j++)
     {
-      stdDataVec[j] = *(int8_t *)((long long) std_data+(xmodel_->getOutDdrSize()+k));
+      stdDataVec[j] = stdExtraZeroesData[xmodel_->getOutDdrSize()+k];
       k++;
     }
     k=0;
     for(int j=stdSize*2; j<stdSize*3; j++)
     {
-      stdDataVec[j] = *(int8_t *)((long long) std_data+k+(xmodel_->getOutDdrSize()*2));
+      stdDataVec[j] = stdExtraZeroesData[k+(xmodel_->getOutDdrSize()*2)];
       k++;
     }
     k=0;
     for(int j=stdSize*3; j<stdSize*4; j++)
     {
-      stdDataVec[j] = *(int8_t *)((long long) std_data+k+(xmodel_->getOutDdrSize()*3));
+      stdDataVec[j] = stdExtraZeroesData[k+(xmodel_->getOutDdrSize()*3)];
       k++;
     }
     
