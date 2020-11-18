@@ -477,7 +477,7 @@ std::vector<vart::TensorBuffer*> DpuV3meController::get_outputs() {
     if (!hwbufs.empty()) {
       break;
     }
-    if (idx == 31) {
+    if (0 && idx == 31) {
       throw std::bad_alloc();
     }
   }
