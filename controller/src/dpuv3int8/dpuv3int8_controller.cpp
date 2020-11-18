@@ -11,6 +11,7 @@ Dpuv3Int8Controller::Dpuv3Int8Controller(std::string meta) : XclDpuController<Xc
   initializeTensors(); 
   initializeTaskDRUVariables();
   initCreateBuffers();
+  initRegMap();
 }
 
 Dpuv3Int8Controller::Dpuv3Int8Controller(const xir::Subgraph *subgraph) : XclDpuController<XclDeviceHandle, XclDeviceBuffer, XclDeviceBuffer>(subgraph)
@@ -21,6 +22,7 @@ Dpuv3Int8Controller::Dpuv3Int8Controller(const xir::Subgraph *subgraph) : XclDpu
   initializeTensors();
   initializeTaskDRUVariables();
   initCreateBuffers();
+  initRegMap();
 }
 
 void Dpuv3Int8Controller::initializeTensors()
@@ -82,6 +84,9 @@ void Dpuv3Int8Controller::runKernel(xrtcpp::exec::exec_write_command cmd, uint64
     cmd.execute();
     cmd.wait();
 
+    // Note: for debugging hangs, replace cmd.wait() with a polling loop
+    // e.g., check for cmd.state() or cmd.completed()
+    //dumpReg();
 }
 
 void Dpuv3Int8Controller::initializeTaskDRUVariables()
@@ -156,6 +161,51 @@ void Dpuv3Int8Controller::initializeTaskDRUVariables()
     reg_val[REG_IDX_REG_AXCACHE_AXOS]       = REG_AXCACHE_AXOS;
     reg_val[REG_IDX_REG_DPU_PROF_ENABLE]    = 0x1;
 
+}
+
+void Dpuv3Int8Controller::initRegMap()
+{
+  cl_int err;
+  regMap_ = clCreateBuffer(handle_->get_context(), CL_MEM_REGISTER_MAP, sizeof(cl_int), NULL, &err);
+  if (err != CL_SUCCESS)
+    throw std::runtime_error("Error: could not create reg map");
+}
+
+uint32_t Dpuv3Int8Controller::readReg(unsigned offset) 
+{
+  uint32_t data;
+  cl_int err = clEnqueueReadBuffer(handle_->get_command_queue(), regMap_, CL_TRUE,
+    handle_->get_device_info().cu_base_addr + offset, sizeof(data), &data, 0, NULL, NULL);
+  if (err != CL_SUCCESS)
+    return 0;
+
+  return data;
+}
+
+void Dpuv3Int8Controller::dumpReg() 
+{
+  uint32_t version = readReg(0x07C);
+  uint32_t nLoadStart = readReg(0x098);
+  uint32_t nLoadFinish = readReg(0x0A8);
+  uint32_t nSaveStart = readReg(0x09C);
+  uint32_t nSaveFinish = readReg(0x0AC);
+  uint32_t nConvStart = readReg(0x0A0);
+  uint32_t nConvFinish = readReg(0x0B0);
+  uint32_t nMiscStart = readReg(0x0A4);
+  uint32_t nMiscFinish = readReg(0x0B4);
+  uint32_t dpuStatus = readReg(0x0B8);
+  uint32_t druStatus = readReg(0x0BC);
+  std::cout << "version: " << version << std::endl;
+  std::cout << "# load_start: " << nLoadStart << std::endl;
+  std::cout << "# load_finish: " << nLoadFinish << std::endl;
+  std::cout << "# save_start: " << nSaveStart << std::endl;
+  std::cout << "# save_finish: " << nSaveFinish << std::endl;
+  std::cout << "# conv_start: " << nConvStart << std::endl;
+  std::cout << "# conv_finish: " << nConvFinish << std::endl;
+  std::cout << "# misc_start: " << nMiscStart << std::endl;
+  std::cout << "# misc_finish: " << nMiscFinish << std::endl;
+  std::cout << "dpu_status: " << dpuStatus << std::endl;
+  std::cout << "dru_status: " << druStatus << std::endl;
 }
 
 void Dpuv3Int8Controller::initCreateBuffers()
