@@ -27,7 +27,9 @@ jsonOrXirKeys::jsonOrXirKeys(std::string runner_dir)
   }
 }
 
-int jsonOrXirKeys::getOutSize(){return outSize_;}
+uint32_t jsonOrXirKeys::getOutW(){return outW_;}
+uint32_t jsonOrXirKeys::getOutH(){return outH_;}
+uint32_t jsonOrXirKeys::getOutCh(){return outCh_;}
 bool jsonOrXirKeys::getDebugMode(){return debugMode_;}
 std::string jsonOrXirKeys::getGoldenFilename(){return golden_filename_;}
 std::string jsonOrXirKeys::getSynsetFilename(){return synset_filename_;}
@@ -53,16 +55,16 @@ void jsonOrXirKeys::loadFromJson(json_object* jobj)
   }
 
   if(not multiFormat)
-    outSize_ = getValue("outSize", jobj);
-  
-  if(not multiFormat)
   {
+    outW_ = getValue("outW", jobj);
+    outH_ = getValue("outH", jobj);
+    outCh_ = getValue("outCh", jobj);
     inW_ = getValue("inW", jobj);
     inH_ = getValue("inH", jobj);
     inCh_ = getValue("inCh", jobj);
+    
   }
-
-
+  
   if(multiFormat)
   {
     json_object_object_foreach(jobj, key, val)
@@ -88,7 +90,14 @@ void jsonOrXirKeys::loadFromJson(json_object* jobj)
         json_object_object_foreach(val, outputkey, outputval)
         {
           assert(outputkey);
-          outSize_ = getValue("outDDRSize", outputval);
+          json_object* obj = json_object_object_get(outputval, "shape");
+          json_object* shapeVal;
+          shapeVal = json_object_array_get_idx(obj, 1);
+          outH_ = json_object_get_int(shapeVal);
+          shapeVal = json_object_array_get_idx(obj, 2);
+          outW_ = json_object_get_int(shapeVal);
+          shapeVal = json_object_array_get_idx(obj, 3);
+          outCh_ = json_object_get_int(shapeVal);
         }
       }
     }
@@ -104,7 +113,56 @@ void jsonOrXirKeys::loadFromXmodel(std::string xmodelFname)
   std::vector<xir::Subgraph *> subgraphs = graph->get_root_subgraph()->children_topological_sort();
   auto subgraph = subgraphs[1];//TO_DO - replace 1 with automated value
   runner_dir_ = subgraph->get_attr<std::string>("runner_dir");
-  outSize_ = subgraph->get_attr<int>("outSize");
+  bool multiFormat = true;
+  
+  auto attrs = subgraph->get_attrs();
+  auto keys = attrs->get_keys();
+  for (auto& key : keys) {
+    std::string keyString(key);
+    if(keyString.compare("inW")==0)
+    {
+      multiFormat = false;
+      break;
+    }
+  }
+  
+  if(multiFormat)
+  {
+    std::string tensorInfo = subgraph->get_attr<std::string>("tensor_info");
+    char * c = tensorInfo.c_str();
+    json_object* jobj = json_tokener_parse(c);
+    json_object_object_foreach(jobj, key, val)
+    {
+      std::string keyString(key);
+      if(keyString.compare("outputs") == 0)
+      {
+        json_object_object_foreach(val, outputkey, outputval)
+        {
+          assert(outputkey);
+          json_object* obj = json_object_object_get(outputval, "shape");
+          json_object* shapeVal;
+          shapeVal = json_object_array_get_idx(obj, 1);
+          outH_ = json_object_get_int(shapeVal);
+          shapeVal = json_object_array_get_idx(obj, 2);
+          outW_ = json_object_get_int(shapeVal);
+          shapeVal = json_object_array_get_idx(obj, 3);
+          outCh_ = json_object_get_int(shapeVal);
+         
+        }
+      }
+    }
+  }
+  else
+  {
+    outH_ = 1;//subgraph->get_attr<int>("outH");
+    outW_ = 1;//subgraph->get_attr<int>("outW");
+    outCh_ = 1000;//subgraph->get_attr<int>("outCh");
+  }
+ 
+  
+  
+  
+  //outSize_ = subgraph->get_attr<int>("outSize");
   debugMode_ = false;//subgraph->get_attr<int>("debugMode");
   golden_filename_ = runner_dir_+"gold.txt";//subgraph->get_attr<std::string>("goldenFile");
   synset_filename_ = runner_dir_+"synset_words.txt";//subgraph->get_attr<std::string>("synsetFile");

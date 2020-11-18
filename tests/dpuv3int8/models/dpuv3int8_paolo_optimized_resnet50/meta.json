@@ -16,6 +16,9 @@
     "druDstBufSize": 16777216,
     "channelAugmentationMode": true,
     "druMode": true,
-    "outSize":1024,
+    "outH":1,
+    "outW":1,
+    "outCh":1000,
+    "outDDRSize":1024,
     "debugMode":false
 }

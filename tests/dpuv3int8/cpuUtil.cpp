@@ -198,7 +198,7 @@ void cpuUtil::postProcess(std::vector<vart::TensorBuffer*> outputs, int idx )
       return;
     void* dat = (void*)outputs[0]->data().first;
     int batch_size = 4;
-    int outSize = keysobj_->getOutSize();//TO_DO: Get formula for this
+    int outSize = keysobj_->getOutW()*keysobj_->getOutH()*keysobj_->getOutCh();
     std::vector<std::vector<int8_t>> net_output(batch_size);
     int k=0;
     for(int o=0; o<batch_size; o++)
@@ -209,7 +209,7 @@ void cpuUtil::postProcess(std::vector<vart::TensorBuffer*> outputs, int idx )
         k=k+1;
       }
     }
-
+    
     // Softmax
     std::vector<std::vector<float>> softmax_output(batch_size, std::vector<float>(synsetLabels_.size()));
     // Judgment and output

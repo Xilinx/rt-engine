@@ -67,10 +67,24 @@ inputLayerParams::inputLayerParams(json_object* jobj, bool isDebugMode, bool mul
 outputLayerParams::outputLayerParams(json_object* jobj, bool multiFormat)
 {
   if(multiFormat)
-    outSize_ = getValue("outDDRSize", jobj);
+  {
+    json_object* obj = json_object_object_get(jobj, "shape");
+    json_object* shapeVal;
+    shapeVal = json_object_array_get_idx(obj, 1);
+    outH_ = json_object_get_int(shapeVal);
+    shapeVal = json_object_array_get_idx(obj, 2);
+    outW_ = json_object_get_int(shapeVal);
+    shapeVal = json_object_array_get_idx(obj, 3);
+    outCh_ = json_object_get_int(shapeVal);
+   
+    outDdrSize_ = getValue("outDDRSize", jobj);
+  }
   else
   {
-    outSize_ = getValue("outSize", jobj);
+    outH_ = getValue("outH", jobj);
+    outW_ = getValue("outW", jobj);
+    outCh_ = getValue("outCh", jobj);
+    outDdrSize_ = getValue("outDDRSize", jobj);
   }
 }
 
@@ -97,7 +111,10 @@ inputLayerParams::inputLayerParams(const xir::Subgraph *subgraph, bool isDebugMo
 
 outputLayerParams::outputLayerParams(const xir::Subgraph *subgraph, bool multiFormat)
 {
-  outSize_ = subgraph->get_attr<int>("outSize");
+  outH_ = subgraph->get_attr<int>("outH");
+  outW_ = subgraph->get_attr<int>("outW");
+  outCh_ = subgraph->get_attr<int>("outCh");
+  outDdrSize_ = subgraph->get_attr<int>("outSize");
 
 }
 
@@ -105,12 +122,15 @@ outputLayerParams::outputLayerParams(const xir::Subgraph *subgraph, bool multiFo
 uint32_t Xmodel::getInW(){return inputParams_[0].inW_;}
 uint32_t Xmodel::getInH(){return inputParams_[0].inH_;}
 uint32_t Xmodel::getInCh(){return inputParams_[0].inCh_;}
-uint32_t Xmodel::getOutSize()
+uint32_t Xmodel::getOutW(){return outputParams_[0].outW_;}
+uint32_t Xmodel::getOutH(){return outputParams_[0].outH_;}
+uint32_t Xmodel::getOutCh(){return outputParams_[0].outCh_;}
+uint32_t Xmodel::getOutDdrSize()
 {
    int totalOutputDdrSize = 0;
    for(int i=0; i<outputParams_.size(); i++)
    {
-     totalOutputDdrSize = totalOutputDdrSize + outputParams_[i].outSize_;
+     totalOutputDdrSize = totalOutputDdrSize + outputParams_[i].outDdrSize_;
    }
    return totalOutputDdrSize;
 }
