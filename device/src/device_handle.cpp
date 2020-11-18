@@ -100,25 +100,6 @@ static uint64_t getDDRBankFromButlerBitmask(unsigned bitmask) {
 
   throw std::runtime_error("Error: unknown ddr_bank config");
 }
-
-namespace {
-DeviceInfo*
-createDeviceInfoFromXCU(butler::xCU& xcu,std::string& name) {
-  return
-    new DeviceInfo{
-      .cu_base_addr = xcu.getBaseAddr(),
-      .ddr_bank = getDDRBankFromButlerBitmask(xcu.getKernelArgMemIdxMapAt(0)),
-      .device_index = size_t(xcu.getFPGAIdx()),
-      .cu_index = size_t(xcu.getCUIdx()),
-      .cu_mask = (1u << xcu.getCUIdx()),
-      .xclbin_path = xcu.getXCLBINPath(),
-      .full_name = name,
-      .device_id = xcu.getOCLDev(),
-      .xdev = xcu.getXDev(),
-      .fingerprint = 0,
-    };
-}
-}
 static const std::string find_kernel_name(std::string name) {
   std::string ret;
   auto pos = name.find_first_of(':');
@@ -127,6 +108,43 @@ static const std::string find_kernel_name(std::string name) {
   }
 
   return ret;
+}
+
+namespace {
+DeviceInfo*
+createDeviceInfoFromXCU(butler::xCU& xcu,std::string& name) {
+  std::string kernelName = find_kernel_name(name);
+  if (kernelName.find("DPUCAHX8L") != std::string::npos)
+    return
+      new DeviceInfo{
+        .cu_base_addr = xcu.getBaseAddr(),
+        .ddr_bank = 0,//getDDRBankFromButlerBitmask(xcu.getKernelArgMemIdxMapAt(0)),
+        .device_index = size_t(xcu.getFPGAIdx()),
+        .cu_index = size_t(xcu.getCUIdx()),
+        .cu_mask = (1u << xcu.getCUIdx()),
+        .xclbin_path = xcu.getXCLBINPath(),
+        .full_name = name,
+        .device_id = xcu.getOCLDev(),
+        .xdev = xcu.getXDev(),
+        .fingerprint = 0,
+      };
+
+  else
+
+    return
+      new DeviceInfo{
+        .cu_base_addr = xcu.getBaseAddr(),
+        .ddr_bank = getDDRBankFromButlerBitmask(xcu.getKernelArgMemIdxMapAt(0)),
+        .device_index = size_t(xcu.getFPGAIdx()),
+        .cu_index = size_t(xcu.getCUIdx()),
+        .cu_mask = (1u << xcu.getCUIdx()),
+        .xclbin_path = xcu.getXCLBINPath(),
+        .full_name = name,
+        .device_id = xcu.getOCLDev(),
+        .xdev = xcu.getXDev(),
+        .fingerprint = 0,
+      };
+}
 }
 
 ButlerResource::ButlerResource(std::string kernelName, std::string xclbin) {
