@@ -11,7 +11,6 @@ Dpuv3Int8Controller::Dpuv3Int8Controller(std::string meta) : XclDpuController<Xc
   initializeTensors(); 
   initializeTaskDRUVariables();
   initCreateBuffers();
-  initRegMap();
 }
 
 Dpuv3Int8Controller::Dpuv3Int8Controller(const xir::Subgraph *subgraph) : XclDpuController<XclDeviceHandle, XclDeviceBuffer, XclDeviceBuffer>(subgraph)
@@ -22,7 +21,6 @@ Dpuv3Int8Controller::Dpuv3Int8Controller(const xir::Subgraph *subgraph) : XclDpu
   initializeTensors();
   initializeTaskDRUVariables();
   initCreateBuffers();
-  initRegMap();
 }
 
 void Dpuv3Int8Controller::initializeTensors()
@@ -31,7 +29,7 @@ void Dpuv3Int8Controller::initializeTensors()
     std::vector<std::int32_t> inHwDims = { int32_t(BATCH_SIZE*xmodel_->getInW()*xmodel_->getInH()*xmodel_->getInCh())};
     if(not xmodel_->getDruMode())
       inHwDims = { int32_t(xmodel_->getInW()*xmodel_->getInH()*BATCH_SIZE*ceil((float)xmodel_->getInCh()/16)*16)};
-    const std::vector<std::int32_t> outdims = { BATCH_SIZE, 1, 1, int32_t(xmodel_->getOutSize())};
+    const std::vector<std::int32_t> outdims = { BATCH_SIZE, 1, 1, int32_t(xmodel_->getOutDdrSize())};
     
     xir::Tensor *in_t = xir::Tensor::create("input", indims, xir::DataType{xir::DataType::INT, 8}).release();
     xir::Tensor *in_hw = xir::Tensor::create("inputHw", inHwDims, xir::DataType{xir::DataType::INT, 8}).release();
@@ -84,9 +82,6 @@ void Dpuv3Int8Controller::runKernel(xrtcpp::exec::exec_write_command cmd, uint64
     cmd.execute();
     cmd.wait();
 
-    // Note: for debugging hangs, replace cmd.wait() with a polling loop
-    // e.g., check for cmd.state() or cmd.completed()
-    //dumpReg();
 }
 
 void Dpuv3Int8Controller::initializeTaskDRUVariables()
@@ -161,51 +156,6 @@ void Dpuv3Int8Controller::initializeTaskDRUVariables()
     reg_val[REG_IDX_REG_AXCACHE_AXOS]       = REG_AXCACHE_AXOS;
     reg_val[REG_IDX_REG_DPU_PROF_ENABLE]    = 0x1;
 
-}
-
-void Dpuv3Int8Controller::initRegMap()
-{
-  cl_int err;
-  regMap_ = clCreateBuffer(handle_->get_context(), CL_MEM_REGISTER_MAP, sizeof(cl_int), NULL, &err);
-  if (err != CL_SUCCESS)
-    throw std::runtime_error("Error: could not create reg map");
-}
-
-uint32_t Dpuv3Int8Controller::readReg(unsigned offset) 
-{
-  uint32_t data;
-  cl_int err = clEnqueueReadBuffer(handle_->get_command_queue(), regMap_, CL_TRUE,
-    handle_->get_device_info().cu_base_addr + offset, sizeof(data), &data, 0, NULL, NULL);
-  if (err != CL_SUCCESS)
-    return 0;
-
-  return data;
-}
-
-void Dpuv3Int8Controller::dumpReg() 
-{
-  uint32_t version = readReg(0x07C);
-  uint32_t nLoadStart = readReg(0x098);
-  uint32_t nLoadFinish = readReg(0x0A8);
-  uint32_t nSaveStart = readReg(0x09C);
-  uint32_t nSaveFinish = readReg(0x0AC);
-  uint32_t nConvStart = readReg(0x0A0);
-  uint32_t nConvFinish = readReg(0x0B0);
-  uint32_t nMiscStart = readReg(0x0A4);
-  uint32_t nMiscFinish = readReg(0x0B4);
-  uint32_t dpuStatus = readReg(0x0B8);
-  uint32_t druStatus = readReg(0x0BC);
-  std::cout << "version: " << version << std::endl;
-  std::cout << "# load_start: " << nLoadStart << std::endl;
-  std::cout << "# load_finish: " << nLoadFinish << std::endl;
-  std::cout << "# save_start: " << nSaveStart << std::endl;
-  std::cout << "# save_finish: " << nSaveFinish << std::endl;
-  std::cout << "# conv_start: " << nConvStart << std::endl;
-  std::cout << "# conv_finish: " << nConvFinish << std::endl;
-  std::cout << "# misc_start: " << nMiscStart << std::endl;
-  std::cout << "# misc_finish: " << nMiscFinish << std::endl;
-  std::cout << "dpu_status: " << dpuStatus << std::endl;
-  std::cout << "dru_status: " << druStatus << std::endl;
 }
 
 void Dpuv3Int8Controller::initCreateBuffers()
@@ -283,26 +233,59 @@ void Dpuv3Int8Controller::output_reorg(void *std_data, void *result_data, int re
 
     for (i = 0; i < result_size; i++)
     {
-        mbatch = i / (64*16*xmodel_->getOutSize());
-        segment = (i - mbatch * (64*16*xmodel_->getOutSize())) / 64;
-        group = (i - mbatch * (64 * 16*xmodel_->getOutSize()) - segment * 64) / 16;
+        mbatch = i / (64*16*xmodel_->getOutDdrSize());
+        segment = (i - mbatch * (64*16*xmodel_->getOutDdrSize())) / 64;
+        group = (i - mbatch * (64 * 16*xmodel_->getOutDdrSize()) - segment * 64) / 16;
         switch(mbatch*4+group)
         {
            case 0: *(int8_t *)((long long) std_data+count[0])=*(int8_t *)((long long)result_data+i);
                    count[0]++;
                    break;
 
-           case 1: *(int8_t *)((long long) std_data+(xmodel_->getOutSize()+count[1]))=*(int8_t *)((long long)result_data+i);
+           case 1: *(int8_t *)((long long) std_data+(xmodel_->getOutDdrSize()+count[1]))=*(int8_t *)((long long)result_data+i);
                    count[1]++;
                    break;
-           case 2: *(int8_t *)((long long) std_data+(xmodel_->getOutSize()*2+count[2]))=*(int8_t *)((long long)result_data+i);
+           case 2: *(int8_t *)((long long) std_data+(xmodel_->getOutDdrSize()*2+count[2]))=*(int8_t *)((long long)result_data+i);
                     count[2]++;
                     break;
-           case 3: *(int8_t *)((long long) std_data+(xmodel_->getOutSize()*3+count[3]))=*(int8_t *)((long long)result_data+i);
+           case 3: *(int8_t *)((long long) std_data+(xmodel_->getOutDdrSize()*3+count[3]))=*(int8_t *)((long long)result_data+i);
                    count[3]++;
         }
         
     }
+    
+    int stdSize = xmodel_->getOutW()*xmodel_->getOutH()*xmodel_->getOutCh();
+    std::vector<int> stdDataVec(stdSize*BATCH_SIZE,0);
+
+    for(int j=0; j<stdSize; j++)
+    {
+      stdDataVec[j] = *(int8_t *)((long long) std_data+j);
+    }
+    int k = 0;
+    for(int j=stdSize*1; j<stdSize*2; j++)
+    {
+      stdDataVec[j] = *(int8_t *)((long long) std_data+(xmodel_->getOutDdrSize()+k));
+      k++;
+    }
+    k=0;
+    for(int j=stdSize*2; j<stdSize*3; j++)
+    {
+      stdDataVec[j] = *(int8_t *)((long long) std_data+k+(xmodel_->getOutDdrSize()*2));
+      k++;
+    }
+    k=0;
+    for(int j=stdSize*3; j<stdSize*4; j++)
+    {
+      stdDataVec[j] = *(int8_t *)((long long) std_data+k+(xmodel_->getOutDdrSize()*3));
+      k++;
+    }
+    
+    for(int o=0; o<stdSize*4; o++)
+    {
+      *(int8_t *)((long long) std_data+o) = stdDataVec[o];
+
+    }
+
 }
 
 std::vector<const xir::Tensor*> 
@@ -394,7 +377,7 @@ void Dpuv3Int8Controller::preprocess(vart::TensorBuffer* stdbuf, vart::TensorBuf
 void Dpuv3Int8Controller::postprocess(vart::TensorBuffer* stdbuf, vart::TensorBuffer* hwbuf)
 {
    
-   output_reorg((void*)stdbuf->data().first, (void*)hwbuf->data().first, xmodel_->getOutSize()*BATCH_SIZE);
+   output_reorg((void*)stdbuf->data().first, (void*)hwbuf->data().first, xmodel_->getOutDdrSize()*BATCH_SIZE);
  
 }
 
