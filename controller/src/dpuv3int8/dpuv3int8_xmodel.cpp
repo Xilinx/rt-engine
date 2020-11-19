@@ -363,7 +363,17 @@ Xmodel::Xmodel(const xir::Subgraph *subgraph, bool isDebugMode)
   instr_filename_ = runner_dir_+"instr.txt";
   params_filename_ = runner_dir_+"params.txt";
   loadParamsSubgraph(subgraph, isDebugMode);
-
+  
+  auto input_tensors = subgraph->get_input_tensors();
+  auto output_tensors = subgraph->get_output_tensors();
+  for (auto &in_tensor : input_tensors)
+  {
+    input_scales_.push_back(pow(2,in_tensor->get_attr<std::int32_t>("fix_point")));
+  }
+  for(auto &out_tensor : output_tensors)
+  {
+    output_scales_.push_back(pow(2,(-1)*out_tensor->get_attr<std::int32_t>("fix_point")));
+  }
 }
 
 
