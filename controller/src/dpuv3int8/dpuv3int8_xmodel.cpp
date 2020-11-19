@@ -236,23 +236,10 @@ void Xmodel::loadParamsXIR(std::string xmodel_filename, bool isDebugMode)
 void Xmodel::loadParamsSubgraph(const xir::Subgraph *subgraph, bool isDebugMode)
 {
 
-  std::vector<std::string> machineCode = subgraph->get_attr<std::vector<std::string>>("mc_code");
-  std::ofstream oFile;
-  oFile.open(instr_filename_);
-  for(uint32_t i=0; i<machineCode.size(); i++)
-  {
-    oFile<<machineCode[i]<<"\n";
-  }
-  oFile.close();
-  std::vector<std::string> paramsMachineFormat = subgraph->get_attr<std::vector<std::string>>("params");
-  std::ofstream oFile1;
-  oFile1.open(params_filename_);
-  for(uint32_t i=0; i<paramsMachineFormat.size(); i++)
-  {
-    oFile1<<paramsMachineFormat[i]<<"\n";
-  }
-  oFile1.close();
-  
+  instr_ = subgraph->get_attr<std::vector<std::string>>("mc_code");
+
+  params_ = subgraph->get_attr<std::vector<std::string>>("params");
+
   bool multiFormat = true;
   
   auto attrs = subgraph->get_attrs();
@@ -346,4 +333,13 @@ Xmodel::Xmodel(const xir::Subgraph *subgraph, bool isDebugMode)
 
 }
 
+const std::vector<string>& Xmodel::getInstr()
+{
+  return instr_;
+}
+
+const std::vector<string>& Xmodel::getParams()
+{
+  return params_;
+}
 
