@@ -23,7 +23,10 @@ class outputLayerParams
     public:
       outputLayerParams(const xir::Subgraph *subgraph, bool multiFormat);     
       outputLayerParams(json_object* jobj, bool multiFormat);
-      uint32_t outSize_;
+      uint32_t outW_;
+      uint32_t outH_;
+      uint32_t outCh_;
+      uint32_t outDdrSize_;
 };
 
 
@@ -32,7 +35,10 @@ class Xmodel {
     uint32_t getInW();
     uint32_t getInH();
     uint32_t getInCh();
-    uint32_t getOutSize();
+    uint32_t getOutW();
+    uint32_t getOutH();
+    uint32_t getOutCh();
+    uint32_t getOutDdrSize();
     uint32_t getInKernelW();
     uint32_t getPadLft();
     uint32_t getPadRgt();
@@ -52,6 +58,9 @@ class Xmodel {
     std::string getDebugDumpdir();
     std::string getDebugDinFilename();
     std::string getDebugGoldenFilename();
+    
+    std::vector<float> get_input_scale();
+    std::vector<float> get_output_scale();
 
     const std::vector<string>& getInstr();
     const std::vector<string>& getParams();
@@ -83,6 +92,9 @@ class Xmodel {
     std::string debug_dumpdir_;
     std::string debug_din_filename_;
     std::string debug_golden_filename_;
+
+    std::vector<float> input_scales_;
+    std::vector<float> output_scales_;
 
 };
 

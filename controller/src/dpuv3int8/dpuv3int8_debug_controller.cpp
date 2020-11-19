@@ -157,22 +157,22 @@ void Dpuv3Int8DebugController::output_reorg(void *std_data, void *result_data, i
 
     for (i = 0; i < result_size; i++)
     {
-        mbatch = i / (64*16*xmodel_->getOutSize());
-        segment = (i - mbatch * (64*16*xmodel_->getOutSize())) / 64;
-        group = (i - mbatch * (64 * 16*xmodel_->getOutSize()) - segment * 64) / 16;
+        mbatch = i / (64*16*xmodel_->getOutDdrSize());
+        segment = (i - mbatch * (64*16*xmodel_->getOutDdrSize())) / 64;
+        group = (i - mbatch * (64 * 16*xmodel_->getOutDdrSize()) - segment * 64) / 16;
         switch(mbatch*4+group)
         {
            case 0: *(int8_t *)((long long) std_data+count[0])=*(int8_t *)((long long)result_data+i);
                    count[0]++;
                    break;
 
-           case 1: *(int8_t *)((long long) std_data+(xmodel_->getOutSize()+count[1]))=*(int8_t *)((long long)result_data+i);
+           case 1: *(int8_t *)((long long) std_data+(xmodel_->getOutDdrSize()+count[1]))=*(int8_t *)((long long)result_data+i);
                    count[1]++;
                    break;
-           case 2: *(int8_t *)((long long) std_data+(xmodel_->getOutSize()*2+count[2]))=*(int8_t *)((long long)result_data+i);
+           case 2: *(int8_t *)((long long) std_data+(xmodel_->getOutDdrSize()*2+count[2]))=*(int8_t *)((long long)result_data+i);
                     count[2]++;
                     break;
-           case 3: *(int8_t *)((long long) std_data+(xmodel_->getOutSize()*3+count[3]))=*(int8_t *)((long long)result_data+i);
+           case 3: *(int8_t *)((long long) std_data+(xmodel_->getOutDdrSize()*3+count[3]))=*(int8_t *)((long long)result_data+i);
                    count[3]++;
         }
         
@@ -362,7 +362,7 @@ void Dpuv3Int8DebugController::compareAgainstGolden(void *outData)
       debug_dumpvals_<<"This section prints whether or not outputs in standard NHWC format match the golden binary file provided, it also prints out int8 values along with indices, of results that mismatch\n";
 
     
-    uint32_t outSize = xmodel_->getOutSize()*BATCH_SIZE;
+    uint32_t outSize = xmodel_->getOutDdrSize()*BATCH_SIZE;
 //    void *outData = (void*)tbuf->data().first;
     
     if(debugGolden_.size()!=outSize)

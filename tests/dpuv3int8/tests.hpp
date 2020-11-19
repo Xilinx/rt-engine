@@ -41,7 +41,9 @@ class MultiThreadTest : public Test {
 class jsonOrXirKeys
 {
   public:
-    int getOutSize();
+    uint32_t getOutW();
+    uint32_t getOutH();
+    uint32_t getOutCh();
     bool getDebugMode();
     std::string getGoldenFilename();
     std::string getSynsetFilename();
@@ -57,13 +59,15 @@ class jsonOrXirKeys
     std::string getFileNameIfExists(std::string name, json_object* jobj);
     uint32_t getValue(std::string name, json_object* jobj);
     bool getBool(std::string name, json_object* jobj);
-    int outSize_;
     bool debugMode_;
     std::string golden_filename_;
     std::string synset_filename_;
     uint32_t inW_;
     uint32_t inH_;
     uint32_t inCh_;
+    uint32_t outW_;
+    uint32_t outH_;
+    uint32_t outCh_;
     bool enable_xmodel_format_;
     std::string runner_dir_;
 };

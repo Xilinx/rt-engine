@@ -16,7 +16,10 @@
     "druDstBufSize": 16777216,
     "channelAugmentationMode": false,
     "druMode": false,
-    "outSize":200704,
+    "outH": 56,
+    "outW": 56,
+    "outCh": 64,
+    "outDDRSize":200704,
     "debugMode":true,
     "singlePoolDebug":true
 }
