@@ -829,7 +829,7 @@ auto trigger_dpu_func = [&](){
           if (xclUnmgdPread(xcl_handle, 0, data.get(), size, io_addrs[i] + offset))
             throw std::runtime_error("Error: dump failed!");
           std::stringstream ss;
-          ss << dump_folder_ << "/E" << i << "/" << dbg_layers_[0].inputs_name[tensor_idx];
+          ss << dump_folder_ << "/E" << i << "/" << std::get<2>(out);
           std::ofstream ofs(ss.str(), std::ofstream::binary);
           ofs.write(data.get(), size);
           ofs.close();
@@ -850,7 +850,7 @@ auto trigger_dpu_func = [&](){
           if (xclUnmgdPread(xcl_handle, 0, data.get(), size, io_addrs[i] + offset))
             throw std::runtime_error("Error: dump failed!");
           std::stringstream ss;
-          ss << dump_folder_ << "/E" << i << "/" << dbg_layers_[0].outputs_name[tensor_idx];
+          ss << dump_folder_ << "/E" << i << "/" << std::get<2>(out);
           std::ofstream ofs(ss.str(), std::ofstream::binary); 
           ofs.write(data.get(), size);
           ofs.close();
@@ -871,7 +871,7 @@ auto trigger_dpu_func = [&](){
           if (xclUnmgdPread(xcl_handle, 0, data.get(), size, io_addrs[i] + offset))
             throw std::runtime_error("Error: dump failed!");
           std::stringstream ss;
-          ss << dump_folder_ << "/E" << i << "/" << dbg_layers_[0].inputs_name[tensor_idx]; 
+          ss << dump_folder_ << "/E" << i << "/" << std::get<2>(input); 
           std::ofstream ofs(ss.str(), std::ofstream::binary);
           ofs.write(data.get(), size);
           ofs.close();
@@ -898,7 +898,7 @@ auto trigger_dpu_func = [&](){
             if (xclUnmgdPread(xcl_handle, 0, data.get(), size, io_addrs[i] + offset))
               throw std::runtime_error("Error: dump failed!");
             std::stringstream ss; 
-            ss << dump_folder_ << "/E" << i << "/" << layer.outputs_name[tensor_idx];
+            ss << dump_folder_ << "/E" << i << "/" << std::get<2>(out);
             std::ofstream ofs(ss.str(), std::ofstream::binary);
             ofs.write(data.get(), size);
             ofs.close();
