@@ -52,6 +52,9 @@ class Xmodel {
     std::string getDebugDumpdir();
     std::string getDebugDinFilename();
     std::string getDebugGoldenFilename();
+    
+    std::vector<float> get_input_scale();
+    std::vector<float> get_output_scale();
 
     Xmodel(std::string meta, bool isDebugMode);
     Xmodel(const xir::Subgraph *subgraph, bool isDebugMode);        
@@ -78,6 +81,9 @@ class Xmodel {
     std::string debug_dumpdir_;
     std::string debug_din_filename_;
     std::string debug_golden_filename_;
+
+    std::vector<float> input_scales_;
+    std::vector<float> output_scales_;
 
 };
 
