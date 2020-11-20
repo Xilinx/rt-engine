@@ -16,7 +16,7 @@ Dpuv3Int8Controller::Dpuv3Int8Controller(std::string meta) : XclDpuController<Xc
 Dpuv3Int8Controller::Dpuv3Int8Controller(const xir::Subgraph *subgraph) : XclDpuController<XclDeviceHandle, XclDeviceBuffer, XclDeviceBuffer>(subgraph)
 {
 
-  xmodel_.reset(new Xmodel(subgraph, false));
+  xmodel_ = std::make_unique<Xmodel>(subgraph, false);
   
   initializeTensors();
   initializeTaskDRUVariables();
@@ -162,8 +162,17 @@ void Dpuv3Int8Controller::initializeTaskDRUVariables()
 void Dpuv3Int8Controller::initCreateBuffers()
 {
     
-    instr_=load(xmodel_->getInstrFileName());
-    params_=load(xmodel_->getParamsFileName());
+    instr_=load(xmodel_->getInstr());
+    params_=load(xmodel_->getParams());
+
+    // ONEHACK TM
+    // If we could not get any instructions directly from the xmodel
+    // assume that we are in a meta.json flow where we must get parameters
+    // from disk
+    if (instr_.size() == 0) {
+      instr_=load(xmodel_->getInstrFileName());
+      params_=load(xmodel_->getParamsFileName());
+    }
 
     const std::vector<std::int32_t> instrdims = { int32_t(instr_.size()*BATCH_SIZE) };
 
@@ -441,5 +450,15 @@ std::vector<int32_t, aligned_allocator<int32_t>> Dpuv3Int8Controller::load(std::
     }
     ifile.close();
     return tmp;
+}
+
+std::vector<int32_t, aligned_allocator<int32_t>> Dpuv3Int8Controller::load(std::vector<string> svals)
+{
+  std::vector<int32_t, aligned_allocator<int32_t>> tmp;
+
+  for (auto& val : svals) {
+    tmp.push_back((int32_t)std::strtol(val.c_str(), nullptr, 16));
+  }
+  return tmp;
 }
 
