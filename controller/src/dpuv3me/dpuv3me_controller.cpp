@@ -55,6 +55,8 @@ using namespace chrono;
 
 #define BATCHSIZE 1
 
+DEF_ENV_PARAM(DPU_HW_POST, "0");
+DEF_ENV_PARAM(DPU_HW_POST_ADDR, "0");
 DEF_ENV_PARAM(DPU_IP_LATENCY, "0");
 DEF_ENV_PARAM(XLNX_ENABLE_DUMP, "0");
 DEF_ENV_PARAM(XLNX_ENABLE_DEBUG_MODE, "0");
@@ -912,7 +914,7 @@ auto trigger_dpu_func = [&](){
 
   // download results into output TensorBuffers
  __TIC__(OUTPUT_D2H)
-  for (unsigned i=0; i < io_bufs.size(); i++)
+  if(!ENV_PARAM(DPU_HW_POST)) for (unsigned i=0; i < io_bufs.size(); i++)
   {
     // instead of downloading all {output, input, intermediate},
     // just download output region
@@ -920,9 +922,16 @@ auto trigger_dpu_func = [&](){
     for (unsigned j=0; j< xdpu_io_output_offset.size(); j++) {
       const auto outSize = get_output_tensors()[j]->get_element_num();
       //__TIC_PROFILING__(OUTPUT)
-      if (xclUnmgdPread(xcl_handle, 0, (void*)output_tensor_buffers[i*xdpu_io_output_offset.size()+j]->data().first,
-        outSize,
-        io_addrs[i] + xdpu_io_output_offset[j]))
+
+      if(ENV_PARAM(DPU_HW_POST_ADDR)){
+        std::cout << hex << "outSize:" << outSize << "@: "<< io_addrs[i] + xdpu_io_output_offset[j] <<std::endl;
+      }
+
+      if (xclUnmgdPread(xcl_handle
+        , 0
+        , (void*)output_tensor_buffers[i*xdpu_io_output_offset.size()+j]->data().first
+        , outSize
+        , io_addrs[i] + xdpu_io_output_offset[j]))
         throw std::runtime_error("Error: download failed");
       //__TOC_PROFILING__(OUTPUT)
     }
