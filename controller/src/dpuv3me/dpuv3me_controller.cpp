@@ -55,8 +55,9 @@ using namespace chrono;
 
 #define BATCHSIZE 1
 
+DEF_ENV_PARAM(DPU_HBM_START, "0");
+DEF_ENV_PARAM(DPU_OUTPUT_ADDR, "0");
 DEF_ENV_PARAM(DPU_HW_POST, "0");
-DEF_ENV_PARAM(DPU_HW_POST_ADDR, "0");
 DEF_ENV_PARAM(DPU_IP_LATENCY, "0");
 DEF_ENV_PARAM(XLNX_ENABLE_DUMP, "0");
 DEF_ENV_PARAM(XLNX_ENABLE_DEBUG_MODE, "0");
@@ -100,6 +101,7 @@ DpuV3meController::DpuV3meController(std::string meta)
   for (unsigned i=0; i < engine.get_num_workers(); i++)
     contexts_.emplace_back(new XrtContext(*handle_));
 
+  dpu_hbm_start = ENV_PARAM(DPU_HBM_START)? ENV_PARAM(DPU_HBM_START) : 16;
   init(meta);
 }
 
@@ -109,6 +111,7 @@ DpuV3meController::DpuV3meController(const xir::Subgraph *subgraph)
   for (unsigned i=0; i < engine.get_num_workers(); i++)
     contexts_.emplace_back(new XrtContext(*handle_));
 
+  dpu_hbm_start = ENV_PARAM(DPU_HBM_START)? ENV_PARAM(DPU_HBM_START) : 16;
   init(subgraph);
 }
 DpuV3meController::~DpuV3meController() {
@@ -222,7 +225,7 @@ std::tuple<uint64_t,int32_t,std::string> DpuV3meController::alloc_and_fill_devic
     ((char*)codePtr)[i] = code[i];
   }
 
-  for (int idx=16; idx<32; idx++) {
+  for (int idx=dpu_hbm_start; idx<32; idx++) {
     auto codeMem = xclAllocUserPtrBO(handle, codePtr, size, idx);
     if (codeMem == NULLBO) {
       if (idx == 31) {
@@ -408,7 +411,7 @@ void DpuV3meController::init_graph(const xir::Subgraph* subgraph) {
       throw std::bad_alloc();
     for (unsigned i=0; i < parameter_size; i++) ((char*)reg0Ptr)[i] = parameter_value[i];
 
-    for (int idx=16; idx<32; idx++) {
+    for (int idx=dpu_hbm_start; idx<32; idx++) {
       auto reg0Mem  = xclAllocUserPtrBO(handle, reg0Ptr, parameter_size, idx);
       if (reg0Mem == NULLBO) {
         if (idx == 31) {
@@ -474,7 +477,7 @@ std::vector<vart::TensorBuffer*> DpuV3meController::get_outputs() {
   auto tbufs = init_tensor_buffer(output_tensors_);
   std::vector<vart::TensorBuffer*>  hwbufs;
 
-  for (int idx=16; idx<32; idx++){
+  for (int idx=dpu_hbm_start; idx<32; idx++){
     hwbufs = create_tensor_buffers(get_merged_io_tensors(),false, idx);
     if (!hwbufs.empty()) {
       break;
@@ -913,6 +916,14 @@ auto trigger_dpu_func = [&](){
   }
 
   // download results into output TensorBuffers
+  if(ENV_PARAM(DPU_OUTPUT_ADDR)) for (unsigned i=0; i < io_bufs.size(); i++)
+  {
+    for (unsigned j=0; j< xdpu_io_output_offset.size(); j++) {
+      const auto outSize = get_output_tensors()[j]->get_element_num();
+      std::cout << hex << "outSize:" << outSize << "@: "<< io_addrs[i] + xdpu_io_output_offset[j] <<std::endl;
+    }
+  }
+
  __TIC__(OUTPUT_D2H)
   if(!ENV_PARAM(DPU_HW_POST)) for (unsigned i=0; i < io_bufs.size(); i++)
   {
@@ -922,11 +933,6 @@ auto trigger_dpu_func = [&](){
     for (unsigned j=0; j< xdpu_io_output_offset.size(); j++) {
       const auto outSize = get_output_tensors()[j]->get_element_num();
       //__TIC_PROFILING__(OUTPUT)
-
-      if(ENV_PARAM(DPU_HW_POST_ADDR)){
-        std::cout << hex << "outSize:" << outSize << "@: "<< io_addrs[i] + xdpu_io_output_offset[j] <<std::endl;
-      }
-
       if (xclUnmgdPread(xcl_handle
         , 0
         , (void*)output_tensor_buffers[i*xdpu_io_output_offset.size()+j]->data().first

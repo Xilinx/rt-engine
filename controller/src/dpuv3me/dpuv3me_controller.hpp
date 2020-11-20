@@ -33,6 +33,7 @@ class DpuV3meController
   uint64_t preload_code_addr_;
   uint64_t preload_reg0_addr_;
   int program_once_complete;
+  int dpu_hbm_start;
   std::vector<std::vector<std::int32_t>> input_dims;
   std::vector<std::vector<std::int32_t>> output_dims;
   std::vector<const xir::Tensor*> input_tensors_;
