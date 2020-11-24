@@ -67,11 +67,11 @@ std::vector<vart::TensorBuffer*> DpuRunner::get_outputs() {
   return out_bufs;
 }
 
-std::vector<vart::TensorBuffer*> DpuRunner::make_inputs() {
-  return dpu_controller_->get_inputs();
+std::vector<vart::TensorBuffer*> DpuRunner::make_inputs(int batchsz) {
+  return dpu_controller_->get_inputs(batchsz);
 }
-std::vector<vart::TensorBuffer*> DpuRunner::make_outputs() {
-  return dpu_controller_->get_outputs();
+std::vector<vart::TensorBuffer*> DpuRunner::make_outputs(int batchsz) {
+  return dpu_controller_->get_outputs(batchsz);
 }
 
 

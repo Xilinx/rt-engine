@@ -467,12 +467,16 @@ DpuV3meController::get_merged_io_tensors() const {
   return ret;
 }*/
 
-std::vector<vart::TensorBuffer*> DpuV3meController::get_inputs() {
+std::vector<vart::TensorBuffer*> DpuV3meController::get_inputs(int batchsz) {
+  if (batchsz != -1)
+    throw std::runtime_error("Error: custom batch size not supported for this DPU");
 //  return get_tensor_buffer_pointer(input_tensor_buffers_);
   return init_tensor_buffer(input_tensors_);
 }
 
-std::vector<vart::TensorBuffer*> DpuV3meController::get_outputs() {
+std::vector<vart::TensorBuffer*> DpuV3meController::get_outputs(int batchsz) {
+  if (batchsz != -1)
+    throw std::runtime_error("Error: custom batch size not supported for this DPU");
 //  return get_tensor_buffer_pointer(output_tensor_buffers_);
   auto tbufs = init_tensor_buffer(output_tensors_);
   std::vector<vart::TensorBuffer*>  hwbufs;
