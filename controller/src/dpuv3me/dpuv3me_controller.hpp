@@ -11,8 +11,8 @@ class DpuV3meController
     const std::vector<vart::TensorBuffer*> &outputs) override;
   virtual std::vector<const xir::Tensor*> get_input_tensors() const override; 
   virtual std::vector<const xir::Tensor*> get_output_tensors() const override; 
-  virtual std::vector<vart::TensorBuffer*> get_inputs() override; 
-  virtual std::vector<vart::TensorBuffer*> get_outputs() override; 
+  virtual std::vector<vart::TensorBuffer*> get_inputs(int batchsz=-1) override; 
+  virtual std::vector<vart::TensorBuffer*> get_outputs(int batchsz=-1) override; 
   std::vector<float> get_input_scale(); 
   std::vector<float> get_output_scale(); 
 
@@ -33,6 +33,7 @@ class DpuV3meController
   uint64_t preload_code_addr_;
   uint64_t preload_reg0_addr_;
   int program_once_complete;
+  int dpu_hbm_start;
   std::vector<std::vector<std::int32_t>> input_dims;
   std::vector<std::vector<std::int32_t>> output_dims;
   std::vector<const xir::Tensor*> input_tensors_;

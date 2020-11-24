@@ -23,8 +23,8 @@ class DpuController {
     const std::vector<vart::TensorBuffer*> &outputs) = 0;
   virtual std::vector<const xir::Tensor*> get_input_tensors() const = 0; 
   virtual std::vector<const xir::Tensor*> get_output_tensors() const = 0; 
-  virtual std::vector<vart::TensorBuffer*> get_inputs() = 0;
-  virtual std::vector<vart::TensorBuffer*> get_outputs() = 0;
+  virtual std::vector<vart::TensorBuffer*> get_inputs(int batchsz=-1) = 0;
+  virtual std::vector<vart::TensorBuffer*> get_outputs(int batchsz=-1) = 0;
   virtual std::vector<float> get_input_scale() = 0;
   virtual std::vector<float> get_output_scale() = 0;
 
@@ -43,8 +43,8 @@ class XclDpuController : public DpuController {
     const std::vector<vart::TensorBuffer*> &outputs) override;
   virtual std::vector<const xir::Tensor*> get_input_tensors() const override; 
   virtual std::vector<const xir::Tensor*> get_output_tensors() const override; 
-  virtual std::vector<vart::TensorBuffer*> get_inputs() override;
-  virtual std::vector<vart::TensorBuffer*> get_outputs() override;
+  virtual std::vector<vart::TensorBuffer*> get_inputs(int batchsz=-1) override;
+  virtual std::vector<vart::TensorBuffer*> get_outputs(int batchsz=-1) override;
   virtual std::vector<float> get_input_scale() override;
   virtual std::vector<float> get_output_scale() override;
 

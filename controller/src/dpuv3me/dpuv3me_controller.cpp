@@ -55,6 +55,9 @@ using namespace chrono;
 
 #define BATCHSIZE 1
 
+DEF_ENV_PARAM(DPU_HBM_START, "0");
+DEF_ENV_PARAM(DPU_OUTPUT_ADDR, "0");
+DEF_ENV_PARAM(DPU_HW_POST, "0");
 DEF_ENV_PARAM(DPU_IP_LATENCY, "0");
 DEF_ENV_PARAM(XLNX_ENABLE_DUMP, "0");
 DEF_ENV_PARAM(XLNX_ENABLE_DEBUG_MODE, "0");
@@ -98,6 +101,7 @@ DpuV3meController::DpuV3meController(std::string meta)
   for (unsigned i=0; i < engine.get_num_workers(); i++)
     contexts_.emplace_back(new XrtContext(*handle_));
 
+  dpu_hbm_start = ENV_PARAM(DPU_HBM_START)? ENV_PARAM(DPU_HBM_START) : 16;
   init(meta);
 }
 
@@ -107,6 +111,7 @@ DpuV3meController::DpuV3meController(const xir::Subgraph *subgraph)
   for (unsigned i=0; i < engine.get_num_workers(); i++)
     contexts_.emplace_back(new XrtContext(*handle_));
 
+  dpu_hbm_start = ENV_PARAM(DPU_HBM_START)? ENV_PARAM(DPU_HBM_START) : 16;
   init(subgraph);
 }
 DpuV3meController::~DpuV3meController() {
@@ -220,7 +225,7 @@ std::tuple<uint64_t,int32_t,std::string> DpuV3meController::alloc_and_fill_devic
     ((char*)codePtr)[i] = code[i];
   }
 
-  for (int idx=16; idx<32; idx++) {
+  for (int idx=dpu_hbm_start; idx<32; idx++) {
     auto codeMem = xclAllocUserPtrBO(handle, codePtr, size, idx);
     if (codeMem == NULLBO) {
       if (idx == 31) {
@@ -355,6 +360,7 @@ void DpuV3meController::init_graph(const xir::Subgraph* subgraph) {
   // Load mc_code
   if(!debug_mode_) {
     auto& mc_code = subgraph_->get_attr<std::vector<char>>("mc_code");
+    auto& layer = dbg_layers_[0]; // release instruction layer is already in the vector 
     layer.code_addr = alloc_and_fill_device_memory(handle, mc_code);
     code_addr_ = std::get<0>(layer.code_addr);
     if (subgraph_->has_attr("mc_code_preload")) {
@@ -364,7 +370,6 @@ void DpuV3meController::init_graph(const xir::Subgraph* subgraph) {
         preload_code_addr_ = std::get<0>(layer.preload_code_addr);
       }
     }
-    dbg_layers_.emplace_back(std::move(layer));
   } else {
     auto children = subgraph_->get_children();
     auto child_order = subgraph_->get_attr<std::vector<std::string>>("children_topological_sort");
@@ -406,7 +411,7 @@ void DpuV3meController::init_graph(const xir::Subgraph* subgraph) {
       throw std::bad_alloc();
     for (unsigned i=0; i < parameter_size; i++) ((char*)reg0Ptr)[i] = parameter_value[i];
 
-    for (int idx=16; idx<32; idx++) {
+    for (int idx=dpu_hbm_start; idx<32; idx++) {
       auto reg0Mem  = xclAllocUserPtrBO(handle, reg0Ptr, parameter_size, idx);
       if (reg0Mem == NULLBO) {
         if (idx == 31) {
@@ -462,22 +467,26 @@ DpuV3meController::get_merged_io_tensors() const {
   return ret;
 }*/
 
-std::vector<vart::TensorBuffer*> DpuV3meController::get_inputs() {
+std::vector<vart::TensorBuffer*> DpuV3meController::get_inputs(int batchsz) {
+  if (batchsz != -1)
+    throw std::runtime_error("Error: custom batch size not supported for this DPU");
 //  return get_tensor_buffer_pointer(input_tensor_buffers_);
   return init_tensor_buffer(input_tensors_);
 }
 
-std::vector<vart::TensorBuffer*> DpuV3meController::get_outputs() {
+std::vector<vart::TensorBuffer*> DpuV3meController::get_outputs(int batchsz) {
+  if (batchsz != -1)
+    throw std::runtime_error("Error: custom batch size not supported for this DPU");
 //  return get_tensor_buffer_pointer(output_tensor_buffers_);
   auto tbufs = init_tensor_buffer(output_tensors_);
   std::vector<vart::TensorBuffer*>  hwbufs;
 
-  for (int idx=16; idx<32; idx++){
+  for (int idx=dpu_hbm_start; idx<32; idx++){
     hwbufs = create_tensor_buffers(get_merged_io_tensors(),false, idx);
     if (!hwbufs.empty()) {
       break;
     }
-    if (idx == 31) {
+    if (0 && idx == 31) {
       throw std::bad_alloc();
     }
   }
@@ -829,7 +838,7 @@ auto trigger_dpu_func = [&](){
           if (xclUnmgdPread(xcl_handle, 0, data.get(), size, io_addrs[i] + offset))
             throw std::runtime_error("Error: dump failed!");
           std::stringstream ss;
-          ss << dump_folder_ << "/E" << i << "/" << dbg_layers_[0].inputs_name[tensor_idx];
+          ss << dump_folder_ << "/E" << i << "/" << std::get<2>(out);
           std::ofstream ofs(ss.str(), std::ofstream::binary);
           ofs.write(data.get(), size);
           ofs.close();
@@ -850,7 +859,7 @@ auto trigger_dpu_func = [&](){
           if (xclUnmgdPread(xcl_handle, 0, data.get(), size, io_addrs[i] + offset))
             throw std::runtime_error("Error: dump failed!");
           std::stringstream ss;
-          ss << dump_folder_ << "/E" << i << "/" << dbg_layers_[0].outputs_name[tensor_idx];
+          ss << dump_folder_ << "/E" << i << "/" << std::get<2>(out);
           std::ofstream ofs(ss.str(), std::ofstream::binary); 
           ofs.write(data.get(), size);
           ofs.close();
@@ -871,7 +880,7 @@ auto trigger_dpu_func = [&](){
           if (xclUnmgdPread(xcl_handle, 0, data.get(), size, io_addrs[i] + offset))
             throw std::runtime_error("Error: dump failed!");
           std::stringstream ss;
-          ss << dump_folder_ << "/E" << i << "/" << dbg_layers_[0].inputs_name[tensor_idx]; 
+          ss << dump_folder_ << "/E" << i << "/" << std::get<2>(input); 
           std::ofstream ofs(ss.str(), std::ofstream::binary);
           ofs.write(data.get(), size);
           ofs.close();
@@ -898,7 +907,7 @@ auto trigger_dpu_func = [&](){
             if (xclUnmgdPread(xcl_handle, 0, data.get(), size, io_addrs[i] + offset))
               throw std::runtime_error("Error: dump failed!");
             std::stringstream ss; 
-            ss << dump_folder_ << "/E" << i << "/" << layer.outputs_name[tensor_idx];
+            ss << dump_folder_ << "/E" << i << "/" << std::get<2>(out);
             std::ofstream ofs(ss.str(), std::ofstream::binary);
             ofs.write(data.get(), size);
             ofs.close();
@@ -911,8 +920,16 @@ auto trigger_dpu_func = [&](){
   }
 
   // download results into output TensorBuffers
+  if(ENV_PARAM(DPU_OUTPUT_ADDR)) for (unsigned i=0; i < io_bufs.size(); i++)
+  {
+    for (unsigned j=0; j< xdpu_io_output_offset.size(); j++) {
+      const auto outSize = get_output_tensors()[j]->get_element_num();
+      std::cout << hex << "outSize:" << outSize << "@: "<< io_addrs[i] + xdpu_io_output_offset[j] <<std::endl;
+    }
+  }
+
  __TIC__(OUTPUT_D2H)
-  for (unsigned i=0; i < io_bufs.size(); i++)
+  if(!ENV_PARAM(DPU_HW_POST)) for (unsigned i=0; i < io_bufs.size(); i++)
   {
     // instead of downloading all {output, input, intermediate},
     // just download output region
@@ -920,9 +937,11 @@ auto trigger_dpu_func = [&](){
     for (unsigned j=0; j< xdpu_io_output_offset.size(); j++) {
       const auto outSize = get_output_tensors()[j]->get_element_num();
       //__TIC_PROFILING__(OUTPUT)
-      if (xclUnmgdPread(xcl_handle, 0, (void*)output_tensor_buffers[i*xdpu_io_output_offset.size()+j]->data().first,
-        outSize,
-        io_addrs[i] + xdpu_io_output_offset[j]))
+      if (xclUnmgdPread(xcl_handle
+        , 0
+        , (void*)output_tensor_buffers[i*xdpu_io_output_offset.size()+j]->data().first
+        , outSize
+        , io_addrs[i] + xdpu_io_output_offset[j]))
         throw std::runtime_error("Error: download failed");
       //__TOC_PROFILING__(OUTPUT)
     }

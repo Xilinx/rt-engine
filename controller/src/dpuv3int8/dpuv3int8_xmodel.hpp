@@ -58,12 +58,12 @@ class Xmodel {
     std::string getDebugDumpdir();
     std::string getDebugDinFilename();
     std::string getDebugGoldenFilename();
-
-    const std::vector<std::string>& getInstr();
-    const std::vector<std::string>& getParams();
-
+    
     std::vector<float> get_input_scale();
     std::vector<float> get_output_scale();
+
+    const std::vector<string>& getInstr();
+    const std::vector<string>& getParams();
 
     Xmodel(std::string meta, bool isDebugMode);
     Xmodel(const xir::Subgraph *subgraph, bool isDebugMode);        
@@ -82,9 +82,9 @@ class Xmodel {
     uint32_t swapBufSize_;
     std::string instr_asm_filename_;
     std::string instr_filename_;
-    std::string params_filename_;
     std::vector<std::string> instr_;
     std::vector<std::string> params_;
+    std::string params_filename_;
     bool enable_xmodel_format_;
     std::string runner_dir_;
 

@@ -46,8 +46,8 @@ class DpuRunner: public vart::RunnerExt {
     
     virtual std::vector<vart::TensorBuffer*> get_inputs() override;
     virtual std::vector<vart::TensorBuffer*> get_outputs() override;
-    virtual std::vector<vart::TensorBuffer*> make_inputs(); 
-    virtual std::vector<vart::TensorBuffer*> make_outputs();
+    virtual std::vector<vart::TensorBuffer*> make_inputs(int batchsz=-1); 
+    virtual std::vector<vart::TensorBuffer*> make_outputs(int batchsz=-1);
 
   protected:
     std::shared_ptr<DpuController> dpu_controller_;

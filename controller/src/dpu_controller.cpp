@@ -122,13 +122,19 @@ XclDpuController<Dhandle, DbufIn, DbufOut>::get_output_tensors() const {
 
 template <class Dhandle, class DbufIn, class DbufOut>
 std::vector<vart::TensorBuffer*> 
-XclDpuController<Dhandle, DbufIn, DbufOut>::get_inputs() {
+XclDpuController<Dhandle, DbufIn, DbufOut>::get_inputs(int batchsz) {
+  // TODO if batchsz > 0, create_tensor_buffers for user-requested batchsz
+  if (batchsz != -1)
+    throw std::runtime_error("Error: custom batch size not supported for this DPU");
   return create_tensor_buffers(get_input_tensors(), /*isInput*/true);
 }
 
 template <class Dhandle, class DbufIn, class DbufOut>
 std::vector<vart::TensorBuffer*> 
-XclDpuController<Dhandle, DbufIn, DbufOut>::get_outputs() {
+XclDpuController<Dhandle, DbufIn, DbufOut>::get_outputs(int batchsz) {
+  // TODO if batchsz > 0, create_tensor_buffers for user-requested batchsz
+  if (batchsz != -1)
+    throw std::runtime_error("Error: custom batch size not supported for this DPU");
   return create_tensor_buffers(get_output_tensors(), /*isInput*/false);
 }
 

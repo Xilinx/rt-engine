@@ -49,8 +49,8 @@ class Dpuv3Int8Controller : public XclDpuController<XclDeviceHandle, XclDeviceBu
 
   virtual std::vector<const xir::Tensor*> get_input_tensors() const override; 
   virtual std::vector<const xir::Tensor*> get_output_tensors() const override; 
-  virtual std::vector<vart::TensorBuffer*> get_inputs() override;
-  virtual std::vector<vart::TensorBuffer*> get_outputs() override;
+  virtual std::vector<vart::TensorBuffer*> get_inputs(int batchsz=-1) override;
+  virtual std::vector<vart::TensorBuffer*> get_outputs(int batchsz=-1) override;
 
 
  protected:    

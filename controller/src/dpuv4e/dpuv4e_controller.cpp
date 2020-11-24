@@ -427,12 +427,22 @@ std::vector<vart::TensorBuffer*> get_tensor_buffer_pointer(
                  [](auto& tensor_buffer) { return tensor_buffer.get(); });
   return ret;
 }
-std::vector<vart::TensorBuffer*> DpuV4eController::get_inputs() {
+std::vector<vart::TensorBuffer*> DpuV4eController::get_inputs(int batchsz) {
+  // TODO if batchsz > 0, create_tensor_buffers for user-requested batchsz
+  // E.g., batchsz=1 for MLperf Server Scenario
+  if (batchsz != -1)
+    throw std::runtime_error("Error: custom batch size not supported for this DPU");
+
 //  return get_tensor_buffer_pointer(input_tensor_buffers_);
   return init_tensor_buffer(input_tensors_);
 }
 
-std::vector<vart::TensorBuffer*> DpuV4eController::get_outputs() {
+std::vector<vart::TensorBuffer*> DpuV4eController::get_outputs(int batchsz) {
+  // TODO if batchsz > 0, create_tensor_buffers for user-requested batchsz
+  // E.g., batchsz=1 for MLperf
+  if (batchsz != -1)
+    throw std::runtime_error("Error: custom batch size not supported for this DPU");
+
 //  return get_tensor_buffer_pointer(output_tensor_buffers_);
   auto tbufs = init_tensor_buffer(output_tensors_);
   auto hwbufs = create_tensor_buffers(get_merged_io_tensors(),false);
