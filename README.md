@@ -79,14 +79,21 @@ int DpuRunner::wait(int jobid, int timeout) {
 ```
 
 ### Build
-
+Makefile Method:  
 ```
 make clean; make -j
 ```
-
+CMake Method:  
+```
+mkdir build_release
+cd build_release
+cmake -DCMAKE_INSTALL_PREFIX=$CONDA_PREFIX -DCMAKE_PREFIX_PATH=$CONDA_PREFIX -DCMAKE_BUILD_TYPE=Release ..
+cmake --build . --parallel $CPU_COUNT
+cmake --install .
+```
 
 ### Run
-
+Note the environment variables only necessary if you don't use Cmake Method
 ```
 export LD_LIBRARY_PATH=build:${CONDA_PREFIX}/lib:/opt/xilinx/xrt/lib 
 export XILINX_XRT=/opt/xilinx/xrt
@@ -94,12 +101,12 @@ build/tests/engine.exe
 build/tests/app.exe -r tests/app/models/sample_resnet50/meta.json
 ```
 
-### Conda environment setup (optional, to get all project dependencies)
+### Conda environment setup (optional-recommended, to get all project dependencies)
 
 ```
 wget https://repo.anaconda.com/archive/Anaconda2-5.1.0-Linux-x86_64.sh
 bash ./Anaconda2-5.1.0-Linux-x86_64.sh
-conda create -n rt-engine python=3.6 pip protobuf=3.6 json-c jsoncpp glog -c defaults -c omnia -c conda-forge/label/gcc7 -c conda-forge
+conda create -n rt-engine python=3.6 protobuf=3.11.2 json-c jsoncpp glog unilog target-factory xir vart -c defaults -c omnia -c conda-forge/label/gcc7 -c conda-forge
 conda activate rt-engine
 git clone gits@xcdl190260:vitis/XIP.git
 cd XIP/Butler/src
