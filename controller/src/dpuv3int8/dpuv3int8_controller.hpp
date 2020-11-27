@@ -98,7 +98,7 @@ class Dpuv3Int8Controller : public XclDpuController<XclDeviceHandle, XclDeviceBu
   uint32_t reg_val[REG_NUM];
 
   static std::vector<int32_t, aligned_allocator<int32_t>> load(std::string filename);
-  static vector<int32_t, aligned_allocator<int32_t>> load(vector<string> svals);
+  static std::vector<int32_t, aligned_allocator<int32_t>> load(std::vector<std::string> svals);
 
   cl_mem regMap_;
 };

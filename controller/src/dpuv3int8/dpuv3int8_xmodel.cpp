@@ -154,6 +154,8 @@ std::string Xmodel::getDebugDumpdir(){return debug_dumpdir_;}
 std::string Xmodel::getDebugDinFilename(){return debug_din_filename_;}
 std::string Xmodel::getDebugGoldenFilename(){return debug_golden_filename_;}
 
+std::vector<std::int32_t> Xmodel::get_input_fix_point_values(){return input_fix_point_values_;}
+std::vector<std::int32_t> Xmodel::get_output_fix_point_values(){return output_fix_point_values_;}
 
 std::string Xmodel::getFileNameIfExists(std::string name, json_object* jobj)
 {
@@ -255,13 +257,13 @@ void Xmodel::loadParamsXIR(std::string xmodel_filename, bool isDebugMode)
 
 void Xmodel::loadParamsSubgraph(const xir::Subgraph *subgraph, bool isDebugMode)
 {
-
+ 
+  // Get instructions and parmaeters from xmodel
   instr_ = subgraph->get_attr<std::vector<std::string>>("mc_code");
-
   params_ = subgraph->get_attr<std::vector<std::string>>("params");
 
   bool multiFormat = true;
-  
+ 
   auto attrs = subgraph->get_attrs();
   auto keys = attrs->get_keys();
   for (auto& key : keys) {
@@ -328,7 +330,9 @@ Xmodel::Xmodel(std::string meta, bool isDebugMode)
   json_object *jobj = json_tokener_parse(metabuf.str().c_str());     
 
   enable_xmodel_format_ = getBool("usexmodel", jobj);
-  
+  input_fix_point_values_.push_back(0);
+  output_fix_point_values_.push_back(0);
+
   instr_asm_filename_ = runner_dir_+"instr.asm";
   instr_filename_ = runner_dir_+"instr.txt";
   params_filename_ = runner_dir_+"params.txt";
@@ -356,19 +360,23 @@ Xmodel::Xmodel(const xir::Subgraph *subgraph, bool isDebugMode)
   for (auto &in_tensor : input_tensors)
   {
     input_scales_.push_back(pow(2,in_tensor->get_attr<std::int32_t>("fix_point")));
+    input_fix_point_values_.push_back(in_tensor->get_attr<std::int32_t>("fix_point"));
+
   }
   for(auto &out_tensor : output_tensors)
   {
     output_scales_.push_back(pow(2,(-1)*out_tensor->get_attr<std::int32_t>("fix_point")));
+    output_fix_point_values_.push_back(out_tensor->get_attr<std::int32_t>("fix_point"));
+
   }
 }
 
-const std::vector<string>& Xmodel::getInstr()
+const std::vector<std::string>& Xmodel::getInstr()
 {
   return instr_;
 }
 
-const std::vector<string>& Xmodel::getParams()
+const std::vector<std::string>& Xmodel::getParams()
 {
   return params_;
 }

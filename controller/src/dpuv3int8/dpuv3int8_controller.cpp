@@ -38,8 +38,10 @@ void Dpuv3Int8Controller::initializeTensors()
     xir::Tensor *op_hw = xir::Tensor::create("outputHw", outHwDims, xir::DataType{xir::DataType::INT, 8}).release();
     
     in_tensor_.reset(in_t);
+    in_tensor_->set_attr<std::int32_t>("fix_point", xmodel_->get_input_fix_point_values()[0]); 
     in_hw_tensor_.reset(in_hw);
     out_tensor_.reset(op);
+    out_tensor_->set_attr<std::int32_t>("fix_point", xmodel_->get_output_fix_point_values()[0]); 
     out_hw_tensor_.reset(op_hw);
 
 }
