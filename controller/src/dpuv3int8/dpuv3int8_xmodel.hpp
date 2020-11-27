@@ -61,6 +61,9 @@ class Xmodel {
     
     std::vector<float> get_input_scale();
     std::vector<float> get_output_scale();
+    
+    std::vector<std::int32_t> get_input_fix_point_values();
+    std::vector<std::int32_t> get_output_fix_point_values();
 
     const std::vector<string>& getInstr();
     const std::vector<string>& getParams();
@@ -95,7 +98,9 @@ class Xmodel {
 
     std::vector<float> input_scales_;
     std::vector<float> output_scales_;
-
+    
+    std::vector<std::int32_t> input_fix_point_values_;
+    std::vector<std::int32_t> output_fix_point_values_;
 };
 
 
