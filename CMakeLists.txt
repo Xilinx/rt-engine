@@ -126,8 +126,7 @@ install(
   TARGETS
   ${PROJECT_NAME}
   EXPORT ${PROJECT_NAME}-targets
-  COMPONENT
-  base
+  COMPONENT base
   DESTINATION lib
   )
 
@@ -155,14 +154,14 @@ write_basic_package_version_file (
   )
 install (
   FILES ${CMAKE_CURRENT_BINARY_DIR}/${PROJECT_NAME}-config.cmake ${CMAKE_CURRENT_BINARY_DIR}/${PROJECT_NAME}-config-version.cmake
-  DESTINATION ${CMAKE_INSTALL_PREFIX}/share/cmake/${PROJECT_NAME}
   COMPONENT base
+  DESTINATION share/cmake/${PROJECT_NAME}
   )
 install(
   EXPORT ${PROJECT_NAME}-targets
   NAMESPACE ${PROJECT_NAME}::
-  DESTINATION ${CMAKE_INSTALL_PREFIX}/share/cmake/${PROJECT_NAME}
   COMPONENT base
+  DESTINATION share/cmake/${PROJECT_NAME}
   )
 #set(CPACK_GENERATOR "DEB")
 set(CPACK_PACKAGE_NAME "librt-engine")
