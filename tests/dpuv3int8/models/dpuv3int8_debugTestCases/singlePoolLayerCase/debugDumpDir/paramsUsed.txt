@@ -1,2 +1,0 @@
-*****************************************************
-This section contains contents of params.txt in ddr format
