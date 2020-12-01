@@ -122,13 +122,13 @@ outputLayerParams::outputLayerParams(const xir::Subgraph *subgraph, bool multiFo
 uint32_t Xmodel::getInW(){return inputParams_[0].inW_;}
 uint32_t Xmodel::getInH(){return inputParams_[0].inH_;}
 uint32_t Xmodel::getInCh(){return inputParams_[0].inCh_;}
-uint32_t Xmodel::getOutW(){return outputParams_[0].outW_;}
-uint32_t Xmodel::getOutH(){return outputParams_[0].outH_;}
-uint32_t Xmodel::getOutCh(){return outputParams_[0].outCh_;}
-uint32_t Xmodel::getOutDdrSize()
+int32_t Xmodel::getOutW(){return outputParams_[0].outW_;}
+int32_t Xmodel::getOutH(){return outputParams_[0].outH_;}
+int32_t Xmodel::getOutCh(){return outputParams_[0].outCh_;}
+int32_t Xmodel::getOutDdrSize()
 {
    int totalOutputDdrSize = 0;
-   for(int i=0; i<outputParams_.size(); i++)
+   for(uint32_t i=0; i<outputParams_.size(); i++)
    {
      totalOutputDdrSize = totalOutputDdrSize + outputParams_[i].outDdrSize_;
    }
@@ -278,7 +278,7 @@ void Xmodel::loadParamsSubgraph(const xir::Subgraph *subgraph, bool isDebugMode)
   if(multiFormat)
   {
     std::string tensorInfo = subgraph->get_attr<std::string>("tensor_info");
-    char * c = tensorInfo.c_str();
+    const char * c = tensorInfo.c_str();
     json_object* jobj = json_tokener_parse(c);
     json_object_object_foreach(jobj, key, val)
     {
