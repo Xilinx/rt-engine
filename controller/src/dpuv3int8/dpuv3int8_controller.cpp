@@ -353,7 +353,7 @@ Dpuv3Int8Controller::create_hw_buffers(std::vector<vart::TensorBuffer*> stdBuf, 
     {
       hwBuf = create_tensor_buffers({out_hw_tensor_.get()}, isInput);
     }
-  
+
   stdbuf2hwbuf_[stdBuf[0]] = hwBuf[0];
 
   return hwBuf;
@@ -398,25 +398,76 @@ void Dpuv3Int8Controller::postprocess(vart::TensorBuffer* stdbuf, vart::TensorBu
  
 }
 
-void Dpuv3Int8Controller::run(const std::vector<vart::TensorBuffer*> &inputs, 
+void Dpuv3Int8Controller::data_fix2float(float* dataDst, int8_t* dataSrc, int size, float scale) {
+  for (int i = 0; i < size; i++)
+    dataDst[i] = (float)(dataSrc[i]*scale);
+}
+
+void Dpuv3Int8Controller::data_float2fix(int8_t* dataDst, float* dataSrc, int size, float scale) {
+  for (int i = 0; i < size; i++)
+    dataDst[i] = (int8_t)(dataSrc[i]*scale);
+}
+
+void Dpuv3Int8Controller::run(const std::vector<vart::TensorBuffer*> &inputs,
                         const std::vector<vart::TensorBuffer*> &outputs) {
   
-//  XclDeviceBuffer* inbuf = dynamic_cast<XclDeviceBuffer*>(get_device_buffer(inputs[0]));
-//  XclDeviceBuffer* outbuf = dynamic_cast<XclDeviceBuffer*>(get_device_buffer(outputs[0]));
+  std::vector<vart::TensorBuffer*> input_tensor_buffers;
+  std::vector<vart::TensorBuffer*> output_tensor_buffers;
 
-  vart::TensorBuffer* inHwTbuf = get_hw_buffer(inputs[0]);
-  vart::TensorBuffer* outHwTbuf = get_hw_buffer(outputs[0]);
-  vart::TensorBuffer* swapTbuf = stdbuf2swapbuf_[inputs[0]];
-  vart::TensorBuffer* druSrcTbuf = stdbuf2druSrcbuf_[inputs[0]];
-  vart::TensorBuffer* druDstTbuf = stdbuf2druDstbuf_[inputs[0]];
+  // False if get_inputs() / get_outputs() was used
+  // True if the user is providing us the tensor buffers
+  bool create_tb_outside=false;
 
-  XclDeviceBuffer *inHwBuf = dynamic_cast<XclDeviceBuffer*>(get_device_buffer(inHwTbuf));
-  XclDeviceBuffer *outHwBuf = dynamic_cast<XclDeviceBuffer*>(get_device_buffer(outHwTbuf));
-  XclDeviceBuffer *swapBuf = dynamic_cast<XclDeviceBuffer*>(get_device_buffer(swapTbuf));
-  XclDeviceBuffer *druSrcBuf = dynamic_cast<XclDeviceBuffer*>(get_device_buffer(druSrcTbuf));
-  XclDeviceBuffer *druDstBuf = dynamic_cast<XclDeviceBuffer*>(get_device_buffer(druDstTbuf));
+  // Does this need to be protected by a mutex for mt
+  auto it = stdbuf2hwbuf_.find(outputs[0]);
+  if (it == stdbuf2hwbuf_.end())
+  {
+    create_tb_outside=true;
+  }
 
-  preprocess(inputs[0], inHwTbuf);
+  // If the user has provided us TB
+  if(create_tb_outside) {
+    input_tensor_buffers = get_inputs();
+    output_tensor_buffers = get_outputs();
+
+    // Must copy input data from user's tensor buffers
+    // Iterate over both vectors simultaneously
+    auto i = inputs.begin();
+    auto itb = input_tensor_buffers.begin();
+    for (; i != inputs.end() && itb != input_tensor_buffers.end(); ++i, ++itb) {
+      // If input is float, we must scale to int8
+      auto num_src = (*i)->get_tensor()->get_element_num();
+      auto num_dst = (*itb)->get_tensor()->get_element_num();
+      auto num = std::min(num_src,num_dst);
+      if ((*i)->get_tensor()->get_data_type().type == xir::DataType::FLOAT)
+      {
+        auto scale = pow(2,(*itb)->get_tensor()->get_attr<std::int32_t>("fix_point"));
+        data_float2fix((int8_t*)(*itb)->data().first, (float*)(*i)->data().first, num, scale);
+      }
+      else if ((*i)->get_tensor()->get_data_type().type == xir::DataType::INT)
+        memcpy((int8_t*)(*itb)->data().first, (float*)(*i)->data().first, num);
+      else
+        throw std::runtime_error("Error: Input Tensor Buffer Data Type is unsupported.");
+    }
+  }
+  else { // Only pointers will be copied
+    input_tensor_buffers = inputs;
+    output_tensor_buffers = outputs;
+  }
+
+  vart::TensorBuffer* inHwTbuf = get_hw_buffer(input_tensor_buffers[0]);
+  vart::TensorBuffer* outHwTbuf = get_hw_buffer(output_tensor_buffers[0]);
+  vart::TensorBuffer* swapTbuf = stdbuf2swapbuf_[input_tensor_buffers[0]];
+  vart::TensorBuffer* druSrcTbuf = stdbuf2druSrcbuf_[input_tensor_buffers[0]];
+  vart::TensorBuffer* druDstTbuf = stdbuf2druDstbuf_[input_tensor_buffers[0]];
+
+  auto *inHwBuf = dynamic_cast<XclDeviceBuffer*>(get_device_buffer(inHwTbuf));
+  auto *outHwBuf = dynamic_cast<XclDeviceBuffer*>(get_device_buffer(outHwTbuf));
+  auto *swapBuf = dynamic_cast<XclDeviceBuffer*>(get_device_buffer(swapTbuf));
+  auto *druSrcBuf = dynamic_cast<XclDeviceBuffer*>(get_device_buffer(druSrcTbuf));
+  auto *druDstBuf = dynamic_cast<XclDeviceBuffer*>(get_device_buffer(druDstTbuf));
+
+  preprocess(input_tensor_buffers[0], inHwTbuf);
 
   uint64_t buf_addr[BUF_IDX_NUM];
 
@@ -439,7 +490,31 @@ void Dpuv3Int8Controller::run(const std::vector<vart::TensorBuffer*> &inputs,
   execute(buf_addr);
   outHwBuf->download();
 
-  postprocess(outputs[0], outHwTbuf);
+  postprocess(output_tensor_buffers[0], outHwTbuf);
+
+  // If the user has provided us TB
+  if(create_tb_outside) {
+
+    // Must copy output data to user's tensor buffers
+    // Iterate over both vectors simultaneously
+    auto o = outputs.begin();
+    auto otb = output_tensor_buffers.begin();
+    for (; o != outputs.end() && otb != output_tensor_buffers.end(); ++o, ++otb) {
+      // If output is float, we must scale to int8
+      auto num_src = (*otb)->get_tensor()->get_element_num();
+      auto num_dst = (*o)->get_tensor()->get_element_num();
+      auto num = std::min(num_src,num_dst);
+      if ((*o)->get_tensor()->get_data_type().type == xir::DataType::FLOAT)
+      {
+        auto scale = pow(2,(*otb)->get_tensor()->get_attr<std::int32_t>("fix_point"));
+        data_fix2float((float*) (*o)->data().first, (int8_t*) (*otb)->data().first, num, scale);
+      }
+      else if ((*o)->get_tensor()->get_data_type().type == xir::DataType::INT)
+        memcpy((int8_t*)(*o)->data().first, (int8_t*)(*otb)->data().first, num);
+      else
+        throw std::runtime_error("Error: Output Tensor Buffer Data Type is unsupported.");
+    }
+  }
 }
 
 std::vector<int32_t, aligned_allocator<int32_t>> Dpuv3Int8Controller::load(std::string filename)

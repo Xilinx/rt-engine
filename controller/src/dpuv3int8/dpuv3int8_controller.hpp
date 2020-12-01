@@ -101,6 +101,9 @@ class Dpuv3Int8Controller : public XclDpuController<XclDeviceHandle, XclDeviceBu
   static std::vector<int32_t, aligned_allocator<int32_t>> load(std::vector<std::string> svals);
 
   cl_mem regMap_;
+
+  void data_float2fix(int8_t* dataDst, float* dataSrc, int size, float scale);
+  void data_fix2float(float* dataDst, int8_t* dataSrc, int size, float scale);
 };
 
 class Dpuv3Int8DebugController : public Dpuv3Int8Controller {
