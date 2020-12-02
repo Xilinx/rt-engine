@@ -111,29 +111,32 @@ DpuV4eController::DpuV4eController(const xir::Subgraph *subgraph)
 }
 DpuV4eController::~DpuV4eController() {
 }
-std::vector<vart::TensorBuffer*> DpuV4eController::init_tensor_buffer(std::vector<const xir::Tensor*> tensors) {
+std::vector<vart::TensorBuffer*> DpuV4eController::init_tensor_buffer(std::vector<const xir::Tensor*> tensors, int batchSupport, unsigned runEngine) {
  std::vector<vart::TensorBuffer*>  tbufs;
- for (unsigned bs=0; bs < BATCHSIZE; bs++) {
+ //in mlperf, need to create tensorbuffers for all engines, and batchSupport=1, need to loop all hw engine.
+ // batchSupport=1 for mlperf runEngine=8;
+ // batchSupport=8 for contiguous tensorbuffer->data()
+ for (unsigned bs=0; bs < runEngine; bs++) {
     for (unsigned ti=0; ti < tensors.size(); ti++)
     {
       // allocate aligned host memory
       const size_t dataSize = 1;//vart::size_of(tensors[ti]->get_data_type());
       size_t size = tensors[ti]->get_element_num() * dataSize;
       void *data;
-      if (posix_memalign(&data, getpagesize(), size))
+      if (posix_memalign(&data, getpagesize(), size*batchSupport))
         throw std::bad_alloc();
+      auto dims = tensors[ti]->get_shape();
+      dims[0] = batchSupport;
+      xir::Tensor *tensor = xir::Tensor::create(tensors[ti]->get_name(), dims, tensors[ti]->get_data_type()).release();
+
 
       // make TensorBuffer to hold host memory
       std::unique_ptr<vart::CpuFlatTensorBuffer> tbuf(
-        new vart::CpuFlatTensorBuffer(data, tensors[ti]));
+        new vart::CpuFlatTensorBuffer(data, tensor));
       tbufs.emplace_back(tbuf.get());
       {
         std::unique_lock<std::mutex> lock(hwbuf_mtx_);
         bufs_.emplace_back(std::move(tbuf));
-        //if(isInput)
-        //  input_tensor_buffers_.emplace_back(std::move(tbuf));
-        //else
-        //  output_tensor_buffers_.emplace_back(std::move(tbuf));
       }
     }
   }
@@ -428,30 +431,63 @@ std::vector<vart::TensorBuffer*> get_tensor_buffer_pointer(
   return ret;
 }
 std::vector<vart::TensorBuffer*> DpuV4eController::get_inputs(int batchsz) {
-  // TODO if batchsz > 0, create_tensor_buffers for user-requested batchsz
+  // TODO if batchsz =! 8 or 1 , create_tensor_buffers for user-requested batchsz
   // E.g., batchsz=1 for MLperf Server Scenario
-  if (batchsz != -1)
-    throw std::runtime_error("Error: custom batch size not supported for this DPU");
 
-//  return get_tensor_buffer_pointer(input_tensor_buffers_);
-  return init_tensor_buffer(input_tensors_);
+  if ((batchsz == -1))
+  // for default defination
+    return init_tensor_buffer(input_tensors_,8);
+  else if (batchsz == 1)
+  // for mlperf defination
+    return init_tensor_buffer(input_tensors_,batchsz,8);
+  else
+  // for other user-requested batchsz
+    return init_tensor_buffer(input_tensors_,batchsz);
+ 
 }
 
 std::vector<vart::TensorBuffer*> DpuV4eController::get_outputs(int batchsz) {
-  // TODO if batchsz > 0, create_tensor_buffers for user-requested batchsz
+  // TODO if batchsz != 8 or 1, create_tensor_buffers for user-requested batchsz
   // E.g., batchsz=1 for MLperf
-  if (batchsz != -1)
-    throw std::runtime_error("Error: custom batch size not supported for this DPU");
+  //if (batchsz != -1)
+  //  throw std::runtime_error("Error: custom batch size not supported for this DPU");
 
-//  return get_tensor_buffer_pointer(output_tensor_buffers_);
-  auto tbufs = init_tensor_buffer(output_tensors_);
-  auto hwbufs = create_tensor_buffers(get_merged_io_tensors(),false);
-  for (int i=0;i<BATCHSIZE; i++) {
-    std::unique_lock<std::mutex> lock(hwbuf_mtx_);
-    tbuf2hwbuf_.emplace(tbufs[i*output_tensors_.size()], hwbufs[i]);
-    
+  if ((batchsz == -1)) {
+    auto tbufs = init_tensor_buffer(output_tensors_,8);
+    auto hwbufs = create_tensor_buffers(get_merged_io_tensors(),false);
+    {
+      std::unique_lock<std::mutex> lock(hwbuf2_mtx_);
+      tbuf2hwbuf2_.emplace(tbufs[0], hwbufs);
+    }
+    return tbufs;
+
+  } else if (batchsz == 1){
+    auto tbufs = init_tensor_buffer(output_tensors_,batchsz,8);
+    auto hwbufs = create_tensor_buffers(get_merged_io_tensors(),false);
+    for (int i=0;i<BATCHSIZE; i++) {
+      std::unique_lock<std::mutex> lock(hwbuf_mtx_);
+      tbuf2hwbuf_.emplace(tbufs[i*output_tensors_.size()], hwbufs[i]);
+      
+    }
+    return tbufs;
+  } else {
+    auto tbufs = init_tensor_buffer(output_tensors_,batchsz);
+    auto hwbufs = create_tensor_buffers(get_merged_io_tensors(),false);
+    {
+      std::unique_lock<std::mutex> lock(hwbuf2_mtx_);
+      tbuf2hwbuf2_.emplace(tbufs[0], hwbufs);
+    }
+    return tbufs;
+    //auto tbufs = init_tensor_buffer(output_tensors_,batchsz);
+    //auto hwbufs = create_tensor_buffers(get_merged_io_tensors(),false);
+    //for (int i=0;i<batchsz; i++) {
+    //  std::unique_lock<std::mutex> lock(hwbuf_mtx_);
+    //  tbuf2hwbuf_.emplace(tbufs[i*output_tensors_.size()], hwbufs[i]);
+    //  
+    //}
+    //return tbufs;
+
   }
-  return tbufs;
 }
 
 void DpuV4eController::data_fix2float(float* dataDst, int8_t* dataSrc, int size, float scale) {
@@ -518,18 +554,33 @@ void DpuV4eController::run(const std::vector<vart::TensorBuffer*> &inputs,
     inputBs = ibs;
   if ((ibs < obs) || (inputBs > BATCHSIZE) )
     throw std::runtime_error("Error: size of tensorbuffer not supported");
+
   bool create_tb_outside=false;
+  bool create_tb_batch=false;
   {
+  
     std::unique_lock<std::mutex> lock(hwbuf_mtx_);
     auto it = tbuf2hwbuf_.find(outputs[0]);
     if (it == tbuf2hwbuf_.end())
     {
-      create_tb_outside=true;
+      std::unique_lock<std::mutex> lock(hwbuf2_mtx_);
+      auto it = tbuf2hwbuf2_.find(outputs[0]);
+      if (it == tbuf2hwbuf2_.end())
+      {
+        create_tb_outside=true;
+      } else {
+        //TODO only support get_inputs(bsz) bsz>1
+        if ((ibs == inputBs)&&(ibs > 1))
+        {
+          create_tb_batch = true;
+        }
+
+      }
     }
   }
   if(create_tb_outside) {
-    input_tensor_buffers = get_inputs();
-    output_tensor_buffers = get_outputs();
+    input_tensor_buffers = get_inputs(1);
+    output_tensor_buffers = get_outputs(1);
     for (unsigned i=0; i < input_tensors_.size(); i++ ) {
       unsigned cnt=0;
       for (unsigned j=0; j < inputs.size(); j++) {
@@ -576,21 +627,33 @@ void DpuV4eController::run(const std::vector<vart::TensorBuffer*> &inputs,
   // get device buffers for input TensorBuffers
   std::vector<XrtDeviceBuffer*> io_bufs(inputBs);
   std::vector<uint64_t> io_addrs(inputBs);
-  for (unsigned i=0; i < inputBs; i++)
-  {
-    vart::TensorBuffer* hwbuf;
-    {
-      std::unique_lock<std::mutex> lock(hwbuf_mtx_);
-      auto it = tbuf2hwbuf_.find(output_tensor_buffers[i*output_tensors_.size()]);
-      if (it == tbuf2hwbuf_.end())
-        throw std::runtime_error("TensorBuffer not found");
-      hwbuf = it->second;
-
+  if (create_tb_batch) {
+    std::unique_lock<std::mutex> lock(hwbuf2_mtx_);
+    auto it = tbuf2hwbuf2_.find(output_tensor_buffers[0]);
+    if (it == tbuf2hwbuf2_.end())
+      throw std::runtime_error("TensorBuffer not found");
+    auto  hwbufs = it->second;
+    for (unsigned i=0; i < inputBs; i++) {
+      io_bufs[i] = dynamic_cast<XrtDeviceBuffer*>(get_device_buffer(hwbufs[i]));
+      io_addrs[i] = io_bufs[i]->get_phys_addr();
     }
-    io_bufs[i] = dynamic_cast<XrtDeviceBuffer*>(get_device_buffer(hwbuf));
-    io_addrs[i] = io_bufs[i]->get_phys_addr(); 
-  }
 
+  } else {
+    for (unsigned i=0; i < inputBs; i++)
+    {
+      vart::TensorBuffer* hwbuf;
+      {
+        std::unique_lock<std::mutex> lock(hwbuf_mtx_);
+        auto it = tbuf2hwbuf_.find(output_tensor_buffers[i*output_tensors_.size()]);
+        if (it == tbuf2hwbuf_.end())
+          throw std::runtime_error("TensorBuffer not found");
+        hwbuf = it->second;
+
+      }
+      io_bufs[i] = dynamic_cast<XrtDeviceBuffer*>(get_device_buffer(hwbuf));
+      io_addrs[i] = io_bufs[i]->get_phys_addr();
+    }
+  }
   // upload batch of inputs
   //const auto inSize = get_input_tensors()[0]->get_element_num();
   __TIC__(INPUT_H2D)
@@ -602,15 +665,19 @@ void DpuV4eController::run(const std::vector<vart::TensorBuffer*> &inputs,
    //const auto mode = std::ios_base::out | std::ios_base::binary | std::ios_base::trunc;
    //  auto input_file = "./input"+ to_string(i)+".bin";
    //  std::ofstream(input_file, mode).write((char*)inputs[i]->data().first,inSize);
-
     for (unsigned j=0; j < xdpu_io_input_offset.size(); j++) {
+      uint8_t* dataPtr;
       const auto inSize = get_input_tensors()[j]->get_element_num();
-      if (xclUnmgdPwrite(xcl_handle, 0, (void *)input_tensor_buffers[i*xdpu_io_input_offset.size()+j]->data().first, inSize,
+      if (create_tb_batch)
+        dataPtr = ((uint8_t*)input_tensor_buffers[j]->data().first)+inSize*i;
+      else
+        dataPtr =(uint8_t*)input_tensor_buffers[i*xdpu_io_input_offset.size()+j]->data().first;
+      if (xclUnmgdPwrite(xcl_handle, 0, (void *)dataPtr, inSize,
       //if (xclUnmgdPwrite(xcl_handle, 0, inputs[i]->data().first, inSize,
         io_addrs[i] + xdpu_io_input_offset[j]))
         throw std::runtime_error("Error: upload failed");
     }
- 
+
   }
   __TOC__(INPUT_H2D)
 
@@ -782,8 +849,13 @@ void DpuV4eController::run(const std::vector<vart::TensorBuffer*> &inputs,
     // io_bufs[i]->download();
     for (unsigned j=0; j< xdpu_io_output_offset.size(); j++) {
       const auto outSize = get_output_tensors()[j]->get_element_num();
+      uint8_t* dataPtr;
+      if (create_tb_batch)
+        dataPtr = ((uint8_t *)output_tensor_buffers[j]->data().first)+outSize*i;
+      else
+        dataPtr = (uint8_t *)output_tensor_buffers[i*xdpu_io_output_offset.size()+j]->data().first;
       //__TIC_PROFILING__(OUTPUT)
-      if (xclUnmgdPread(xcl_handle, 0, (void*)output_tensor_buffers[i*xdpu_io_output_offset.size()+j]->data().first,
+      if (xclUnmgdPread(xcl_handle, 0, (void*)dataPtr,
         outSize,
         io_addrs[i] + xdpu_io_output_offset[j]))
         throw std::runtime_error("Error: download failed");
