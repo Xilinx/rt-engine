@@ -11,8 +11,9 @@
 
 #include "xir/tensor/tensor.hpp"
 #include "vart/runner.hpp"
-#include "dpu_runner_ext.hpp"
+#include "vart/runner_ext.hpp"
 #include "dpu_controller.hpp"
+#include "vart/experimental/runner_helper.hpp"
 
 /*
  * References:
@@ -24,36 +25,49 @@
 
 namespace vart {
 
-class DpuRunner: public vart::RunnerExt {
-  public:
-    DpuRunner(const xir::Subgraph* subgraph);
-    DpuRunner(std::string meta);
-    ~DpuRunner();
-    DpuRunner(const DpuRunner&) = delete;
-    DpuRunner& operator=(const DpuRunner& other) = delete;
+class DpuRunner : public vart::RunnerExt
+{
+public:
+  DpuRunner(const xir::Subgraph* subgraph);
 
-    virtual std::pair<uint32_t, int> 
-    execute_async(const std::vector<vart::TensorBuffer*>& inputs,
-      const std::vector<vart::TensorBuffer*>& outputs) override;
+  DpuRunner(std::string meta);
 
-    virtual int wait(int jobid, int timeout) override;
-    
-    virtual TensorFormat get_tensor_format() override { 
-      return Runner::TensorFormat::NHWC; }
-    
-    virtual std::vector<const xir::Tensor*> get_input_tensors() override; 
-    virtual std::vector<const xir::Tensor*> get_output_tensors() override; 
-    
-    virtual std::vector<vart::TensorBuffer*> get_inputs() override;
-    virtual std::vector<vart::TensorBuffer*> get_outputs() override;
-    virtual std::vector<vart::TensorBuffer*> make_inputs(int batchsz=-1); 
-    virtual std::vector<vart::TensorBuffer*> make_outputs(int batchsz=-1);
+  ~DpuRunner();
 
-  protected:
-    std::shared_ptr<DpuController> dpu_controller_;
-    std::vector<vart::TensorBuffer*> in_bufs;
-    std::vector<vart::TensorBuffer*> out_bufs;
+  DpuRunner(const DpuRunner&) = delete;
+
+  DpuRunner& operator=(const DpuRunner& other) = delete;
+
+  virtual std::pair<uint32_t, int>
+  execute_async(const std::vector<vart::TensorBuffer*>& inputs,
+                const std::vector<vart::TensorBuffer*>& outputs) override;
+
+  virtual int wait(int jobid, int timeout) override;
+
+  virtual TensorFormat get_tensor_format() override
+  {
+    return Runner::TensorFormat::NHWC;
+  }
+
+  virtual std::vector<const xir::Tensor*> get_input_tensors() override;
+
+  virtual std::vector<const xir::Tensor*> get_output_tensors() override;
+
+  virtual std::vector<vart::TensorBuffer*> get_inputs() override;
+
+  virtual std::vector<vart::TensorBuffer*> get_outputs() override;
+
+  virtual std::vector<vart::TensorBuffer*> make_inputs(int batchsz = -1);
+
+  virtual std::vector<vart::TensorBuffer*> make_outputs(int batchsz = -1);
+
+protected:
+  std::shared_ptr<DpuController> dpu_controller_;
+  std::vector<vart::TensorBuffer*> in_bufs;
+  std::vector<vart::TensorBuffer*> out_bufs;
 };
+}
+/*
 
 class CpuFlatTensorBuffer : public vart::TensorBuffer {
 public:
@@ -91,8 +105,9 @@ public:
 private:
   void *data_;
 };
- 
+
 } //vart namespace
+*/
 
 extern "C" {
   vart::Runner* create_runner(const xir::Subgraph* subgraph);
