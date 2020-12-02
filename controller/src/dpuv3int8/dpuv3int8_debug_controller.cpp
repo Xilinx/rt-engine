@@ -10,8 +10,9 @@ Dpuv3Int8DebugController::Dpuv3Int8DebugController(std::string meta) : Dpuv3Int8
   dumpDmem_ = std::getenv("DPUV3INT8_DEBUGMODE_DUMPDMEM") ? atoi(std::getenv("DPUV3INT8_DEBUGMODE_DUMPDMEM")) == 1 : false;
   xmodel_.reset(new Xmodel(meta, true));
 
-  loadBinFile(xmodel_->getDebugDinFilename(), true);
-  loadBinFile(xmodel_->getDebugGoldenFilename(), false);
+  loadBinFile(xmodel_->getDebugDinFilename(), true, 0);
+  for(uint32_t i=0; i<xmodel_->getOutputNum(); i++)
+    loadBinFile(xmodel_->getDebugGoldenFilename(i), false, i);
   if(not xmodel_->getSinglePoolDebug())
   {
     debugDumpParams((void*)params_.data(), params_.size()*BATCH_SIZE);
@@ -28,8 +29,9 @@ Dpuv3Int8DebugController::Dpuv3Int8DebugController(const xir::Subgraph *subgraph
   
   dumpDmem_ = std::getenv("DPUV3INT8_DEBUGMODE_DUMPDMEM") ? atoi(std::getenv("DPUV3INT8_DEBUGMODE_DUMPDMEM")) == 1 : false;
   xmodel_.reset(new Xmodel(subgraph, true));
-  loadBinFile(xmodel_->getDebugDinFilename(), true);
-  loadBinFile(xmodel_->getDebugGoldenFilename(), false);
+  loadBinFile(xmodel_->getDebugDinFilename(), true, 0);
+  for(uint32_t i=0; i<xmodel_->getOutputNum(); i++)
+    loadBinFile(xmodel_->getDebugGoldenFilename(i), false, i);
   
   if(not xmodel_->getSinglePoolDebug())
   {
@@ -150,38 +152,60 @@ void Dpuv3Int8DebugController::preprocess(vart::TensorBuffer* stdbuf, vart::Tens
 
 }
 
-void Dpuv3Int8DebugController::output_reorg(void *std_data, void *result_data, int result_size)
+void Dpuv3Int8DebugController::each_output_reorg(void* std_data, void *result_data, int ddr_size, int startVal, int std_size, int stdOutCh, int outputNumber)
 {
     int i, mbatch, segment, group;
-    std::vector<int> count(BATCH_SIZE,0); 
+    std::vector<int> count(BATCH_SIZE,0);
 
-    for (i = 0; i < result_size; i++)
+    int result_size = ddr_size*4;
+    std::vector<int8_t> stdExtraZeroesData(result_size,0);
+
+    for (i = startVal; i < result_size+startVal; i++)
     {
-        mbatch = i / (64*16*xmodel_->getOutDdrSize());
-        segment = (i - mbatch * (64*16*xmodel_->getOutDdrSize())) / 64;
-        group = (i - mbatch * (64 * 16*xmodel_->getOutDdrSize()) - segment * 64) / 16;
+        mbatch = i / (64*16*ddr_size);
+        segment = (i - mbatch * (64*16*ddr_size)) / 64;
+        group = (i - mbatch * (64 * 16*ddr_size) - segment * 64) / 16;
         switch(mbatch*4+group)
         {
-           case 0: *(int8_t *)((long long) std_data+count[0])=*(int8_t *)((long long)result_data+i);
+           case 0: stdExtraZeroesData[count[0]]=*(int8_t *)((long long)result_data+i);
                    count[0]++;
                    break;
 
-           case 1: *(int8_t *)((long long) std_data+(xmodel_->getOutDdrSize()+count[1]))=*(int8_t *)((long long)result_data+i);
+           case 1: stdExtraZeroesData[ddr_size+count[1]]=*(int8_t *)((long long)result_data+i);
                    count[1]++;
                    break;
-           case 2: *(int8_t *)((long long) std_data+(xmodel_->getOutDdrSize()*2+count[2]))=*(int8_t *)((long long)result_data+i);
+           case 2: stdExtraZeroesData[ddr_size*2+count[2]]=*(int8_t *)((long long)result_data+i);
                     count[2]++;
                     break;
-           case 3: *(int8_t *)((long long) std_data+(xmodel_->getOutDdrSize()*3+count[3]))=*(int8_t *)((long long)result_data+i);
+           case 3: stdExtraZeroesData[ddr_size*3+count[3]]=*(int8_t *)((long long)result_data+i);
                    count[3]++;
         }
         
     }
-    
-    debugDumpOutputs(std_data, result_data, result_size);
-    compareAgainstGolden(std_data);
-}
+   
+    std::vector<int> stdDataVec(std_size*BATCH_SIZE,0);
+    int ddrOutCh = std::ceil(stdOutCh/16.0)*16;
+    int counter = 0;
 
+    for(int k=0; k<result_size; k=k+ddrOutCh)
+    {
+        for(int j=k; j<k+stdOutCh; j++)
+        {
+          stdDataVec[counter]=stdExtraZeroesData[j];
+          counter++;
+        }
+    }
+    for(int o=0; o<std_size*4; o++)
+    {
+      *(int8_t *)((long long) std_data+o) = stdDataVec[o];
+
+    }
+
+    debugDumpOutputs(std_data, result_data, result_size, std_size*4, outputNumber);
+    compareAgainstGolden(std_data, std_size*4, outputNumber);
+
+
+}
 
 void Dpuv3Int8DebugController::initRunBufs(uint64_t *buf_addr, XclDeviceBuffer* swap_buf, XclDeviceBuffer* druSrc_buf, XclDeviceBuffer* druDst_buf)
 {
@@ -317,7 +341,7 @@ void Dpuv3Int8DebugController::convert2DmemFormat(std::vector<int8_t> &flattened
   }
 }
 
-void Dpuv3Int8DebugController::loadBinFile(std::string binFileName, bool isInput)
+void Dpuv3Int8DebugController::loadBinFile(std::string binFileName, bool isInput, int idx)
 {
   std::ifstream stream(binFileName, std::ios::in | std::ios::binary);  
   std::vector<int8_t> contents((std::istreambuf_iterator<char>(stream)), std::istreambuf_iterator<char>());
@@ -335,25 +359,27 @@ void Dpuv3Int8DebugController::loadBinFile(std::string binFileName, bool isInput
   }
   else
   {
-    debugGolden_.resize(contents.size());
-    debugGolden_=contents;
+    std::vector<int8_t> debugGolden;
+    debugGolden.resize(contents.size());
+    debugGolden=contents;
     
-    debug_dumpvals_.open(xmodel_->getDebugDumpdir()+"goldenFlattened.txt");
-    for(uint32_t p=0; p<debugGolden_.size(); p++)
+    debug_dumpvals_.open(xmodel_->getDebugDumpdir()+"goldenFlattened"+std::to_string(idx)+".txt");
+    for(uint32_t p=0; p<debugGolden.size(); p++)
     {
-      debug_dumpvals_<<"idx: "<<p<<" int8 val: "<<(int32_t)debugGolden_[p]<<"\n";
+      debug_dumpvals_<<"idx: "<<p<<" int8 val: "<<(int32_t)debugGolden[p]<<"\n";
     }
     debug_dumpvals_.close();
     
     if(dumpDmem_)
-      convert2DmemFormat(debugGolden_, "golden output", xmodel_->getDebugDumpdir()+"goldenOutputDmem.txt");
+      convert2DmemFormat(debugGolden, "golden output", xmodel_->getDebugDumpdir()+"goldenOutputDmem"+std::to_string(idx)+".txt");
     
-    std::cout<<"Number of golden output int8 values: "<<debugGolden_.size()<<std::endl;
+    std::cout<<"Number of golden output int8 values for output num "+std::to_string(idx)+": "<<debugGolden.size()<<std::endl;
+    debugGolden_.push_back(debugGolden);
   }
 
 }
 
-void Dpuv3Int8DebugController::compareAgainstGolden(void *outData)
+void Dpuv3Int8DebugController::compareAgainstGolden(void *outData, int std_size, int idx)
 {
     //xir::vart::TensorBuffer* tbuf = outbuf->get_tensor_buffer();
     
@@ -362,14 +388,14 @@ void Dpuv3Int8DebugController::compareAgainstGolden(void *outData)
       debug_dumpvals_<<"This section prints whether or not outputs in standard NHWC format match the golden binary file provided, it also prints out int8 values along with indices, of results that mismatch\n";
 
     
-    uint32_t outSize = xmodel_->getOutDdrSize()*BATCH_SIZE;
+    uint32_t outSize = std_size;//xmodel_->getOutDdrSize()*BATCH_SIZE;
 //    void *outData = (void*)tbuf->data().first;
     
-    if(debugGolden_.size()!=outSize)
+    if(debugGolden_[idx].size()!=outSize)
     {
-       debug_dumpvals_<<"SIZE MISMATCH: Outputs from board converted to std format have size: "<<outSize<<" and Golden Outputs have size: "<<debugGolden_.size()<<"\n";
+       debug_dumpvals_<<"SIZE MISMATCH: Outputs from board converted to std format have size: "<<outSize<<" and Golden Outputs have size: "<<debugGolden_[idx].size()<<"\n";
        debug_dumpvals_.close();
-       std::cout<<"ERROR! OUTPUT SIZE MISMATCH: Outputs from board converted to std format have size: "<<outSize<<" and Golden Outputs have size: "<<debugGolden_.size()<<std::endl;
+       std::cout<<"ERROR! OUTPUT SIZE MISMATCH: Outputs from board converted to std format have size: "<<outSize<<" and Golden Outputs have size: "<<debugGolden_[idx].size()<<std::endl;
        exit(1);
     }
     
@@ -378,10 +404,10 @@ void Dpuv3Int8DebugController::compareAgainstGolden(void *outData)
     for(uint32_t j=0; j<outSize; j++)
     {
          
-      if((int32_t)*(int8_t *)((long long)outData+j)!=(int32_t)debugGolden_[j])
+      if((int32_t)*(int8_t *)((long long)outData+j)!=(int32_t)debugGolden_[idx][j])
       {
-         debug_dumpvals_<<"Mismatch at idx: "<<j<<" int8 board std value: "<<(int32_t)*(int8_t *)((long long)outData+j)<<" int8 golden output value: "<<(int32_t)debugGolden_[j]<<"\n"; 
-         difference+=((int32_t)*(int8_t *)((long long)outData+j)-(int32_t)debugGolden_[j])*((int32_t)*(int8_t *)((long long)outData+j)-(int32_t)debugGolden_[j]);
+         debug_dumpvals_<<"Mismatch at idx: "<<j<<" int8 board std value: "<<(int32_t)*(int8_t *)((long long)outData+j)<<" int8 golden output value: "<<(int32_t)debugGolden_[idx][j]<<"\n"; 
+         difference+=((int32_t)*(int8_t *)((long long)outData+j)-(int32_t)debugGolden_[idx][j])*((int32_t)*(int8_t *)((long long)outData+j)-(int32_t)debugGolden_[idx][j]);
          counter++;
       }
 
@@ -646,7 +672,7 @@ void Dpuv3Int8DebugController::debugDumpRegVals(uint64_t* buf_addr, uint32_t* re
 
 }
 
-void Dpuv3Int8DebugController::debugDumpOutputs(void *std_data, void *result_data, int result_size)
+void Dpuv3Int8DebugController::debugDumpOutputs(void *std_data, void *result_data, int result_size, int std_size, int outIdx)
 {
       debug_dumpvals_.open(xmodel_->getDebugDumpdir()+"outBoard.txt");
       debug_dumpvals_<<"*****************************************************\n";
@@ -661,11 +687,11 @@ void Dpuv3Int8DebugController::debugDumpOutputs(void *std_data, void *result_dat
         convert2DmemFormat(outBoard, "outputs straight from board, not converted to std format", xmodel_->getDebugDumpdir()+"outBoardDmem.txt");
       debug_dumpvals_.close();
 
-      debug_dumpvals_.open(xmodel_->getDebugDumpdir()+"outStdFormat.txt");
+      debug_dumpvals_.open(xmodel_->getDebugDumpdir()+"outStdFormat"+std::to_string(outIdx)+".txt");
       debug_dumpvals_<<"*****************************************************\n";
       debug_dumpvals_<<"This section contains int8 output values reorganized to standard format, NHWC\n";
-      std::vector<int8_t> outputStdFormat(result_size,0);
-      for(int j=0; j<result_size; j++)
+      std::vector<int8_t> outputStdFormat(std_size,0);
+      for(int j=0; j<std_size; j++)
       {
         debug_dumpvals_<<"idx: "<<j<<" int8 val: "<<(int32_t)*(int8_t *)((long long)std_data+j)<<"\n";
         outputStdFormat[j]=*(int8_t *)((long long)std_data+j);
