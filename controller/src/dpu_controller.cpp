@@ -56,7 +56,10 @@ XclDpuController<Dhandle, DbufIn, DbufOut>::XclDpuController(const xir::Subgraph
   }
   // get xclbin path and acquire handle
   const char* xclbinPath = std::getenv("XLNX_VART_FIRMWARE");
-  
+
+  if (xclbinPath == nullptr)
+    throw std::runtime_error("Error: xclbinPath is not set, please consider setting XLNX_VART_FIRMWARE.");
+
   std::cout << "loading xclbin: " << xclbinPath << std::endl;
   handle_.reset(new Dhandle(kernelName, xclbinPath));
   std::cout << "done loading xclbin" << std::endl;
