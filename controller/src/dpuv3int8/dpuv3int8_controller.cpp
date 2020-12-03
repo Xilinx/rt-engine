@@ -31,9 +31,9 @@ void Dpuv3Int8Controller::initializeTensors()
       inHwDims = { int32_t(xmodel_->getInW()*xmodel_->getInH()*BATCH_SIZE*ceil((float)xmodel_->getInCh()/16)*16)};
     const std::vector<std::int32_t> outHwDims = { BATCH_SIZE, 1, 1, int32_t(xmodel_->getOutDdrSize())};
    
-    xir::Tensor *in_t = xir::Tensor::create("input", indims, xir::DataType{xir::DataType::INT, 8}).release();
-    xir::Tensor *in_hw = xir::Tensor::create("inputHw", inHwDims, xir::DataType{xir::DataType::INT, 8}).release();
-    xir::Tensor *op_hw = xir::Tensor::create("outputHw", outHwDims, xir::DataType{xir::DataType::INT, 8}).release();
+    xir::Tensor *in_t = xir::Tensor::create("input", indims, xir::DataType{xir::DataType::XINT, 8}).release();
+    xir::Tensor *in_hw = xir::Tensor::create("inputHw", inHwDims, xir::DataType{xir::DataType::XINT, 8}).release();
+    xir::Tensor *op_hw = xir::Tensor::create("outputHw", outHwDims, xir::DataType{xir::DataType::XINT, 8}).release();
     
     in_tensor_.reset(in_t);
     in_tensor_->set_attr<std::int32_t>("fix_point", xmodel_->get_input_fix_point_values()[0]); 
@@ -43,7 +43,7 @@ void Dpuv3Int8Controller::initializeTensors()
     for(uint32_t k=0; k<xmodel_->getOutputNum(); k++)
     {
       std::vector<std::int32_t> outputdims = { BATCH_SIZE, xmodel_->getOutTensorsDims()[k][0], xmodel_->getOutTensorsDims()[k][1], xmodel_->getOutTensorsDims()[k][2]};
-      xir::Tensor *outputOp = xir::Tensor::create("output"+std::to_string(k), outputdims, xir::DataType{xir::DataType::INT, 8}).release();
+      xir::Tensor *outputOp = xir::Tensor::create("output"+std::to_string(k), outputdims, xir::DataType{xir::DataType::XINT, 8}).release();
       std::unique_ptr<xir::Tensor> outtensor;
       outtensor.reset(outputOp);
       outtensor->set_attr<std::int32_t>("fix_point", xmodel_->get_output_fix_point_values()[k]);
@@ -187,7 +187,7 @@ void Dpuv3Int8Controller::initCreateBuffers()
     if(params_.size()!=0)
     {
       const std::vector<std::int32_t> paramsdims = { int32_t(params_.size()*BATCH_SIZE) };
-      xir::Tensor *params_t = xir::Tensor::create("params", paramsdims, xir::DataType{xir::DataType::INT, 8}).release();
+      xir::Tensor *params_t = xir::Tensor::create("params", paramsdims, xir::DataType{xir::DataType::XINT, 8}).release();
       params_tensor_.reset(params_t);
 
       paramsTbuf_.reset(new vart::CpuFlatTensorBuffer((void*)params_.data(),&(*params_tensor_)));
@@ -198,10 +198,10 @@ void Dpuv3Int8Controller::initCreateBuffers()
     const std::vector<std::int32_t> druSrcdims = { int32_t(BATCH_SIZE*xmodel_->getInW()*xmodel_->getInH()*xmodel_->getInCh())};
     const std::vector<std::int32_t> druDstdims = swapdims;
 
-    xir::Tensor *instr_t = xir::Tensor::create("instr", instrdims, xir::DataType{xir::DataType::INT, 8}).release();
-    xir::Tensor *swap_t = xir::Tensor::create("swap", swapdims, xir::DataType{xir::DataType::INT, 8}).release();
-    xir::Tensor *drusrc_t = xir::Tensor::create("druSrc", druSrcdims, xir::DataType{xir::DataType::INT, 8}).release();
-    xir::Tensor *drudst_t = xir::Tensor::create("druDst", druDstdims, xir::DataType{xir::DataType::INT, 8}).release();
+    xir::Tensor *instr_t = xir::Tensor::create("instr", instrdims, xir::DataType{xir::DataType::XINT, 8}).release();
+    xir::Tensor *swap_t = xir::Tensor::create("swap", swapdims, xir::DataType{xir::DataType::XINT, 8}).release();
+    xir::Tensor *drusrc_t = xir::Tensor::create("druSrc", druSrcdims, xir::DataType{xir::DataType::XINT, 8}).release();
+    xir::Tensor *drudst_t = xir::Tensor::create("druDst", druDstdims, xir::DataType{xir::DataType::XINT, 8}).release();
     instr_tensor_.reset(instr_t);
     swap_tensor_.reset(swap_t);
     druSrc_tensor_.reset(drusrc_t);
@@ -460,7 +460,7 @@ void Dpuv3Int8Controller::run(const std::vector<vart::TensorBuffer*> &inputs,
         auto scale = pow(2,(*itb)->get_tensor()->get_attr<std::int32_t>("fix_point"));
         data_float2fix((int8_t*)(*itb)->data().first, (float*)(*i)->data().first, num, scale);
       }
-      else if ((*i)->get_tensor()->get_data_type().type == xir::DataType::INT)
+      else if ((*i)->get_tensor()->get_data_type().type == xir::DataType::XINT)
         memcpy((int8_t*)(*itb)->data().first, (float*)(*i)->data().first, num);
       else
         throw std::runtime_error("Error: Input Tensor Buffer Data Type is unsupported.");
@@ -525,7 +525,7 @@ void Dpuv3Int8Controller::run(const std::vector<vart::TensorBuffer*> &inputs,
         auto scale = pow(2,(*otb)->get_tensor()->get_attr<std::int32_t>("fix_point"));
         data_fix2float((float*) (*o)->data().first, (int8_t*) (*otb)->data().first, num, scale);
       }
-      else if ((*o)->get_tensor()->get_data_type().type == xir::DataType::INT)
+      else if ((*o)->get_tensor()->get_data_type().type == xir::DataType::XINT)
         memcpy((int8_t*)(*o)->data().first, (int8_t*)(*otb)->data().first, num);
       else
         throw std::runtime_error("Error: Output Tensor Buffer Data Type is unsupported.");

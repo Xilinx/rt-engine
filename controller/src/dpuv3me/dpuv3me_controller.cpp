@@ -452,7 +452,7 @@ DpuV3meController::get_output_tensors() const {
 std::vector<const xir::Tensor*>
 DpuV3meController::get_merged_io_tensors() const {
   const std::vector<std::int32_t> dims = { 1, 1, 1, xdpu_io_total_size };
-  xir::Tensor *tensor = xir::Tensor::create("inout", dims, xir::DataType{xir::DataType::INT, 8}).release();
+  xir::Tensor *tensor = xir::Tensor::create("inout", dims, xir::DataType{xir::DataType::XINT, 8}).release();
   //static xir::Tensor tensor("inout", dims, xir::Tensor::DataType::INT8); 
   return std::vector<const xir::Tensor*>(8, tensor);
 }
