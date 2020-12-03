@@ -34,7 +34,7 @@
 
 #include <vart/runner.hpp>
 //#include <vart/dpu/dpu_runner_ext.hpp>
-#include <dpu_runner_ext.hpp>
+#include <vart/runner_ext.hpp>
 #include <xir/graph/graph.hpp>
 #include <xir/tensor/tensor.hpp>
 #include "common.h"
