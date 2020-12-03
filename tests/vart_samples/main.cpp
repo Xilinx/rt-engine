@@ -285,7 +285,6 @@ int main(int argc, char* argv[]) {
   LOG(INFO) << "create running for subgraph: " << subgraph[0]->get_name();
   /*create runner*/
   auto runner = vart::Runner::create_runner(subgraph[0], "run");
-  // ai::XdpuRunner* runner = new ai::XdpuRunner("./");
   /*get in/out tensor*/
   auto inputTensors = runner->get_input_tensors();
   auto outputTensors = runner->get_output_tensors();
