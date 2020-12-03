@@ -96,16 +96,17 @@ int main(int argc, char* argv[]) {
   void *codePtr = NULL;
   std::string inputbin = "./tests/app/models/v4e_resnet50/input.bin";
   unsigned int size = getFileSize(inputbin);
-  if (posix_memalign(&codePtr, getpagesize(), size))
+  if (posix_memalign(&codePtr, getpagesize(), size*8))
     throw std::bad_alloc();
   auto infile = ifstream(inputbin, ios::in | ios::binary);
   for (unsigned i=0; infile.read(&((char*)codePtr)[i], sizeof(int8_t)); i++);
   std::vector<std::unique_ptr<vart::TensorBuffer> > tbufs;
   for (int bi=0; bi < 8; bi++)
    {
-     memcpy((void*)inputs[bi]->data().first, codePtr,size);
+     memcpy((void*)inputs[0]->data().first+bi*size, codePtr,size);
    }
- 
+  auto tensorr = inputs[0]->get_tensor()->get_shape()[0];
+cout <<tensorr << endl; 
   std::cout << std::endl << "Testing single thread..." << std::endl;
   auto t1 = std::chrono::high_resolution_clock::now();
   //std::cout<<"Loading "<<num_queries_*4<<" Images ..."<<std::endl;
@@ -127,7 +128,7 @@ int main(int argc, char* argv[]) {
         //std::tie(outData, sz) = outputs[bi*3+t]->data();
         //const char *out = (const char*)outData;
 
-        std::ofstream(output_file, mode).write((char*)outputs[bi*3+t]->data().first, output_tensors[t]->get_element_num());
+        std::ofstream(output_file, mode).write((char*)outputs[t]->data().first+bi*output_tensors[t]->get_element_num(), output_tensors[t]->get_element_num());
       }
     }
 

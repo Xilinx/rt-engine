@@ -129,7 +129,7 @@ void jsonOrXirKeys::loadFromXmodel(std::string xmodelFname)
   if(multiFormat)
   {
     std::string tensorInfo = subgraph->get_attr<std::string>("tensor_info");
-    char * c = tensorInfo.c_str();
+    const char * c = tensorInfo.c_str();
     json_object* jobj = json_tokener_parse(c);
     json_object_object_foreach(jobj, key, val)
     {

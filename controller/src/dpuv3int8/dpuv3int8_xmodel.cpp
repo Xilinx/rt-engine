@@ -76,15 +76,19 @@ outputLayerParams::outputLayerParams(json_object* jobj, bool multiFormat)
     outW_ = json_object_get_int(shapeVal);
     shapeVal = json_object_array_get_idx(obj, 3);
     outCh_ = json_object_get_int(shapeVal);
-   
+    
+    outAddress_ = getValue("address", jobj);
     outDdrSize_ = getValue("outDDRSize", jobj);
+    debug_golden_filename_ = getFileNameIfExists("debugGoldenFile", jobj);
   }
   else
   {
     outH_ = getValue("outH", jobj);
     outW_ = getValue("outW", jobj);
     outCh_ = getValue("outCh", jobj);
+    outAddress_ = 0;
     outDdrSize_ = getValue("outDDRSize", jobj);
+    debug_golden_filename_ = "";
   }
 }
 
@@ -114,25 +118,42 @@ outputLayerParams::outputLayerParams(const xir::Subgraph *subgraph, bool multiFo
   outH_ = subgraph->get_attr<int>("outH");
   outW_ = subgraph->get_attr<int>("outW");
   outCh_ = subgraph->get_attr<int>("outCh");
+  outAddress_ = 0;
   outDdrSize_ = subgraph->get_attr<int>("outSize");
 
 }
 
 
+std::vector<std::vector<std::int32_t>> Xmodel::getOutTensorsDims()
+{
+   std::vector<std::vector<std::int32_t>> outTensorsDims;
+   for(uint32_t i=0; i<outputParams_.size(); i++)
+   {
+      std::vector<std::int32_t> outdims(5,0);
+      outdims[0] = outputParams_[i].outW_;
+      outdims[1] = outputParams_[i].outH_;
+      outdims[2] = outputParams_[i].outCh_;
+      outdims[3] = outputParams_[i].outAddress_;
+      outdims[4] = outputParams_[i].outDdrSize_;
+      outTensorsDims.push_back(outdims);
+   }
+   return outTensorsDims;
+}
+
+std::string Xmodel::getDebugGoldenFilename(int outputNum)
+{
+  if(outputNum==0 and outputParams_[outputNum].debug_golden_filename_=="")
+    return debug_golden_filename_;
+  return runner_dir_+outputParams_[outputNum].debug_golden_filename_;
+}
+uint32_t Xmodel::getOutputNum(){return outputParams_.size();}
 uint32_t Xmodel::getInW(){return inputParams_[0].inW_;}
 uint32_t Xmodel::getInH(){return inputParams_[0].inH_;}
 uint32_t Xmodel::getInCh(){return inputParams_[0].inCh_;}
-uint32_t Xmodel::getOutW(){return outputParams_[0].outW_;}
-uint32_t Xmodel::getOutH(){return outputParams_[0].outH_;}
-uint32_t Xmodel::getOutCh(){return outputParams_[0].outCh_;}
 uint32_t Xmodel::getOutDdrSize()
 {
-   int totalOutputDdrSize = 0;
-   for(int i=0; i<outputParams_.size(); i++)
-   {
-     totalOutputDdrSize = totalOutputDdrSize + outputParams_[i].outDdrSize_;
-   }
-   return totalOutputDdrSize;
+   return (outputParams_[outputParams_.size()-1].outAddress_+(4*outputParams_[outputParams_.size()-1].outDdrSize_))/4;
+
 }
 uint32_t Xmodel::getInKernelW(){return inputParams_[0].inKernelW_;}
 uint32_t Xmodel::getPadLft(){return inputParams_[0].padLft_;}
@@ -152,7 +173,6 @@ bool Xmodel::getEnableXmodelFormat(){return enable_xmodel_format_;}
 bool Xmodel::getSinglePoolDebug(){return single_pool_debug_;}
 std::string Xmodel::getDebugDumpdir(){return debug_dumpdir_;}
 std::string Xmodel::getDebugDinFilename(){return debug_din_filename_;}
-std::string Xmodel::getDebugGoldenFilename(){return debug_golden_filename_;}
 
 std::vector<std::int32_t> Xmodel::get_input_fix_point_values(){return input_fix_point_values_;}
 std::vector<std::int32_t> Xmodel::get_output_fix_point_values(){return output_fix_point_values_;}
@@ -278,7 +298,7 @@ void Xmodel::loadParamsSubgraph(const xir::Subgraph *subgraph, bool isDebugMode)
   if(multiFormat)
   {
     std::string tensorInfo = subgraph->get_attr<std::string>("tensor_info");
-    char * c = tensorInfo.c_str();
+    const char * c = tensorInfo.c_str();
     json_object* jobj = json_tokener_parse(c);
     json_object_object_foreach(jobj, key, val)
     {

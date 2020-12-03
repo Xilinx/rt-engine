@@ -55,7 +55,7 @@ class Dpuv3Int8Controller : public XclDpuController<XclDeviceHandle, XclDeviceBu
 
  protected:    
   virtual void preprocess(vart::TensorBuffer*, vart::TensorBuffer*); 
-  virtual void output_reorg(void*, void*, int); 
+  virtual void each_output_reorg(void* std_data, void *result_data, int ddr_size, int startVal, int std_size, int stdOutCh, int outputNumber);
   virtual void runKernel(xrtcpp::exec::exec_write_command cmd, uint64_t* buf_addr, uint32_t* reg_val);
   virtual void initRunBufs(uint64_t *buf_addr, XclDeviceBuffer* swap_buf, XclDeviceBuffer* druSrc_buf, XclDeviceBuffer* druDst_buf);
   std::unique_ptr<Xmodel> xmodel_;
@@ -64,19 +64,20 @@ class Dpuv3Int8Controller : public XclDpuController<XclDeviceHandle, XclDeviceBu
   std::vector<int,aligned_allocator<int>> params_;
 
  private:
+  virtual void output_reorg(std::vector<void*>, void*, int); 
   void initializeTensors();  
   void initializeTaskDRUVariables(); 
   virtual void initCreateBuffers();
   void initRegMap();
   uint32_t readReg(unsigned offset);
   void dumpReg();
-  void postprocess(vart::TensorBuffer*, vart::TensorBuffer*);
+  void postprocess(std::vector<vart::TensorBuffer*>, vart::TensorBuffer*);
   std::vector<vart::TensorBuffer*> create_hw_buffers(std::vector<vart::TensorBuffer*> stdBuf, bool isInput);
   vart::TensorBuffer* get_hw_buffer(vart::TensorBuffer *tb);
   void execute(uint64_t *buf_addr);
   
   std::unique_ptr<xir::Tensor> in_tensor_;
-  std::unique_ptr<xir::Tensor> out_tensor_;
+  std::vector<std::unique_ptr<xir::Tensor>> out_tensors_; 
   std::unique_ptr<xir::Tensor> in_hw_tensor_;
   std::unique_ptr<xir::Tensor> out_hw_tensor_;
   std::unique_ptr<xir::Tensor> instr_tensor_;
@@ -101,6 +102,10 @@ class Dpuv3Int8Controller : public XclDpuController<XclDeviceHandle, XclDeviceBu
   static std::vector<int32_t, aligned_allocator<int32_t>> load(std::vector<std::string> svals);
 
   cl_mem regMap_;
+
+  void data_float2fix(int8_t* dataDst, float* dataSrc, int size, float scale);
+  void data_fix2float(float* dataDst, int8_t* dataSrc, int size, float scale);
+
 };
 
 class Dpuv3Int8DebugController : public Dpuv3Int8Controller {
@@ -113,16 +118,16 @@ class Dpuv3Int8DebugController : public Dpuv3Int8Controller {
     virtual void preprocess(vart::TensorBuffer*, vart::TensorBuffer*);
     virtual void runKernel(xrtcpp::exec::exec_write_command cmd, uint64_t* buf_addr, uint32_t* reg_val);
     virtual void initRunBufs(uint64_t *buf_addr, XclDeviceBuffer* swap_buf, XclDeviceBuffer* druSrc_buf, XclDeviceBuffer* druDst_buf);
-    virtual void output_reorg(void*, void*, int); 
-    void loadBinFile(std::string binFileName, bool isInput);
+    virtual void each_output_reorg(void* std_data, void *result_data, int ddr_size, int startVal, int std_size, int stdOutCh, int outputNumber);
+    void loadBinFile(std::string binFileName, bool isInput, int idx);
     std::string toHexWidth2( uint32_t i );
     std::string toHexWidth16( uint32_t i );
     void convert2DmemFormat(std::vector<int8_t> &flattenedData, std::string dataName, std::string outFileName);
-    void compareAgainstGolden(void *outData);
+    void compareAgainstGolden(void *outData, int std_size, int idx);
     void batchInterleave();
     void channelAug();
     void debugDumpRegVals(uint64_t* buf_addr, uint32_t* reg_val);
-    void debugDumpOutputs(void *std_data, void *result_data, int result_size);
+    void debugDumpOutputs(void *std_data, void *result_data, int result_size, int std_size, int outIdx);
     void debugDumpParams(void *params_data, int params_size);
     void debugDumpInstr();
     void debugDumpParamsDdrFormat();
@@ -133,7 +138,7 @@ class Dpuv3Int8DebugController : public Dpuv3Int8Controller {
     uint32_t chAugCh_;
     
     std::vector<int8_t> debugInput_;
-    std::vector<int8_t> debugGolden_;
+    std::vector<std::vector<int8_t>> debugGolden_;
     std::vector<int8_t> debugChAug_;
     std::vector<int8_t> debugBatchInterleaved_;
         

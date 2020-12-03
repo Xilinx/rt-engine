@@ -21,10 +21,12 @@ class DpuV4eController
   void init(const xir::Subgraph* subgraph);
   void init_graph(const xir::Subgraph* subgraph);
   std::vector<const xir::Tensor*> get_merged_io_tensors() const;
-  std::vector<vart::TensorBuffer*> init_tensor_buffer(std::vector<const xir::Tensor*> tensors);
+  std::vector<vart::TensorBuffer*> init_tensor_buffer(std::vector<const xir::Tensor*> tensors, int batchSupport, unsigned runEngone=1);
   void free_buffers(std::vector<vart::TensorBuffer*> &tbufs, bool isInput);
   std::unordered_map<vart::TensorBuffer*, vart::TensorBuffer*> tbuf2hwbuf_;
+  std::unordered_map<vart::TensorBuffer*, vector<vart::TensorBuffer*>> tbuf2hwbuf2_;
   std::mutex hwbuf_mtx_;
+  std::mutex hwbuf2_mtx_;
   std::list<std::unique_ptr<vart::TensorBuffer>> bufs_;
   std::vector<std::unique_ptr<XrtContext>> contexts_;
   uint64_t code_addr_;

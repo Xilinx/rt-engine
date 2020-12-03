@@ -29,20 +29,26 @@ void Dpuv3Int8Controller::initializeTensors()
     std::vector<std::int32_t> inHwDims = { int32_t(BATCH_SIZE*xmodel_->getInW()*xmodel_->getInH()*xmodel_->getInCh())};
     if(not xmodel_->getDruMode())
       inHwDims = { int32_t(xmodel_->getInW()*xmodel_->getInH()*BATCH_SIZE*ceil((float)xmodel_->getInCh()/16)*16)};
-    const std::vector<std::int32_t> outdims = { BATCH_SIZE, xmodel_->getOutW(), xmodel_->getOutH(), int32_t(xmodel_->getOutCh())};
     const std::vector<std::int32_t> outHwDims = { BATCH_SIZE, 1, 1, int32_t(xmodel_->getOutDdrSize())};
    
     xir::Tensor *in_t = xir::Tensor::create("input", indims, xir::DataType{xir::DataType::INT, 8}).release();
     xir::Tensor *in_hw = xir::Tensor::create("inputHw", inHwDims, xir::DataType{xir::DataType::INT, 8}).release();
-    xir::Tensor *op = xir::Tensor::create("output", outdims, xir::DataType{xir::DataType::INT, 8}).release();
     xir::Tensor *op_hw = xir::Tensor::create("outputHw", outHwDims, xir::DataType{xir::DataType::INT, 8}).release();
     
     in_tensor_.reset(in_t);
     in_tensor_->set_attr<std::int32_t>("fix_point", xmodel_->get_input_fix_point_values()[0]); 
     in_hw_tensor_.reset(in_hw);
-    out_tensor_.reset(op);
-    out_tensor_->set_attr<std::int32_t>("fix_point", xmodel_->get_output_fix_point_values()[0]); 
     out_hw_tensor_.reset(op_hw);
+    
+    for(uint32_t k=0; k<xmodel_->getOutputNum(); k++)
+    {
+      std::vector<std::int32_t> outputdims = { BATCH_SIZE, xmodel_->getOutTensorsDims()[k][0], xmodel_->getOutTensorsDims()[k][1], xmodel_->getOutTensorsDims()[k][2]};
+      xir::Tensor *outputOp = xir::Tensor::create("output"+std::to_string(k), outputdims, xir::DataType{xir::DataType::INT, 8}).release();
+      std::unique_ptr<xir::Tensor> outtensor;
+      outtensor.reset(outputOp);
+      outtensor->set_attr<std::int32_t>("fix_point", xmodel_->get_output_fix_point_values()[k]);
+      out_tensors_.push_back(std::move(outtensor));
+    }
 
 }
 
@@ -237,69 +243,68 @@ void Dpuv3Int8Controller::execute(uint64_t *buf_addr)
 
 }
 
+void Dpuv3Int8Controller::output_reorg(std::vector<void*> stdData, void *result_data, int result_size)
+{
+     std::vector<std::vector<std::int32_t>> outTensorsDimensions = xmodel_->getOutTensorsDims();
+    
+    for(uint32_t i=0; i<stdData.size(); i++)
+    {
+      each_output_reorg(stdData[i], result_data, outTensorsDimensions[i][4], outTensorsDimensions[i][3], outTensorsDimensions[i][0]*outTensorsDimensions[i][1]*outTensorsDimensions[i][2], outTensorsDimensions[i][2], i);    
+    }
 
-void Dpuv3Int8Controller::output_reorg(void *std_data, void *result_data, int result_size)
+}
+
+void Dpuv3Int8Controller::each_output_reorg(void* std_data, void *result_data, int ddr_size, int startVal, int std_size, int stdOutCh, int outputNumber)
 {
     int i, mbatch, segment, group;
-    std::vector<int> count(BATCH_SIZE,0); 
+    std::vector<int> count(BATCH_SIZE,0);
+
+    int result_size = ddr_size*4;
     std::vector<int8_t> stdExtraZeroesData(result_size,0);
 
-    for (i = 0; i < result_size; i++)
+    for (i = startVal; i < result_size+startVal; i++)
     {
-        mbatch = i / (64*16*xmodel_->getOutDdrSize());
-        segment = (i - mbatch * (64*16*xmodel_->getOutDdrSize())) / 64;
-        group = (i - mbatch * (64 * 16*xmodel_->getOutDdrSize()) - segment * 64) / 16;
+        mbatch = i / (64*16*ddr_size);
+        segment = (i - mbatch * (64*16*ddr_size)) / 64;
+        group = (i - mbatch * (64 * 16*ddr_size) - segment * 64) / 16;
         switch(mbatch*4+group)
         {
            case 0: stdExtraZeroesData[count[0]]=*(int8_t *)((long long)result_data+i);
                    count[0]++;
                    break;
 
-           case 1: stdExtraZeroesData[xmodel_->getOutDdrSize()+count[1]]=*(int8_t *)((long long)result_data+i);
+           case 1: stdExtraZeroesData[ddr_size+count[1]]=*(int8_t *)((long long)result_data+i);
                    count[1]++;
                    break;
-           case 2: stdExtraZeroesData[xmodel_->getOutDdrSize()*2+count[2]]=*(int8_t *)((long long)result_data+i);
+           case 2: stdExtraZeroesData[ddr_size*2+count[2]]=*(int8_t *)((long long)result_data+i);
                     count[2]++;
                     break;
-           case 3: stdExtraZeroesData[xmodel_->getOutDdrSize()*3+count[3]]=*(int8_t *)((long long)result_data+i);
+           case 3: stdExtraZeroesData[ddr_size*3+count[3]]=*(int8_t *)((long long)result_data+i);
                    count[3]++;
         }
         
     }
-    
-    int stdSize = xmodel_->getOutW()*xmodel_->getOutH()*xmodel_->getOutCh();
-    std::vector<int> stdDataVec(stdSize*BATCH_SIZE,0);
+   
+    std::vector<int> stdDataVec(std_size*BATCH_SIZE,0);
+    int ddrOutCh = std::ceil(stdOutCh/16.0)*16;
+    int counter = 0;
 
-    for(int j=0; j<stdSize; j++)
+    for(int k=0; k<result_size; k=k+ddrOutCh)
     {
-      stdDataVec[j] = stdExtraZeroesData[j];
+        for(int j=k; j<k+stdOutCh; j++)
+        {
+          stdDataVec[counter]=stdExtraZeroesData[j];
+          counter++;
+        }
     }
-    int k = 0;
-    for(int j=stdSize*1; j<stdSize*2; j++)
-    {
-      stdDataVec[j] = stdExtraZeroesData[xmodel_->getOutDdrSize()+k];
-      k++;
-    }
-    k=0;
-    for(int j=stdSize*2; j<stdSize*3; j++)
-    {
-      stdDataVec[j] = stdExtraZeroesData[k+(xmodel_->getOutDdrSize()*2)];
-      k++;
-    }
-    k=0;
-    for(int j=stdSize*3; j<stdSize*4; j++)
-    {
-      stdDataVec[j] = stdExtraZeroesData[k+(xmodel_->getOutDdrSize()*3)];
-      k++;
-    }
-    
-    for(int o=0; o<stdSize*4; o++)
+    for(int o=0; o<std_size*4; o++)
     {
       *(int8_t *)((long long) std_data+o) = stdDataVec[o];
 
     }
 
 }
+
 
 std::vector<const xir::Tensor*> 
 Dpuv3Int8Controller::get_input_tensors() const  {
@@ -308,7 +313,12 @@ Dpuv3Int8Controller::get_input_tensors() const  {
 
 std::vector<const xir::Tensor*> 
 Dpuv3Int8Controller::get_output_tensors() const {
-  return std::vector<const xir::Tensor*>{ out_tensor_.get() };
+  std::vector<const xir::Tensor*> outtensors;
+  for(uint32_t i=0; i<xmodel_->getOutputNum(); i++)
+  {
+    outtensors.push_back(out_tensors_[i].get());
+  }
+  return outtensors;
 }
 
 std::vector<vart::TensorBuffer*> 
@@ -353,7 +363,7 @@ Dpuv3Int8Controller::create_hw_buffers(std::vector<vart::TensorBuffer*> stdBuf, 
     {
       hwBuf = create_tensor_buffers({out_hw_tensor_.get()}, isInput);
     }
-  
+
   stdbuf2hwbuf_[stdBuf[0]] = hwBuf[0];
 
   return hwBuf;
@@ -391,32 +401,89 @@ void Dpuv3Int8Controller::preprocess(vart::TensorBuffer* stdbuf, vart::TensorBuf
     memcpy((void*)hwbuf->data().first, (void*)hwDinVector.data(), hwDinVector.size()*BATCH_SIZE);
 }
 
-void Dpuv3Int8Controller::postprocess(vart::TensorBuffer* stdbuf, vart::TensorBuffer* hwbuf)
+void Dpuv3Int8Controller::postprocess(std::vector<vart::TensorBuffer*> stdbuf, vart::TensorBuffer* hwbuf)
 {
    
-   output_reorg((void*)stdbuf->data().first, (void*)hwbuf->data().first, xmodel_->getOutDdrSize()*BATCH_SIZE);
+   std::vector<void*> vecs;
+   for(uint32_t i=0; i<stdbuf.size(); i++)
+   {
+     vecs.push_back((void*)stdbuf[i]->data().first);
+   }
+
+   output_reorg(vecs, (void*)hwbuf->data().first, xmodel_->getOutDdrSize()*BATCH_SIZE);
  
 }
 
-void Dpuv3Int8Controller::run(const std::vector<vart::TensorBuffer*> &inputs, 
+void Dpuv3Int8Controller::data_fix2float(float* dataDst, int8_t* dataSrc, int size, float scale) {
+  for (int i = 0; i < size; i++)
+    dataDst[i] = (float)(dataSrc[i]*scale);
+}
+
+void Dpuv3Int8Controller::data_float2fix(int8_t* dataDst, float* dataSrc, int size, float scale) {
+  for (int i = 0; i < size; i++)
+    dataDst[i] = (int8_t)(dataSrc[i]*scale);
+}
+
+void Dpuv3Int8Controller::run(const std::vector<vart::TensorBuffer*> &inputs,
                         const std::vector<vart::TensorBuffer*> &outputs) {
   
-//  XclDeviceBuffer* inbuf = dynamic_cast<XclDeviceBuffer*>(get_device_buffer(inputs[0]));
-//  XclDeviceBuffer* outbuf = dynamic_cast<XclDeviceBuffer*>(get_device_buffer(outputs[0]));
+  std::vector<vart::TensorBuffer*> input_tensor_buffers;
+  std::vector<vart::TensorBuffer*> output_tensor_buffers;
 
-  vart::TensorBuffer* inHwTbuf = get_hw_buffer(inputs[0]);
-  vart::TensorBuffer* outHwTbuf = get_hw_buffer(outputs[0]);
-  vart::TensorBuffer* swapTbuf = stdbuf2swapbuf_[inputs[0]];
-  vart::TensorBuffer* druSrcTbuf = stdbuf2druSrcbuf_[inputs[0]];
-  vart::TensorBuffer* druDstTbuf = stdbuf2druDstbuf_[inputs[0]];
+  // False if get_inputs() / get_outputs() was used
+  // True if the user is providing us the tensor buffers
+  bool create_tb_outside=false;
 
-  XclDeviceBuffer *inHwBuf = dynamic_cast<XclDeviceBuffer*>(get_device_buffer(inHwTbuf));
-  XclDeviceBuffer *outHwBuf = dynamic_cast<XclDeviceBuffer*>(get_device_buffer(outHwTbuf));
-  XclDeviceBuffer *swapBuf = dynamic_cast<XclDeviceBuffer*>(get_device_buffer(swapTbuf));
-  XclDeviceBuffer *druSrcBuf = dynamic_cast<XclDeviceBuffer*>(get_device_buffer(druSrcTbuf));
-  XclDeviceBuffer *druDstBuf = dynamic_cast<XclDeviceBuffer*>(get_device_buffer(druDstTbuf));
+  // Does this need to be protected by a mutex for mt
+  auto it = stdbuf2hwbuf_.find(outputs[0]);
+  if (it == stdbuf2hwbuf_.end())
+  {
+    create_tb_outside=true;
+  }
 
-  preprocess(inputs[0], inHwTbuf);
+  // If the user has provided us TB
+  if(create_tb_outside) {
+    input_tensor_buffers = get_inputs();
+    output_tensor_buffers = get_outputs();
+
+    // Must copy input data from user's tensor buffers
+    // Iterate over both vectors simultaneously
+    auto i = inputs.begin();
+    auto itb = input_tensor_buffers.begin();
+    for (; i != inputs.end() && itb != input_tensor_buffers.end(); ++i, ++itb) {
+      // If input is float, we must scale to int8
+      auto num_src = (*i)->get_tensor()->get_element_num();
+      auto num_dst = (*itb)->get_tensor()->get_element_num();
+      auto num = std::min(num_src,num_dst);
+      if ((*i)->get_tensor()->get_data_type().type == xir::DataType::FLOAT)
+      {
+        auto scale = pow(2,(*itb)->get_tensor()->get_attr<std::int32_t>("fix_point"));
+        data_float2fix((int8_t*)(*itb)->data().first, (float*)(*i)->data().first, num, scale);
+      }
+      else if ((*i)->get_tensor()->get_data_type().type == xir::DataType::INT)
+        memcpy((int8_t*)(*itb)->data().first, (float*)(*i)->data().first, num);
+      else
+        throw std::runtime_error("Error: Input Tensor Buffer Data Type is unsupported.");
+    }
+  }
+  else { // Only pointers will be copied
+    input_tensor_buffers = inputs;
+    output_tensor_buffers = outputs;
+  }
+
+  vart::TensorBuffer* inHwTbuf = get_hw_buffer(input_tensor_buffers[0]);
+  vart::TensorBuffer* outHwTbuf = get_hw_buffer(output_tensor_buffers[0]);
+  vart::TensorBuffer* swapTbuf = stdbuf2swapbuf_[input_tensor_buffers[0]];
+  vart::TensorBuffer* druSrcTbuf = stdbuf2druSrcbuf_[input_tensor_buffers[0]];
+  vart::TensorBuffer* druDstTbuf = stdbuf2druDstbuf_[input_tensor_buffers[0]];
+
+  auto *inHwBuf = dynamic_cast<XclDeviceBuffer*>(get_device_buffer(inHwTbuf));
+  auto *outHwBuf = dynamic_cast<XclDeviceBuffer*>(get_device_buffer(outHwTbuf));
+  auto *swapBuf = dynamic_cast<XclDeviceBuffer*>(get_device_buffer(swapTbuf));
+  auto *druSrcBuf = dynamic_cast<XclDeviceBuffer*>(get_device_buffer(druSrcTbuf));
+  auto *druDstBuf = dynamic_cast<XclDeviceBuffer*>(get_device_buffer(druDstTbuf));
+
+  preprocess(input_tensor_buffers[0], inHwTbuf);
 
   uint64_t buf_addr[BUF_IDX_NUM];
 
@@ -439,7 +506,31 @@ void Dpuv3Int8Controller::run(const std::vector<vart::TensorBuffer*> &inputs,
   execute(buf_addr);
   outHwBuf->download();
 
-  postprocess(outputs[0], outHwTbuf);
+  postprocess(output_tensor_buffers, outHwTbuf);
+
+  // If the user has provided us TB
+  if(create_tb_outside) {
+
+    // Must copy output data to user's tensor buffers
+    // Iterate over both vectors simultaneously
+    auto o = outputs.begin();
+    auto otb = output_tensor_buffers.begin();
+    for (; o != outputs.end() && otb != output_tensor_buffers.end(); ++o, ++otb) {
+      // If output is float, we must scale to int8
+      auto num_src = (*otb)->get_tensor()->get_element_num();
+      auto num_dst = (*o)->get_tensor()->get_element_num();
+      auto num = std::min(num_src,num_dst);
+      if ((*o)->get_tensor()->get_data_type().type == xir::DataType::FLOAT)
+      {
+        auto scale = pow(2,(*otb)->get_tensor()->get_attr<std::int32_t>("fix_point"));
+        data_fix2float((float*) (*o)->data().first, (int8_t*) (*otb)->data().first, num, scale);
+      }
+      else if ((*o)->get_tensor()->get_data_type().type == xir::DataType::INT)
+        memcpy((int8_t*)(*o)->data().first, (int8_t*)(*otb)->data().first, num);
+      else
+        throw std::runtime_error("Error: Output Tensor Buffer Data Type is unsupported.");
+    }
+  }
 }
 
 std::vector<int32_t, aligned_allocator<int32_t>> Dpuv3Int8Controller::load(std::string filename)
