@@ -175,7 +175,8 @@ std::vector<float> cpuUtil::computeSoftmax(std::vector<int8_t> input)
 std::vector<pair<float,int>> cpuUtil::sortArr(std::vector<float> arr, int n) 
 { 
 
-	vector<pair<float, float> > vp; 
+	int labelOffset = keysobj_->getOutCh()-1000;
+  vector<pair<float, float> > vp; 
 
 	for (int i = 0; i < n; ++i) { 
 		vp.push_back(make_pair(arr[i], i)); 
@@ -186,7 +187,7 @@ std::vector<pair<float,int>> cpuUtil::sortArr(std::vector<float> arr, int n)
   std::vector<pair<float,int>> p;
 
 	for (uint32_t i = vp.size()-1; i >vp.size()-6; i--) { 
-      p.push_back(make_pair(vp[i].first,vp[i].second));
+      p.push_back(make_pair(vp[i].first,vp[i].second-labelOffset));
 	}
   return p;
 } 
