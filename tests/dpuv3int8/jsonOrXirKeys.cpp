@@ -134,6 +134,21 @@ void jsonOrXirKeys::loadFromXmodel(std::string xmodelFname)
     json_object_object_foreach(jobj, key, val)
     {
       std::string keyString(key);
+      if(keyString.compare("inputs") == 0)
+      {
+        json_object_object_foreach(val, inputkey, inputval)
+        {
+          assert(inputkey);
+          json_object* obj = json_object_object_get(inputval, "shape");
+          json_object* shapeVal;
+          shapeVal = json_object_array_get_idx(obj, 1);
+          inH_ = json_object_get_int(shapeVal);
+          shapeVal = json_object_array_get_idx(obj, 2);
+          inW_ = json_object_get_int(shapeVal);
+          shapeVal = json_object_array_get_idx(obj, 3);
+          inCh_ = json_object_get_int(shapeVal);
+        }
+      }
       if(keyString.compare("outputs") == 0)
       {
         json_object_object_foreach(val, outputkey, outputval)
@@ -157,18 +172,14 @@ void jsonOrXirKeys::loadFromXmodel(std::string xmodelFname)
     outH_ = 1;//subgraph->get_attr<int>("outH");
     outW_ = 1;//subgraph->get_attr<int>("outW");
     outCh_ = 1000;//subgraph->get_attr<int>("outCh");
-  }
- 
+    inW_ = subgraph->get_attr<int>("inW");
+    inH_ = subgraph->get_attr<int>("inH");
+    inCh_ = subgraph->get_attr<int>("inCh");
+ }
   
-  
-  
-  //outSize_ = subgraph->get_attr<int>("outSize");
   debugMode_ = false;//subgraph->get_attr<int>("debugMode");
   golden_filename_ = runner_dir_+"gold.txt";//subgraph->get_attr<std::string>("goldenFile");
   synset_filename_ = runner_dir_+"synset_words.txt";//subgraph->get_attr<std::string>("synsetFile");
-  inW_ = subgraph->get_attr<int>("inW");
-  inH_ = subgraph->get_attr<int>("inH");
-  inCh_ = subgraph->get_attr<int>("inCh");
 
 }
 

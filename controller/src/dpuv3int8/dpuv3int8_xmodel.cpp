@@ -64,7 +64,7 @@ inputLayerParams::inputLayerParams(json_object* jobj, bool isDebugMode, bool mul
 
 }
 
-outputLayerParams::outputLayerParams(json_object* jobj, bool multiFormat)
+outputLayerParams::outputLayerParams(json_object* jobj, bool isDebugMode, bool multiFormat)
 {
   if(multiFormat)
   {
@@ -79,7 +79,7 @@ outputLayerParams::outputLayerParams(json_object* jobj, bool multiFormat)
     
     outAddress_ = getValue("address", jobj);
     outDdrSize_ = getValue("outDDRSize", jobj);
-    debug_golden_filename_ = getFileNameIfExists("debugGoldenFile", jobj);
+    debug_golden_filename_ = isDebugMode ? getFileNameIfExists("debugGoldenFile", jobj):"";
   }
   else
   {
@@ -113,14 +113,14 @@ inputLayerParams::inputLayerParams(const xir::Subgraph *subgraph, bool isDebugMo
 
 }
 
-outputLayerParams::outputLayerParams(const xir::Subgraph *subgraph, bool multiFormat)
+outputLayerParams::outputLayerParams(const xir::Subgraph *subgraph, bool isDebugMode, bool multiFormat)
 {
   outH_ = subgraph->get_attr<int>("outH");
   outW_ = subgraph->get_attr<int>("outW");
   outCh_ = subgraph->get_attr<int>("outCh");
   outAddress_ = 0;
   outDdrSize_ = subgraph->get_attr<int>("outSize");
-
+  debug_golden_filename_ = "";
 }
 
 
@@ -241,7 +241,7 @@ void Xmodel::loadParamsJson(json_object* jobj, bool isDebugMode)
         json_object_object_foreach(val, outputkey, outputval)
         {
           assert(outputkey);
-          outputParams_.push_back(outputLayerParams(outputval, multiFormat)); 
+          outputParams_.push_back(outputLayerParams(outputval, isDebugMode, multiFormat)); 
         }
       }
     }
@@ -249,7 +249,7 @@ void Xmodel::loadParamsJson(json_object* jobj, bool isDebugMode)
   else
   {
     inputParams_.push_back(inputLayerParams(jobj, isDebugMode, multiFormat));
-    outputParams_.push_back(outputLayerParams(jobj, multiFormat));
+    outputParams_.push_back(outputLayerParams(jobj, isDebugMode, multiFormat));
   }
   
   swapBufSize_ = getValue("swapBufSize", jobj);
@@ -316,7 +316,7 @@ void Xmodel::loadParamsSubgraph(const xir::Subgraph *subgraph, bool isDebugMode)
         json_object_object_foreach(val, outputkey, outputval)
         {
           assert(outputkey);
-          outputParams_.push_back(outputLayerParams(outputval, multiFormat)); 
+          outputParams_.push_back(outputLayerParams(outputval, isDebugMode, multiFormat)); 
         }
       }
     }
@@ -324,7 +324,7 @@ void Xmodel::loadParamsSubgraph(const xir::Subgraph *subgraph, bool isDebugMode)
   else
   {
     inputParams_.push_back(inputLayerParams(subgraph, isDebugMode, multiFormat));
-    outputParams_.push_back(outputLayerParams(subgraph, multiFormat));
+    outputParams_.push_back(outputLayerParams(subgraph, isDebugMode, multiFormat));
   }
 
   swapBufSize_ = subgraph->get_attr<int>("swapBufSize");
