@@ -195,6 +195,7 @@ XclDpuController<Dhandle, DbufIn, DbufOut>::free_tensor_buffers(std::vector<vart
     for (auto it=tbufs_.begin(); it != tbufs_.end(); it++)
       if (it->get() == tbufs[ti])
       {
+        free(reinterpret_cast<void*>(it->get()->data().first));
         tbufs_.erase(it);
         break;
       }

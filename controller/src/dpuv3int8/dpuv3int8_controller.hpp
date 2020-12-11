@@ -105,8 +105,8 @@ class Dpuv3Int8Controller : public XclDpuController<XclDeviceHandle, XclDeviceBu
 
   cl_mem regMap_;
 
-  void data_float2fix(int8_t* dataDst, float* dataSrc, int size, float scale);
-  void data_fix2float(float* dataDst, int8_t* dataSrc, int size, float scale);
+  static void data_float2fix(int8_t* dataDst, float* dataSrc, int size, float scale);
+  static void data_fix2float(float* dataDst, int8_t* dataSrc, int size, float scale);
 
 };
 
