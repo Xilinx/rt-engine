@@ -373,32 +373,222 @@ vart::TensorBuffer* Dpuv3Int8Controller::get_hw_buffer(vart::TensorBuffer* stdBu
   return stdbuf2hwbuf_[stdBuffer];
 }
 
+void Dpuv3Int8Controller::channelAugmentation(std::vector<int8_t> &inputStdData, std::vector<int8_t> &channelAugmentedData, std::vector<int> &channelAugShape)
+{
+
+  int src_kw = xmodel_->getInKernelW();
+  int src_pw = xmodel_->getPadLft();
+  int src_sw = xmodel_->getInStrdW();
+  int src_b = BATCH_SIZE;
+  int src_h = xmodel_->getInH();
+  int src_w = xmodel_->getInW();
+  int src_c = xmodel_->getInCh();
+  
+  int dst_b = src_b;
+  int dst_h = src_h;
+  int dst_w = std::floor(src_w/src_sw);
+  int dst_c = src_c*src_kw;
+  
+  int chAugH = dst_h;
+  int chAugW = dst_w;
+  int chAugCh = dst_c;
+  
+  channelAugShape[0] = chAugH;
+  channelAugShape[1] = chAugW;
+  channelAugShape[2] = chAugCh;
+ 
+  int src_w_idx = 0;
+  int src_c_idx = 0;
+   
+  channelAugmentedData.resize(dst_b*dst_h*dst_w*dst_c, 0);
+  
+  for(int bch_idx=0; bch_idx<dst_b; bch_idx++)
+  {
+    for(int h_idx=0; h_idx<dst_h; h_idx++)
+    {
+      for(int w_idx=0; w_idx<dst_w; w_idx++)
+      {
+        for(int ch_idx=0; ch_idx<dst_c; ch_idx++)
+        {
+          src_w_idx = (src_sw*w_idx)-src_pw+(std::floor(ch_idx/src_c));
+          src_c_idx = ch_idx%src_c;
+          
+          if(src_w_idx<0 or src_w_idx>=src_w)
+          {
+            channelAugmentedData[(bch_idx*dst_h*dst_w*dst_c)+(h_idx*dst_w*dst_c)+(w_idx*dst_c)+(ch_idx)]=0;
+          }
+          else
+          {
+            channelAugmentedData[(bch_idx*dst_h*dst_w*dst_c)+(h_idx*dst_w*dst_c)+(w_idx*dst_c)+(ch_idx)] = inputStdData[(bch_idx*src_h*src_w*src_c)+(h_idx*src_w*src_c)+(src_w_idx*src_c)+(src_c_idx)];
+          }
+
+        }
+      }
+    }
+  }
+  
+}
+
+void Dpuv3Int8Controller::batchInterleave(std::vector<int8_t> &inputData, std::vector<int8_t> &batchInterleavedData, std::vector<int> &channelAugShape)
+{
+
+  /////////////batch interleave//////////
+  int dpuCfgPrllIch = 16;
+  int dpuCfgDummy = 0;
+  int layerCfgIbMode = 8;
+  
+  int src_b = BATCH_SIZE;
+  
+  int src_h = xmodel_->getInH();
+  if(xmodel_->getChannelAugmentationMode())
+    src_h = channelAugShape[0];
+  
+  int src_w = xmodel_->getInW();
+  if(xmodel_->getChannelAugmentationMode())
+    src_w = channelAugShape[1];
+  
+  int src_c = xmodel_->getInCh();
+  if(xmodel_->getChannelAugmentationMode())
+    src_c = channelAugShape[2];
+
+  int prllIch = dpuCfgPrllIch;
+  int dummyMode = dpuCfgDummy;
+  int dst_c = 0;
+  int dst_c_grp = 0;
+  int dst_c_idx = 0;
+  int8_t data = 0;
+
+  if(src_c % prllIch == 0)
+    dst_c = src_c;
+  else
+    dst_c = (std::floor(src_c/prllIch)+1)*prllIch;
+
+  dst_c_grp = std::floor(dst_c/prllIch);
+//  int ddr_size = src_b*dst_c*src_w*src_h;
+  for(int h_idx=0; h_idx<src_h; h_idx++)
+  {
+    for(int w_idx=0; w_idx<src_w; w_idx++)
+    {
+      for(int ch_grp_idx=0; ch_grp_idx<dst_c_grp; ch_grp_idx++)
+      {
+        for(int bch_idx=0; bch_idx<src_b; bch_idx++)
+        {
+          if(layerCfgIbMode==8)
+          {
+            for(int ch_idx=0; ch_idx<prllIch; ch_idx++)
+            {
+              dst_c_idx = (ch_grp_idx*prllIch)+ch_idx;
+              if(dst_c_idx<src_c)
+              {
+                //data = img_data_src[bch_idx][h_idx][w_idx][dst_c_idx] & 0xff
+                if(xmodel_->getChannelAugmentationMode())
+                  data = inputData[(bch_idx*channelAugShape[0]*channelAugShape[1]*channelAugShape[2])+(h_idx*channelAugShape[1]*channelAugShape[2])+(w_idx*channelAugShape[2])+(dst_c_idx)]&0xff;
+               else
+                  data = inputData[(bch_idx*xmodel_->getInH()*xmodel_->getInW()*xmodel_->getInCh())+(h_idx*xmodel_->getInW()*xmodel_->getInCh())+(w_idx*xmodel_->getInCh())+(dst_c_idx)]&0xff;
+              }
+              else
+              {
+                if(dummyMode==0)
+                  data=0;
+                else if(dummyMode==1)
+                  data=0xff;
+                else
+                  data=std::rand()%(256);///randomInt(0,255);/////
+              }
+              batchInterleavedData.push_back(data);////
+            }
+          }
+          else
+          {
+            for(int ch_idx=0; ch_idx<prllIch; ch_idx=ch_idx+4)
+            {
+              data=0;
+              for(int b2_ch_idx=0; b2_ch_idx<4; b2_ch_idx++)
+              {
+                dst_c_idx = (ch_grp_idx*prllIch)+ch_idx+b2_ch_idx;
+                if(dst_c_idx<src_c)
+                {
+                  //data |= (img_data_src[bch_idx][h_idx][w_idx][dst_c_idx] & 0x03) << (b2_ch_idx * 2)
+                  if(xmodel_->getChannelAugmentationMode())
+                    data |= (inputData[(bch_idx*channelAugShape[0]*channelAugShape[1]*channelAugShape[2])+(h_idx*channelAugShape[1]*channelAugShape[2])+(w_idx*channelAugShape[2])+(dst_c_idx)] & 0x03) << (b2_ch_idx*2); /////;
+                  else
+                    data |= (inputData[(bch_idx*xmodel_->getInH()*xmodel_->getInW()*xmodel_->getInCh())+(h_idx*xmodel_->getInW()*xmodel_->getInCh())+(w_idx*xmodel_->getInCh())+(dst_c_idx)] & 0x03) << (b2_ch_idx*2); /////;
+                }
+                else
+                {
+                  if(dummyMode==0)
+                    data |= 0;
+                  else if(dummyMode==1)
+                    data = (0x03 << (b2_ch_idx*2));
+                  else
+                    data=(std::rand()%(4))<<(b2_ch_idx*2);///randomInt;/////
+                }
+              }
+              batchInterleavedData.push_back(data);//////
+            }
+          }
+        }
+      }
+    }
+  }
+
+
+}
+
+
 void Dpuv3Int8Controller::preprocess(vart::TensorBuffer* stdbuf, vart::TensorBuffer* hwbuf)
 {
-  
-    void* std_data = (void*)stdbuf->data().first;
-    std::vector<uint8_t> flattenedData(xmodel_->getInW()*xmodel_->getInH()*xmodel_->getInCh()*BATCH_SIZE,0);
-    for(uint32_t i=0; i<flattenedData.size(); i++)
+    if (not xmodel_->getDruMode())
     {
-      flattenedData[i]=*(int8_t *)((long long) std_data+i);
-    }
-
-    std::vector<int,aligned_allocator<int>> hwDinVector(flattenedData.size()/4,0);
-
-    int j=0;
-    
-    for(uint32_t i=0; i<flattenedData.size(); i=i+BATCH_SIZE)
-    {
-      uint8_t *ptr = (uint8_t*)&(hwDinVector[j]);
-      for(int o=0; o<BATCH_SIZE; o++)
+      void* std_data = (void*)stdbuf->data().first;
+      std::vector<int8_t> inputStdData(xmodel_->getInW()*xmodel_->getInH()*xmodel_->getInCh()*BATCH_SIZE,0);
+      for(uint32_t i=0; i<inputStdData.size(); i++)
       {
-        ptr[o] = flattenedData[i+o];
-
+        inputStdData[i]=*(int8_t *)((long long) std_data+i);
       }
-      j++;
+      
+      std::vector<int8_t> channelAugmentedData;
+      std::vector<int> channelAugShape(3,0);
+      std::vector<int8_t> batchInterleavedData;
+  
+      if(xmodel_->getChannelAugmentationMode())
+      {
+        channelAugmentation(inputStdData, channelAugmentedData, channelAugShape);
+        batchInterleave(channelAugmentedData, batchInterleavedData, channelAugShape);
+      }
+      else
+        batchInterleave(inputStdData, batchInterleavedData, channelAugShape);
+  
+      memcpy((void*)hwbuf->data().first, (void*)batchInterleavedData.data(), (batchInterleavedData.size()));
     }
-    
-    memcpy((void*)hwbuf->data().first, (void*)hwDinVector.data(), hwDinVector.size()*BATCH_SIZE);
+    else
+    {
+
+      void* std_data = (void*)stdbuf->data().first;
+      std::vector<uint8_t> flattenedData(xmodel_->getInW()*xmodel_->getInH()*xmodel_->getInCh()*BATCH_SIZE,0);
+      for(uint32_t i=0; i<flattenedData.size(); i++)
+      {
+        flattenedData[i]=*(int8_t *)((long long) std_data+i);
+      }
+  
+      std::vector<int,aligned_allocator<int>> hwDinVector(flattenedData.size()/4,0);
+  
+      int j=0;
+      
+      for(uint32_t i=0; i<flattenedData.size(); i=i+BATCH_SIZE)
+      {
+        uint8_t *ptr = (uint8_t*)&(hwDinVector[j]);
+        for(int o=0; o<BATCH_SIZE; o++)
+        {
+          ptr[o] = flattenedData[i+o];
+  
+        }
+        j++;
+      }
+      
+      memcpy((void*)hwbuf->data().first, (void*)hwDinVector.data(), hwDinVector.size()*BATCH_SIZE);
+
+    }
 }
 
 void Dpuv3Int8Controller::postprocess(std::vector<vart::TensorBuffer*> stdbuf, vart::TensorBuffer* hwbuf)
@@ -439,6 +629,7 @@ void Dpuv3Int8Controller::run(const std::vector<vart::TensorBuffer*> &inputs,
   if (it == stdbuf2hwbuf_.end())
   {
     create_tb_outside=true;
+    std::cout << "WARNING: Running in non-performance mode." << std::endl;
   }
 
   // If the user has provided us TB

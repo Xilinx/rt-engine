@@ -64,6 +64,8 @@ class Dpuv3Int8Controller : public XclDpuController<XclDeviceHandle, XclDeviceBu
   std::vector<int,aligned_allocator<int>> params_;
 
  private:
+  virtual void channelAugmentation(std::vector<int8_t> &inputStdData, std::vector<int8_t> &channelAugmentedData, std::vector<int> &channelAugShape);
+  virtual void batchInterleave(std::vector<int8_t> &inputData, std::vector<int8_t> &batchInterleavedData, std::vector<int> &channelAugShape);
   virtual void output_reorg(std::vector<void*>, void*, int); 
   void initializeTensors();  
   void initializeTaskDRUVariables(); 
