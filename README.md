@@ -1,3 +1,4 @@
+# rt-engine
 Minimal & fast async runtime engine for Vitis accelerators. Capable of servicing > 800K requests per second.
 
 ### Overview
@@ -49,13 +50,7 @@ tests/
         meta.json                Describes configs/files to create this DpuRunner
 ```
 
-### Requirements
-
-* Xilinx Butler (http://xcdl190260/vitis/MLsuite/tree/master/packages, http://xcdl190260/vitis/XIP)
-* XRT (https://github.com/Xilinx/XRT)
-* json-c (https://github.com/json-c/json-c)
-
-### Example
+### Example CPP Usage
 
 ```
 runner/src/dpu_runner.cpp:
@@ -78,44 +73,37 @@ int DpuRunner::wait(int jobid, int timeout) {
 }
 ```
 
-### Build
-Makefile Method:  
+### Build && Install
 ```
-make clean; make -j
-```
-CMake Method:  
-```
-mkdir build_release
-cd build_release
-cmake -DCMAKE_INSTALL_PREFIX=$CONDA_PREFIX -DCMAKE_PREFIX_PATH=$CONDA_PREFIX -DCMAKE_BUILD_TYPE=Release ..
-cmake --build . --parallel $CPU_COUNT
-cmake --install .
+# Link from and install to Conda Environment
+./cmake.sh --clean --build-dir=$PWD/build --install-prefix=$CONDA_PREFIX --conda
+
+# Link from and install to system
+./cmake.sh --clean --build-dir=$PWD/build
 ```
 
-### Run
-Note the environment variables only necessary if you don't use Cmake Method
+### Run Test Example
+Test executables are generated in the cmake build-dir  
+They are also installed into `CMAKE_INSTALL_PATH/bin`  
+Meaning the executables should be in your path
 ```
-export LD_LIBRARY_PATH=build:${CONDA_PREFIX}/lib:/opt/xilinx/xrt/lib 
-export XILINX_XRT=/opt/xilinx/xrt
-build/tests/engine.exe
-build/tests/app.exe -r tests/app/models/sample_resnet50/meta.json
+engine.exe
 ```
 
-### Conda environment setup (optional-recommended, to get all project dependencies)
-
+### Conda Environment
+[Install Anaconda](https://docs.anaconda.com/anaconda/install/linux/#installation)
+  
+For Universal Development (You are building, and installing unilog/targetfactory/xir/vart/xip/xrm/xrt):  
 ```
-wget https://repo.anaconda.com/archive/Anaconda2-5.1.0-Linux-x86_64.sh
-bash ./Anaconda2-5.1.0-Linux-x86_64.sh
-conda create -n rt-engine python=3.6 protobuf=3.11.2 json-c jsoncpp glog unilog target-factory xir vart -c defaults -c omnia -c conda-forge/label/gcc7 -c conda-forge
-conda activate rt-engine
-git clone gits@xcdl190260:vitis/XIP.git
-cd XIP/Butler/src
-(edit Makefile to skip ENABLE_PYBIND11 and -lpython if not needed)
-make clean; make -j libbutler.so
-mkdir -p ${CONDA_PREFIX}/include/xip/butler
-cp client/butler_*.h ${CONDA_PREFIX}/include/xip/butler
-cp common/*h ${CONDA_PREFIX}/include/xip/butler
-cp butler.pb.h ${CONDA_PREFIX}/include/xip/butler
-cp lib/libbutler.so ${CONDA_PREFIX}/lib/
+conda create -n rt-engine python=3.6 cmake opencv protobuf libprotobuf-static pybind11 json-c jsoncpp glog libuuid -c defaults -c conda-forge/label/gcc7
+```
 
+For rt-engine Development (You want to use prebuilt conda packages for: unilog/targetfactory/xir/vart/xip/xrm/xrt):  
+```
+conda create -n rt-engine python=3.6 cmake vart -c defaults -c conda-forge/label/gcc7 -c http://web/~bryanloz
+```
+
+For rt-engine Testing (You want everything from prebuilt conda packages)
+```
+conda create -n rt-engine python=3.6 rt-engine -c defaults -c conda-forge/label/gcc7 -c http://web/~bryanloz
 ```
