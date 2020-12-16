@@ -11,7 +11,7 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 add_definitions("-fpermissive" "-Wall")
 
-set(CMAKE_VERBOSE_MAKEFILE ON)
+#set(CMAKE_VERBOSE_MAKEFILE ON)
 
 message("-- Host system processor is ${CMAKE_HOST_SYSTEM_PROCESSOR}")
 message("-- Target system processor is ${CMAKE_SYSTEM_PROCESSOR}")
@@ -20,7 +20,7 @@ set(CMAKE_MODULE_PATH "${CMAKE_MODULE_PATH};${CMAKE_SOURCE_DIR}/cmake")
 
 set(THREADS_PREFER_PTHREAD_FLAG ON)
 find_package(Threads REQUIRED)
-find_package(Boost REQUIRED)
+find_package(Boost COMPONENTS system filesystem REQUIRED)
 find_package(Protobuf REQUIRED)
 find_package(jsoncpp REQUIRED)
 find_package(OpenCV REQUIRED)
@@ -31,8 +31,19 @@ find_package(target-factory REQUIRED)
 find_package(xir REQUIRED)
 find_package(xip REQUIRED)
 find_package(vart COMPONENTS runner REQUIRED)
-find_package(Xrt REQUIRED)
 find_package(glog REQUIRED)
+
+# XRM not yet supported
+#add_definitions(-DXRM)
+#find_package(XRM REQUIRED)
+
+# Fix Some Day
+# Would prefer to find XRT the normal way
+find_package(Xrt REQUIRED)
+#find_package(XRT REQUIRED PATHS /opt/xilinx/xrt)
+
+find_path(JSONC_INCLUDE_DIRS NAMES json-c) 
+find_library(JSONC_LIBRARIES NAME json-c REQUIRED)
 
 file(
   GLOB_RECURSE
@@ -64,13 +75,11 @@ file(
   "vitis/src/*.cpp"
   )
 
-# XRM not yet supported
-#add_definitions(-DXRM)
-
 ##########################
 # Includes for all targets
 ##########################
 include_directories(
+  ${OpenCV_INCLUDE_DIRS}
   ${Protobuf_INCLUDE_DIRS}
   ${XRT_INCLUDE_DIRS}
   ${xip_INCLUDE_DIRS}
@@ -78,6 +87,8 @@ include_directories(
   ${target-factory_INCLUDE_DIRS}
   ${xir_INCLUDE_DIRS}
   ${vart_INCLUDE_DIRS}
+  ${JSONCPP_INCLUDE_DIRS}
+  ${JSONC_INCLUDE_DIRS}
   ${CMAKE_SOURCE_DIR}/engine/src
   ${CMAKE_SOURCE_DIR}/runner/src
   ${CMAKE_SOURCE_DIR}/device/src
@@ -107,10 +118,11 @@ target_link_libraries(
   vart::runner
   xip::butler
   XRT::XRT
-  #XRT::xilinxopencl
-  #XRT::xrt_core
+  #${XRT_OPENCL_LIBRARIES}
+  #${XRT_CORE_LIBRARIES}
   glog::glog
   jsoncpp_lib
+  ${JSONC_LIBRARIES}
   )
 set_target_properties(
   ${PROJECT_NAME}
@@ -163,6 +175,10 @@ install(
   COMPONENT base
   DESTINATION share/cmake/${PROJECT_NAME}
   )
+
+#########################
+# Generate Debian
+#########################
 #set(CPACK_GENERATOR "DEB")
 set(CPACK_PACKAGE_NAME "librt-engine")
 set(CPACK_DEBIAN_PACKAGE_MAINTAINER "xsun@xilinx.com")
@@ -206,7 +222,39 @@ include(CPack)
 cpack_add_component_group(all)
 cpack_add_component(base GROUP all)
 
+#########################
+# Test Executables
+#########################
 
-##########################
-# Test Executables TBD
-##########################
+file(
+  GLOB
+  TESTS
+  "tests/*"
+  )
+
+foreach(test ${TESTS})
+  get_filename_component(exe ${test} NAME)
+  file(GLOB_RECURSE TEST_SRCS "tests/${exe}/*.cpp")
+  add_executable("${exe}.exe" ${TEST_SRCS})
+  target_link_libraries(
+    "${exe}.exe"
+    PRIVATE
+    ${PROJECT_NAME}
+    ${OpenCV_LIBS}
+    ${Protobuf_LIBRARIES}
+    ${Boost_SYSTEM_LIBRARY}
+    ${Boost_FILESYSTEM_LIBRARY}
+    unilog::unilog
+    target-factory::target-factory 
+    xir::xir
+    vart::runner
+    xip::butler
+    XRT::XRT
+    #${XRT_OPENCL_LIBRARIES}
+    #${XRT_CORE_LIBRARIES}
+    glog::glog
+    jsoncpp_lib
+    ${JSONC_LIBRARIES}
+    )
+endforeach()
+
