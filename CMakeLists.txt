@@ -109,9 +109,7 @@ add_library(
 target_link_libraries(
   ${PROJECT_NAME}
   PRIVATE
-  unilog::unilog
   target-factory::target-factory 
-  xir::xir
   vart::runner
   xip::butler
   XRT::XRT
