@@ -256,5 +256,17 @@ foreach(test ${TESTS})
     jsoncpp_lib
     ${JSONC_LIBRARIES}
     )
+  set_target_properties(
+    "${exe}.exe"
+    PROPERTIES
+    INSTALL_RPATH ${CMAKE_INSTALL_PREFIX}/lib
+    INSTALL_RPATH_USE_LINK_PATH TRUE
+    )
+  install(
+    TARGETS
+    "${exe}.exe"
+    COMPONENT tests
+    DESTINATION bin
+    )
 endforeach()
 
