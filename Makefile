@@ -43,10 +43,10 @@ all: $(BUILD_DIR)/$(TARGET_LIB) $(TEST_BINS)
 
 $(BUILD_DIR)/tests/%.exe: tests/%/*.cpp $(BUILD_DIR)/$(TARGET_LIB)
 	$(MKDIR_P) $(dir $@) 
-	$(CXX) $(CPPFLAGS) -o $@ $(dir $<)*.cpp -lrt-engine -lpthread -lxilinxopencl -lxrt_core -ljson-c -lglog -lgflags -lxrt++ -lxrt_coreutil -lunilog -lprotobuf -lxir -ltarget-factory -lvart-runner -ljsoncpp -lbutler -lopencv_core -lopencv_imgproc -lopencv_highgui -lopencv_imgcodecs -ltiff -lboost_system -lboost_filesystem
+	$(CXX) $(CPPFLAGS) -o $@ $(dir $<)*.cpp -lrt-engine -lpthread -lxilinxopencl -lxrt_core -ljson-c -lglog -lgflags -lxrt++ -lxrt_coreutil -lunilog -lxir -ltarget-factory -lvart-runner -ljsoncpp -lbutler -lopencv_core -lopencv_imgproc -lopencv_highgui -lopencv_imgcodecs -ltiff -lboost_system -lboost_filesystem
 
 $(BUILD_DIR)/$(TARGET_LIB): $(OBJS)
-	$(CXX) -fPIC -shared -o $@ $^ $(VITIS_LIBS) -lpthread -lxilinxopencl -lxrt_core -ljson-c -lglog -lgflags -lxrt++ -lxrt_coreutil -lunilog -lprotobuf -lxir -ltarget-factory -lvart-runner -ljsoncpp -lbutler	
+	$(CXX) -fPIC -shared -o $@ $^ $(VITIS_LIBS) -lpthread -lxilinxopencl -lxrt_core -ljson-c -lglog -lgflags -lxrt++ -lxrt_coreutil -lunilog -lxir -ltarget-factory -lvart-runner -ljsoncpp -lbutler
 
 $(BUILD_DIR)/%.cpp.o: %.cpp
 	$(MKDIR_P) $(dir $@)

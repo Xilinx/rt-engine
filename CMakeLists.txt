@@ -21,7 +21,6 @@ set(CMAKE_MODULE_PATH "${CMAKE_MODULE_PATH};${CMAKE_SOURCE_DIR}/cmake")
 set(THREADS_PREFER_PTHREAD_FLAG ON)
 find_package(Threads REQUIRED)
 find_package(Boost COMPONENTS system filesystem REQUIRED)
-find_package(Protobuf REQUIRED)
 find_package(jsoncpp REQUIRED)
 find_package(OpenCV REQUIRED)
 find_package(glog REQUIRED)
@@ -80,7 +79,6 @@ file(
 ##########################
 include_directories(
   ${OpenCV_INCLUDE_DIRS}
-  ${Protobuf_INCLUDE_DIRS}
   ${XRT_INCLUDE_DIRS}
   ${xip_INCLUDE_DIRS}
   ${unilog_INCLUDE_DIRS}
@@ -111,7 +109,6 @@ add_library(
 target_link_libraries(
   ${PROJECT_NAME}
   PRIVATE
-  ${Protobuf_LIBRARIES}
   unilog::unilog
   target-factory::target-factory 
   xir::xir
@@ -241,19 +238,10 @@ foreach(test ${TESTS})
     PRIVATE
     ${PROJECT_NAME}
     ${OpenCV_LIBS}
-    ${Protobuf_LIBRARIES}
     ${Boost_SYSTEM_LIBRARY}
     ${Boost_FILESYSTEM_LIBRARY}
-    unilog::unilog
-    target-factory::target-factory 
-    xir::xir
     vart::runner
-    xip::butler
-    XRT::XRT
-    #${XRT_OPENCL_LIBRARIES}
-    #${XRT_CORE_LIBRARIES}
     glog::glog
-    jsoncpp_lib
     ${JSONC_LIBRARIES}
     )
   set_target_properties(
