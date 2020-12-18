@@ -235,7 +235,10 @@ foreach(test ${TESTS})
     "${exe}.exe"
     PRIVATE
     ${PROJECT_NAME}
-    ${OpenCV_LIBS}
+    opencv_core
+    opencv_imgproc
+    opencv_highgui
+    opencv_imgcodecs
     ${Boost_SYSTEM_LIBRARY}
     ${Boost_FILESYSTEM_LIBRARY}
     vart::runner
