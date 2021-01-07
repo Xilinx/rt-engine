@@ -713,7 +713,7 @@ void Dpuv3Int8Controller::run(const std::vector<vart::TensorBuffer*> &inputs,
       auto num = std::min(num_src,num_dst);
       if ((*o)->get_tensor()->get_data_type().type == xir::DataType::FLOAT)
       {
-        auto scale = pow(2,(*otb)->get_tensor()->get_attr<std::int32_t>("fix_point"));
+        auto scale = pow(2,(-1)*(*otb)->get_tensor()->get_attr<std::int32_t>("fix_point"));
         data_fix2float((float*) (*o)->data().first, (int8_t*) (*otb)->data().first, num, scale);
       }
       else if ((*o)->get_tensor()->get_data_type().type == xir::DataType::XINT)
