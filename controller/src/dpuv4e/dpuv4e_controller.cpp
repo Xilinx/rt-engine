@@ -52,6 +52,10 @@ using namespace chrono;
 #define XDPU_CONTROL_ADDR_0_H 0x104
 #define XDPU_CONTROL_ADDR_1_L 0x108 // input1
 #define XDPU_CONTROL_ADDR_1_H 0x10C
+#define XDPU_CONTROL_ADDR_2_L 0x110 
+#define XDPU_CONTROL_ADDR_2_H 0x114
+#define XDPU_CONTROL_ADDR_3_L 0x118
+#define XDPU_CONTROL_ADDR_3_H 0x11C
 
 #define BATCHSIZE 8
 
@@ -266,15 +270,64 @@ void DpuV4eController::init_graph(const xir::Subgraph* subgraph) {
     }
   }
   // Get Reg ID size
-  auto reg_id_to_context_type =
-    subgraph_->get_attr<std::map<std::string, std::string>>("reg_id_to_context_type");
-  auto reg_id_to_size =
-    subgraph_->get_attr<std::map<std::string, int32_t>>("reg_id_to_size");
   size_t total_io_size = 0;
-  for(auto &r : reg_id_to_context_type) {
-    if (r.second == "DATA") {
-      total_io_size += reg_id_to_size.at(r.first);
+  split_io = 0;
+  if (subgraph_->has_attr("reg_id_to_context_type_v2")) {
+
+    auto reg_id_to_context_type_v2 =
+      subgraph_->get_attr<std::map<std::string, std::string>>("reg_id_to_context_type_v2");
+    auto reg_id_to_size =
+      subgraph_->get_attr<std::map<std::string, int32_t>>("reg_id_to_size");
+    //split_io = 0;
+    for(auto &r : reg_id_to_context_type_v2) {
+      if (r.second == "WORKSPACE") {
+        //total_io_size += reg_id_to_size.at(r.first);
+        split_io = 1;
+        total_io_size = reg_id_to_size.at(r.first);
+      }
     }
+    if (!split_io) {
+      for(auto &r : reg_id_to_context_type_v2) {
+        if (r.second == "INTERFACE") {
+          total_io_size += reg_id_to_size.at(r.first);
+        }
+      }
+    } 
+    else {
+      int count = 0;
+      for(auto &r : reg_id_to_context_type_v2) {
+        if (r.second == "INTERFACE") {
+          //total_io_size += reg_id_to_size.at(r.first);
+          if (r.first == "REG_2")
+          xdpu_total_in_size = reg_id_to_size.at(r.first);
+          else if (r.first == "REG_3")
+          xdpu_total_out_size = reg_id_to_size.at(r.first);
+          count++;
+        }
+      }
+
+    }
+  } 
+  else { //for vai1.3 xmodel
+    auto reg_id_to_context_type =
+      subgraph_->get_attr<std::map<std::string, std::string>>("reg_id_to_context_type");
+    auto reg_id_to_size =
+      subgraph_->get_attr<std::map<std::string, int32_t>>("reg_id_to_size");
+    int count = 0;
+    for(auto &r : reg_id_to_context_type) {
+      if (r.second == "DATA") {
+        if(count < 1)
+        //cout << count <<endl;
+        total_io_size += reg_id_to_size.at(r.first);
+        // old xmodel 
+        if (count == 1)
+        xdpu_total_in_size = reg_id_to_size.at(r.first);
+        if (count == 2)
+        xdpu_total_out_size = reg_id_to_size.at(r.first);
+        count++;
+      }
+    }
+    if (count > 1) split_io=1;
   }
   xdpu_io_total_size = total_io_size;
 
@@ -414,9 +467,9 @@ DpuV4eController::get_output_tensors() const {
 }
 
 std::vector<const xir::Tensor*> 
-DpuV4eController::get_merged_io_tensors() const {
-  const std::vector<std::int32_t> dims = { 1, 1, 1, xdpu_io_total_size };
-  xir::Tensor *tensor = xir::Tensor::create("inout", dims, xir::DataType{xir::DataType::XINT, 8}).release();
+DpuV4eController::get_merged_io_tensors(int size) const {
+  const std::vector<std::int32_t> dims = { 1, 1, 1, size};
+  xir::Tensor *tensor = xir::Tensor::create("inout", dims, xir::DataType{xir::DataType::INT, 8}).release();
   //static xir::Tensor tensor("inout", dims, xir::Tensor::DataType::INT8); 
   return std::vector<const xir::Tensor*>(8, tensor);
 }
@@ -454,40 +507,106 @@ std::vector<vart::TensorBuffer*> DpuV4eController::get_outputs(int batchsz) {
 
   if ((batchsz == -1)) {
     auto tbufs = init_tensor_buffer(output_tensors_,8);
-    auto hwbufs = create_tensor_buffers(get_merged_io_tensors(),false);
+    auto hwbufs = create_tensor_buffers(get_merged_io_tensors(xdpu_io_total_size),false);
     {
       std::unique_lock<std::mutex> lock(hwbuf2_mtx_);
       tbuf2hwbuf2_.emplace(tbufs[0], hwbufs);
+    }
+    if (split_io) {
+      auto hwbufin = create_tensor_buffers(get_merged_io_tensors(xdpu_total_in_size),false);
+      auto hwbufout = create_tensor_buffers(get_merged_io_tensors(xdpu_total_out_size),false);
+      {
+        std::unique_lock<std::mutex> lock(hwbufio2_mtx_);
+        tbuf2hwbufio2_.emplace(tbufs[0],std::make_tuple(hwbufin,hwbufout));
+      }
+      //{
+      //  std::unique_lock<std::mutex> lock(hwbufio2_mtx_);
+      //  tbuf2hwbufout2_.emplace(tbufs[0], hwbufout);
+      //}
     }
     return tbufs;
 
   } else if (batchsz == 1){
     auto tbufs = init_tensor_buffer(output_tensors_,batchsz,8);
-    auto hwbufs = create_tensor_buffers(get_merged_io_tensors(),false);
+    auto hwbufs = create_tensor_buffers(get_merged_io_tensors(xdpu_io_total_size),false);
     for (int i=0;i<BATCHSIZE; i++) {
       std::unique_lock<std::mutex> lock(hwbuf_mtx_);
       tbuf2hwbuf_.emplace(tbufs[i*output_tensors_.size()], hwbufs[i]);
       
     }
+    if (split_io) {
+      auto hwbufin = create_tensor_buffers(get_merged_io_tensors(xdpu_total_in_size),false);
+      auto hwbufout = create_tensor_buffers(get_merged_io_tensors(xdpu_total_out_size),false);
+      for (int i=0;i<BATCHSIZE; i++) { 
+        std::unique_lock<std::mutex> lock(hwbufio_mtx_);
+        tbuf2hwbufio_.emplace(tbufs[i*output_tensors_.size()], std::make_tuple(hwbufin[i], hwbufout[i]));
+      }
+      //for (int i=0;i<BATCHSIZE; i++) {
+      //{
+      //  std::unique_lock<std::mutex> lock(hwbufio_mtx_);
+      //  tbuf2hwbufout_.emplace(tbufs[0], hwbufout[i]);
+      //}
+    }
     return tbufs;
   } else {
     auto tbufs = init_tensor_buffer(output_tensors_,batchsz);
-    auto hwbufs = create_tensor_buffers(get_merged_io_tensors(),false);
+    auto hwbufs = create_tensor_buffers(get_merged_io_tensors(xdpu_io_total_size),false);
     {
       std::unique_lock<std::mutex> lock(hwbuf2_mtx_);
       tbuf2hwbuf2_.emplace(tbufs[0], hwbufs);
     }
+    if (split_io) {
+      auto hwbufin = create_tensor_buffers(get_merged_io_tensors(xdpu_total_in_size),false);
+      auto hwbufout = create_tensor_buffers(get_merged_io_tensors(xdpu_total_out_size),false);
+      {
+        std::unique_lock<std::mutex> lock(hwbufio2_mtx_);
+        tbuf2hwbufio2_.emplace(tbufs[0],std::make_tuple( hwbufin, hwbufout));
+      }
+      //{
+      //  std::unique_lock<std::mutex> lock(hwbufio2_mtx_);
+      //  tbuf2hwbufout2_.emplace(tbufs[0], hwbufout);
+      //}
+
+    }
     return tbufs;
-    //auto tbufs = init_tensor_buffer(output_tensors_,batchsz);
-    //auto hwbufs = create_tensor_buffers(get_merged_io_tensors(),false);
-    //for (int i=0;i<batchsz; i++) {
-    //  std::unique_lock<std::mutex> lock(hwbuf_mtx_);
-    //  tbuf2hwbuf_.emplace(tbufs[i*output_tensors_.size()], hwbufs[i]);
-    //  
-    //}
-    //return tbufs;
 
   }
+  //  for (unsigned i=0; i < BATCHSIZE; i++) {
+  //    void *reg0Ptr = NULL; 
+  //    if (posix_memalign(&reg0Ptr, getpagesize(), xdpu_io_total_size))
+  //      throw std::bad_alloc();
+  //    for (unsigned i=0; i <xdpu_io_total_size; i++) ((char*)reg0Ptr)[i] = 0;
+  //    auto reg0Mem 
+  //      = xclAllocUserPtrBO(xcl_handle, reg0Ptr, xdpu_io_total_size, handle_->get_device_info().ddr_bank);
+  //    xclBOProperties p;
+  //    xclGetBOProperties(xcl_handle, reg0Mem, &p);
+  //    io_addrs[i] = p.paddr;
+  //    
+  //    auto mem2 = xclAllocUserPtrBO(xcl_handle,inputs[0]->data().first,xdpu_total_in_size,  handle_->get_device_info().ddr_bank);
+  //    xclBOProperties p2;
+  //    xclGetBOProperties(xcl_handle, mem2, &p2);
+  //    in_addrs[i] = p2.paddr;
+  //      const auto inSize = get_input_tensors()[0]->get_element_num();
+  //      if (xclUnmgdPwrite(xcl_handle, 0, (void *)inputs[0]->data().first, inSize,
+  //        in_addrs[i] + xdpu_io_input_offset[0]))
+  //        throw std::runtime_error("Error: upload failed");
+ 
+  //    auto mem3 = xclAllocBO(xcl_handle,xdpu_total_out_size, 0, handle_->get_device_info().ddr_bank);
+  //    if (mem3[i] == NULLBO) {
+  //      throw std::bad_alloc();
+  //    }
+  //    xclBOProperties p3;
+  //    xclGetBOProperties(xcl_handle, mem3[i], &p3);
+  //    out_addrs[i] = p3.paddr;
+  //    out_vir[i] = (int*)xclMapBO(xcl_handle, mem3[i], true);
+  //    //for (int n=0;n<xdpu_total_out_size;n++)
+  //    //  out_vir[i][n] = 0;
+  //      memset(out_vir[i], 0, xdpu_total_out_size);
+  //      xclSyncBO(xcl_handle, mem3[i], XCL_BO_SYNC_BO_TO_DEVICE, xdpu_total_out_size, 0);
+  //    //in_addrs[i] = inputs[i]->data().first;
+  //    //out_addrs[i] = outputs[i]->data().first;
+  //  }
+  //}
 }
 
 void DpuV4eController::data_fix2float(float* dataDst, int8_t* dataSrc, int size, float scale) {
@@ -513,6 +632,7 @@ void DpuV4eController::free_buffers(std::vector<vart::TensorBuffer*> &tbufs, boo
     }
 
   } else {
+    // here only free the buffer that called in run(), run only call get_inputs(1)/get_outputs(1)
     std::unique_lock<std::mutex> lock(hwbuf_mtx_);
     for (unsigned ti=0; ti < tbufs.size(); ti++)
     {
@@ -528,6 +648,11 @@ void DpuV4eController::free_buffers(std::vector<vart::TensorBuffer*> &tbufs, boo
 
       }
       tbuf2hwbuf_.erase(tbufs[ti]);
+      //TODO
+      {
+        std::unique_lock<std::mutex> lock(hwbufio_mtx_);
+        tbuf2hwbufio_.erase(tbufs[ti]);
+      }
       for (auto it=bufs_.begin(); it != bufs_.end(); it++)
         if (it->get() == tbufs[ti])
         {
@@ -538,15 +663,31 @@ void DpuV4eController::free_buffers(std::vector<vart::TensorBuffer*> &tbufs, boo
   }
 }
 
+size_t DpuV4eController::getInputBufferSize() {
+  return xdpu_total_in_size;
+}
+
+size_t DpuV4eController::getOutputBufferSize() {
+  return xdpu_total_out_size;
+}
+
+vector<int32_t> DpuV4eController::getInputOffsets() {
+  return xdpu_io_input_offset;
+}
+
+vector<int32_t> DpuV4eController::getOutputOffsets() {
+  return xdpu_io_output_offset;
+}
 void DpuV4eController::run(const std::vector<vart::TensorBuffer*> &inputs, 
     const std::vector<vart::TensorBuffer*> &outputs) {
   std::vector<vart::TensorBuffer*> input_tensor_buffers;
   std::vector<vart::TensorBuffer*> output_tensor_buffers;
+  unsigned inputBs = BATCHSIZE;
+  //if (!split_io) { 
   if(inputs.size()%input_tensors_.size())
     throw std::runtime_error("Error: input tensorbuffers error");
   unsigned ibs = inputs[0]->get_tensor()->get_shape()[0]/input_tensors_[0]->get_shape()[0];
   unsigned obs = outputs[0]->get_tensor()->get_shape()[0]/output_tensors_[0]->get_shape()[0];
-  unsigned inputBs;
   // check if tensorbuffer store batch inputs/outputs
   if ((inputs.size()/input_tensors_.size())>1)
     inputBs = inputs.size()/input_tensors_.size();
@@ -554,9 +695,11 @@ void DpuV4eController::run(const std::vector<vart::TensorBuffer*> &inputs,
     inputBs = ibs;
   if ((ibs < obs) || (inputBs > BATCHSIZE) )
     throw std::runtime_error("Error: size of tensorbuffer not supported");
-
+  //}
   bool create_tb_outside=false;
   bool create_tb_batch=false;
+  bool tensorbuffer_phy=false;
+  //if (!split_io) 
   {
   
     std::unique_lock<std::mutex> lock(hwbuf_mtx_);
@@ -578,106 +721,266 @@ void DpuV4eController::run(const std::vector<vart::TensorBuffer*> &inputs,
       }
     }
   }
+  //if (create_tb_outside&&split_io)
+  //    tensorbuffer_phy = true;
+//  if (!split_io) {
   if(create_tb_outside) {
-    input_tensor_buffers = get_inputs(1);
-    output_tensor_buffers = get_outputs(1);
-    for (unsigned i=0; i < input_tensors_.size(); i++ ) {
-      unsigned cnt=0;
-      for (unsigned j=0; j < inputs.size(); j++) {
-        if (input_tensors_[i]->get_name().find(inputs[j]->get_tensor()->get_name()) != std::string::npos) {
-          if (ibs == inputBs) { //one tensrobuffer store batch
-            for (unsigned b=0; b < ibs; b++) {
+    if (!tensorbuffer_phy) {
+      input_tensor_buffers = get_inputs(1);
+      output_tensor_buffers = get_outputs(1);
+      for (unsigned i=0; i < input_tensors_.size(); i++ ) {
+        unsigned cnt=0;
+        for (unsigned j=0; j < inputs.size(); j++) {
+          if (input_tensors_[i]->get_name().find(inputs[j]->get_tensor()->get_name()) != std::string::npos) {
+            if (ibs == inputBs) { //one tensrobuffer store batch
+              for (unsigned b=0; b < ibs; b++) {
+                if (inputs[j]->get_tensor()->get_data_type().type == xir::DataType::FLOAT)
+                  data_float2fix((int8_t*)input_tensor_buffers[b*input_tensors_.size()+i]->data().first,(float*)inputs[j]->data().first+b*input_tensors_[i]->get_element_num(),input_tensors_[i]->get_element_num(), input_scales_[i]);
+                else
+                  memcpy((int8_t*)input_tensor_buffers[b*input_tensors_.size()+i]->data().first,(int8_t*)inputs[j]->data().first+b*input_tensors_[i]->get_element_num(),input_tensors_[i]->get_element_num());
+                cnt++;
+              }
+            }
+            else {
               if (inputs[j]->get_tensor()->get_data_type().type == xir::DataType::FLOAT)
-                data_float2fix((int8_t*)input_tensor_buffers[b*input_tensors_.size()+i]->data().first,(float*)inputs[j]->data().first+b*input_tensors_[i]->get_element_num(),input_tensors_[i]->get_element_num(), input_scales_[i]);
+        	data_float2fix((int8_t*)input_tensor_buffers[cnt*input_tensors_.size()+i]->data().first,(float*)inputs[j]->data().first,input_tensors_[i]->get_element_num(), input_scales_[i]);
               else
-                memcpy((int8_t*)input_tensor_buffers[b*input_tensors_.size()+i]->data().first,(int8_t*)inputs[j]->data().first+b*input_tensors_[i]->get_element_num(),input_tensors_[i]->get_element_num());
+        	memcpy((int8_t*)input_tensor_buffers[cnt*input_tensors_.size()+i]->data().first,(int8_t*)inputs[j]->data().first,input_tensors_[i]->get_element_num());
               cnt++;
             }
-          }
-          else {
-            if (inputs[j]->get_tensor()->get_data_type().type == xir::DataType::FLOAT)
-              data_float2fix((int8_t*)input_tensor_buffers[cnt*input_tensors_.size()+i]->data().first,(float*)inputs[j]->data().first,input_tensors_[i]->get_element_num(), input_scales_[i]);
-            else
-              memcpy((int8_t*)input_tensor_buffers[cnt*input_tensors_.size()+i]->data().first,(int8_t*)inputs[j]->data().first,input_tensors_[i]->get_element_num());
-            cnt++;
-          }
 
+          }
+  
         }
-        
+        if (cnt == 0)
+          throw std::runtime_error("Error: invilad tensorbuffer input");
       }
-      if (cnt == 0)
-        throw std::runtime_error("Error: invilad tensorbuffer input");
-    }
+    } 
+    //else {
+      //TODO
+      // for the condition that alloc addr outside API
+  
+     //}
   }
   else {
     input_tensor_buffers = inputs;
     output_tensor_buffers = outputs;
   }
-
   Engine& engine = Engine::get_instance();
   const unsigned worker_id = engine.get_my_worker_id();
   if (worker_id >= contexts_.size())
-    throw std::runtime_error("Error: worker_id too large; update controller code");
-
+  throw std::runtime_error("Error: worker_id too large; update controller code");
+  
   auto &context = *(contexts_[worker_id]);
   auto xcl_handle = context.get_dev_handle();
   auto bo_handle = context.get_bo_handle();
   auto bo_addr = context.get_bo_addr();
-
+  
   // get device buffers for input TensorBuffers
-  std::vector<XrtDeviceBuffer*> io_bufs(inputBs);
-  std::vector<uint64_t> io_addrs(inputBs);
-  if (create_tb_batch) {
-    std::unique_lock<std::mutex> lock(hwbuf2_mtx_);
-    auto it = tbuf2hwbuf2_.find(output_tensor_buffers[0]);
-    if (it == tbuf2hwbuf2_.end())
-      throw std::runtime_error("TensorBuffer not found");
-    auto  hwbufs = it->second;
-    for (unsigned i=0; i < inputBs; i++) {
-      io_bufs[i] = dynamic_cast<XrtDeviceBuffer*>(get_device_buffer(hwbufs[i]));
-      io_addrs[i] = io_bufs[i]->get_phys_addr();
-    }
-
-  } else {
-    for (unsigned i=0; i < inputBs; i++)
-    {
-      vart::TensorBuffer* hwbuf;
+  std::vector<XrtDeviceBuffer*> io_bufs(BATCHSIZE);
+  std::vector<uint64_t> io_addrs(BATCHSIZE);
+  std::vector<uint64_t> in_addrs(BATCHSIZE);
+  std::vector<uint64_t> out_addrs(BATCHSIZE);
+  if (!tensorbuffer_phy) { 
+    if (create_tb_batch) {
       {
-        std::unique_lock<std::mutex> lock(hwbuf_mtx_);
-        auto it = tbuf2hwbuf_.find(output_tensor_buffers[i*output_tensors_.size()]);
-        if (it == tbuf2hwbuf_.end())
+        std::unique_lock<std::mutex> lock(hwbuf2_mtx_);
+        auto it = tbuf2hwbuf2_.find(output_tensor_buffers[0]);
+        if (it == tbuf2hwbuf2_.end())
           throw std::runtime_error("TensorBuffer not found");
-        hwbuf = it->second;
+        auto  hwbufs = it->second;
+        for (unsigned i=0; i < inputBs; i++) {
+          io_bufs[i] = dynamic_cast<XrtDeviceBuffer*>(get_device_buffer(hwbufs[i]));
+          io_addrs[i] = io_bufs[i]->get_phys_addr();
+        }
+      }
+      if(split_io) {
+        std::unique_lock<std::mutex> lock(hwbufio2_mtx_);
+        auto it = tbuf2hwbufio2_.find(output_tensor_buffers[0]);
+        if (it == tbuf2hwbufio2_.end())
+          throw std::runtime_error("TensorBuffer not found");
+        auto bufs = it->second;
+        auto  hwbufsin = std::get<0>(bufs);
+        auto  hwbufsout = std::get<1>(bufs);
+        for (unsigned i=0; i < inputBs; i++) {
+          auto bufs = dynamic_cast<XrtDeviceBuffer*>(get_device_buffer(hwbufsin[i]));
+          in_addrs[i] = bufs->get_phys_addr();
+          auto bufsout = dynamic_cast<XrtDeviceBuffer*>(get_device_buffer(hwbufsout[i]));
+          out_addrs[i] = bufsout->get_phys_addr();
+        }
 
       }
-      io_bufs[i] = dynamic_cast<XrtDeviceBuffer*>(get_device_buffer(hwbuf));
-      io_addrs[i] = io_bufs[i]->get_phys_addr();
+
+    } else {
+      for (unsigned i=0; i < io_bufs.size(); i++)
+      {
+        vart::TensorBuffer* hwbuf;
+        {
+          std::unique_lock<std::mutex> lock(hwbuf_mtx_);
+          auto it = tbuf2hwbuf_.find(output_tensor_buffers[i*output_tensors_.size()]);
+          if (it == tbuf2hwbuf_.end())
+            throw std::runtime_error("TensorBuffer not found");
+          hwbuf = it->second;
+
+        }
+        io_bufs[i] = dynamic_cast<XrtDeviceBuffer*>(get_device_buffer(hwbuf));
+        io_addrs[i] = io_bufs[i]->get_phys_addr();
+        if (split_io) {
+          vart::TensorBuffer* hwbufin;
+          vart::TensorBuffer* hwbufout;
+          {
+            std::unique_lock<std::mutex> lock(hwbufio_mtx_);
+            auto it = tbuf2hwbufio_.find(output_tensor_buffers[i*output_tensors_.size()]);
+            if (it == tbuf2hwbufio_.end())
+              throw std::runtime_error("TensorBuffer not found");
+            auto bufs = it->second;
+            hwbufin = std::get<0>(bufs);
+            hwbufout = std::get<1>(bufs);
+          }
+          auto bufin = dynamic_cast<XrtDeviceBuffer*>(get_device_buffer(hwbufin));
+          in_addrs[i] = bufin->get_phys_addr();
+          auto bufout = dynamic_cast<XrtDeviceBuffer*>(get_device_buffer(hwbufout));
+          out_addrs[i] = bufout->get_phys_addr();
+
+        }
+      }
     }
+  } 
+  else {
+  // for the condition that alloc memory without API
+    for (unsigned i=0; i < io_bufs.size(); i++) {
+      if (create_tb_batch) { 
+        for (unsigned t=0; t < inputs.size(); t++ ) {
+          if (input_tensors_[0]->get_name().find(inputs[t]->get_tensor()->get_name()) != std::string::npos) {
+            in_addrs[i] = inputs[t]->data().first-xdpu_io_input_offset[0]+i*input_tensors_[0]->get_element_num();
+            break;
+          }
+        }
+        for (unsigned t=0; t < outputs.size(); t++ ) {
+          if (output_tensors_[0]->get_name().find(outputs[t]->get_tensor()->get_name()) != std::string::npos) {
+            out_addrs[i] = outputs[t]->data().first-xdpu_io_output_offset[0]+i*output_tensors_[0]->get_element_num();
+            break;
+          }
+        }
+      } else {
+        int cnt = 0;
+        for (unsigned t=cnt; t < inputs.size(); t++ ) {
+          if (input_tensors_[0]->get_name().find(inputs[t]->get_tensor()->get_name()) != std::string::npos) {
+            in_addrs[i] = inputs[t]->data().first-xdpu_io_input_offset[0];
+            cnt = t;
+            break;
+          }
+        }
+        int cnt_out = 0;
+        for (unsigned t=cnt_out; t < outputs.size(); t++ ) {
+          if (output_tensors_[0]->get_name().find(outputs[t]->get_tensor()->get_name()) != std::string::npos) {
+            out_addrs[i] = outputs[t]->data().first-xdpu_io_output_offset[0];
+            cnt_out = t;
+            break;
+          }
+        }
+
+      }
+      void *ioPtr = NULL;
+      xclBOProperties p;
+      if (posix_memalign(&ioPtr, getpagesize(), xdpu_io_total_size))
+        throw std::bad_alloc();
+      auto ioMem 
+        = xclAllocUserPtrBO(xcl_handle, ioPtr, xdpu_io_total_size, handle_->get_device_info().ddr_bank);
+      xclGetBOProperties(xcl_handle, ioMem, &p);
+      io_addrs[i] = p.paddr;
+      free(ioPtr);
+    }
+
   }
+//  } else {
+  //  for (unsigned i=0; i < BATCHSIZE; i++) {
+  //    void *reg0Ptr = NULL; 
+  //    if (posix_memalign(&reg0Ptr, getpagesize(), xdpu_io_total_size))
+  //      throw std::bad_alloc();
+  //    for (unsigned i=0; i <xdpu_io_total_size; i++) ((char*)reg0Ptr)[i] = 0;
+  //    auto reg0Mem 
+  //      = xclAllocUserPtrBO(xcl_handle, reg0Ptr, xdpu_io_total_size, handle_->get_device_info().ddr_bank);
+  //    xclBOProperties p;
+  //    xclGetBOProperties(xcl_handle, reg0Mem, &p);
+  //    io_addrs[i] = p.paddr;
+  //    
+  //    auto mem2 = xclAllocUserPtrBO(xcl_handle,inputs[0]->data().first,xdpu_total_in_size,  handle_->get_device_info().ddr_bank);
+  //    xclBOProperties p2;
+  //    xclGetBOProperties(xcl_handle, mem2, &p2);
+  //    in_addrs[i] = p2.paddr;
+  //      const auto inSize = get_input_tensors()[0]->get_element_num();
+  //      if (xclUnmgdPwrite(xcl_handle, 0, (void *)inputs[0]->data().first, inSize,
+  //        in_addrs[i] + xdpu_io_input_offset[0]))
+  //        throw std::runtime_error("Error: upload failed");
+  //    auto mem3 = xclAllocUserPtrBO(xcl_handle,outputs[0]->data().first,xdpu_total_out_size,  handle_->get_device_info().ddr_bank);
+ 
+  //    xclBOProperties p3;
+  //    xclGetBOProperties(xcl_handle, mem3, &p3);
+  //    out_addrs[i] = p3.paddr;
+  //   
+
+  //     //in_addrs[i] = inputs[i]->data().first;
+  //    //out_addrs[i] = outputs[i]->data().first;
+////    }
+  //}
+  //if (split_io) {
+  //  for (unsigned i=0; i < 8; i++) {
+  //      //const auto outSize = get_output_tensors()[0]->get_element_num();
+  //      //const auto outSize1 = get_output_tensors()[1]->get_element_num();
+  //      //const auto outSize2 = get_output_tensors()[2]->get_element_num();
+  //      //xclSyncBO(xcl_handle, mem3[i], XCL_BO_SYNC_BO_FROM_DEVICE, xdpu_total_out_size, 0);
+  //      //memcpy(((void*)outputs[0]->data().first)+i*outSize, (int8_t*)out_vir[i]+xdpu_io_output_offset[0], outSize);
+  //      //memcpy(((void*)outputs[1]->data().first)+i*outSize1,out_vir[i]+xdpu_io_output_offset[1], outSize1);
+  //      //memcpy(((void*)outputs[2]->data().first)+i*outSize2,out_vir[i]+xdpu_io_output_offset[2], outSize2);
+  //      const auto inSize = get_input_tensors()[0]->get_element_num();
+  //      //xclSyncBO(xcl_handle, mem2[i], XCL_BO_SYNC_BO_FROM_DEVICE, xdpu_total_in_size, 0);
+  //      //memcpy(inputs[0]->data().first+i*inSize, in_vir[i]+xdpu_io_input_offset[0], inSize);
+  //      if (xclUnmgdPread(xcl_handle, 0, (void *)inputs[0]->data().first, inSize,
+  //        in_addrs[i] + xdpu_io_input_offset[0]))
+  //        throw std::runtime_error("Error: upload failed");
+  //      const auto mode = std::ios_base::out | std::ios_base::binary | std::ios_base::trunc;
+  //      auto input_file = "./input"+ to_string(i)+".bin";
+  //      //auto output_file = "./output1_"+ to_string(i)+".bin";
+  //      //auto output_file1 = "./output2_"+ to_string(i)+".bin";
+  //      //auto output_file2 = "./output3_"+ to_string(i)+".bin";
+  //      //std::ofstream(output_file, mode).write((char*)outputs[0]->data().first+i*outSize,outSize);
+  //      //std::ofstream(output_file1, mode).write((char*)outputs[1]->data().first+i*outSize1,outSize1);
+  //      //std::ofstream(output_file2, mode).write((char*)outputs[2]->data().first+i*outSize2,outSize2);
+  //      std::ofstream(input_file, mode).write((char*)inputs[0]->data().first+i*inSize,inSize);
+  //  }
+  //}//
   // upload batch of inputs
   //const auto inSize = get_input_tensors()[0]->get_element_num();
   __TIC__(INPUT_H2D)
-  for (unsigned i=0; i < io_bufs.size(); i++)
-  {
-    // instead of uploading all {output, input, intermediate}, 
-    // just upload input region
-    // io_bufs[i]->upload();
-   //const auto mode = std::ios_base::out | std::ios_base::binary | std::ios_base::trunc;
-   //  auto input_file = "./input"+ to_string(i)+".bin";
-   //  std::ofstream(input_file, mode).write((char*)inputs[i]->data().first,inSize);
-    for (unsigned j=0; j < xdpu_io_input_offset.size(); j++) {
-      uint8_t* dataPtr;
-      const auto inSize = get_input_tensors()[j]->get_element_num();
-      if (create_tb_batch)
-        dataPtr = ((uint8_t*)input_tensor_buffers[j]->data().first)+inSize*i;
-      else
-        dataPtr =(uint8_t*)input_tensor_buffers[i*xdpu_io_input_offset.size()+j]->data().first;
-      if (xclUnmgdPwrite(xcl_handle, 0, (void *)dataPtr, inSize,
-      //if (xclUnmgdPwrite(xcl_handle, 0, inputs[i]->data().first, inSize,
-        io_addrs[i] + xdpu_io_input_offset[j]))
-        throw std::runtime_error("Error: upload failed");
-    }
+  if (!tensorbuffer_phy) { 
+    for (unsigned i=0; i < inputBs; i++)
+    {
+      // instead of uploading all {output, input, intermediate}, 
+      // just upload input region
+      // io_bufs[i]->upload();
+     //const auto mode = std::ios_base::out | std::ios_base::binary | std::ios_base::trunc;
+     //  auto input_file = "./input"+ to_string(i)+".bin";
+     //  std::ofstream(input_file, mode).write((char*)inputs[i]->data().first,inSize);
+      for (unsigned j=0; j < xdpu_io_input_offset.size(); j++) {
+        uint8_t* dataPtr;
+        const auto inSize = get_input_tensors()[j]->get_element_num();
+        if (create_tb_batch)
+          dataPtr = ((uint8_t*)input_tensor_buffers[j]->data().first)+inSize*i;
+        else
+          dataPtr =(uint8_t*)input_tensor_buffers[i*xdpu_io_input_offset.size()+j]->data().first;
+        if(split_io) {
+          if (xclUnmgdPwrite(xcl_handle, 0, (void *)dataPtr, inSize,
+            in_addrs[i] + xdpu_io_input_offset[j]))
+            throw std::runtime_error("Error: upload failed");
+        } else {
+          if(xclUnmgdPwrite(xcl_handle, 0, (void *)dataPtr, inSize,
+            io_addrs[i] + xdpu_io_input_offset[j]))
+            throw std::runtime_error("Error: upload failed");
+        }
+      }
 
+    }
   }
   __TOC__(INPUT_H2D)
 
@@ -711,8 +1014,17 @@ void DpuV4eController::run(const std::vector<vart::TensorBuffer*> &inputs,
       auto highOffset = (XDPU_CONTROL_ADDR_1_H + (i*0x100)) / 4;
       regVals.push_back({ lowOffset, io_addrs[i] & 0xFFFFFFFF });
       regVals.push_back({ highOffset, (io_addrs[i] >> 32) & 0xFFFFFFFF });
+      if(split_io) {
+        auto lowOffsetIn = (XDPU_CONTROL_ADDR_2_L + (i*0x100)) / 4;
+        auto highOffsetIn = (XDPU_CONTROL_ADDR_2_H + (i*0x100)) / 4;
+        regVals.push_back({ lowOffsetIn, in_addrs[i] & 0xFFFFFFFF });
+        regVals.push_back({ highOffsetIn, (in_addrs[i] >> 32) & 0xFFFFFFFF });
+        auto lowOffsetOut = (XDPU_CONTROL_ADDR_3_L + (i*0x100)) / 4;
+        auto highOffsetOut = (XDPU_CONTROL_ADDR_3_H + (i*0x100)) / 4;
+        regVals.push_back({ lowOffsetOut, out_addrs[i] & 0xFFFFFFFF });
+        regVals.push_back({ highOffsetOut, (out_addrs[i] >> 32) & 0xFFFFFFFF });
+      }
     }
-
  
     int p = 6;
     for (unsigned i=0; i < regVals.size(); i++) {
@@ -756,9 +1068,14 @@ void DpuV4eController::run(const std::vector<vart::TensorBuffer*> &inputs,
         auto offset = std::get<0>(out);
         auto size = std::get<1>(out);
         auto data = std::make_unique<char[]>(size);
-        for (unsigned i=0; i < io_bufs.size(); i++) { 
-          if (xclUnmgdPread(xcl_handle, 0, data.get(), size, io_addrs[i] + offset))
-            throw std::runtime_error("Error: dump failed!");
+        for (unsigned i=0; i < io_bufs.size(); i++) {
+          if (!split_io) { 
+            if (xclUnmgdPread(xcl_handle, 0, data.get(), size, io_addrs[i] + offset))
+              throw std::runtime_error("Error: dump failed!");
+          } else {
+            if (xclUnmgdPread(xcl_handle, 0, data.get(), size, in_addrs[i] + offset))
+              throw std::runtime_error("Error: dump failed!");
+          }
           std::stringstream ss;  
           ss << dump_folder_ << "/E" << i << "/" << std::get<2>(out); 
           std::ofstream ofs(ss.str(), std::ofstream::binary);
@@ -778,8 +1095,13 @@ void DpuV4eController::run(const std::vector<vart::TensorBuffer*> &inputs,
         auto size = std::get<1>(out);
         auto data = std::make_unique<char[]>(size);
         for (unsigned i=0; i < io_bufs.size(); i++) { 
-          if (xclUnmgdPread(xcl_handle, 0, data.get(), size, io_addrs[i] + offset))
-            throw std::runtime_error("Error: dump failed!");
+          if (!split_io) { 
+            if (xclUnmgdPread(xcl_handle, 0, data.get(), size, io_addrs[i] + offset))
+              throw std::runtime_error("Error: dump failed!");
+          } else {
+            if (xclUnmgdPread(xcl_handle, 0, data.get(), size, out_addrs[i] + offset))
+              throw std::runtime_error("Error: dump failed!");
+          }
           std::stringstream ss;  
           ss << dump_folder_ << "/E" << i << "/" << std::get<2>(out); 
           std::ofstream ofs(ss.str(), std::ofstream::binary);
@@ -799,8 +1121,13 @@ void DpuV4eController::run(const std::vector<vart::TensorBuffer*> &inputs,
         auto size = std::get<1>(input);
         auto data = std::make_unique<char[]>(size);
         for (unsigned i=0; i < io_bufs.size(); i++) { 
-          if (xclUnmgdPread(xcl_handle, 0, data.get(), size, io_addrs[i] + offset))
-            throw std::runtime_error("Error: dump failed!");
+          if (split_io) {
+            if (xclUnmgdPread(xcl_handle, 0, data.get(), size, in_addrs[i] + offset))
+              throw std::runtime_error("Error: dump failed!");
+          } else  {
+            if (xclUnmgdPread(xcl_handle, 0, data.get(), size, io_addrs[i] + offset))
+              throw std::runtime_error("Error: dump failed!");
+          }
           std::stringstream ss;
           ss << dump_folder_ << "/E" << i << "/" << std::get<2>(input); 
           std::ofstream ofs(ss.str(), std::ofstream::binary);
@@ -825,9 +1152,19 @@ void DpuV4eController::run(const std::vector<vart::TensorBuffer*> &inputs,
           auto offset = std::get<0>(out);
           auto size = std::get<1>(out);
           auto data = std::make_unique<char[]>(size);
-          for (unsigned i=0; i < io_bufs.size(); i++) { 
-            if (xclUnmgdPread(xcl_handle, 0, data.get(), size, io_addrs[i] + offset))
-              throw std::runtime_error("Error: dump failed!");
+          for (unsigned i=0; i < io_bufs.size(); i++) {
+            int is_bondary = 0;
+            for (auto& out_tmp: dbg_layers_[0].outputs) {
+              if (std::get<2>(out) ==std::get<2>(out_tmp) )
+                is_bondary = 1;
+            }
+            if (split_io && is_bondary) { 
+              if (xclUnmgdPread(xcl_handle, 0, data.get(), size, out_addrs[i] + offset))
+                throw std::runtime_error("Error: dump failed!");
+            } else {
+              if (xclUnmgdPread(xcl_handle, 0, data.get(), size, io_addrs[i] + offset))
+                throw std::runtime_error("Error: dump failed!");
+            }
             std::stringstream ss;  
             ss << dump_folder_ << "/E" << i << "/" << std::get<2>(out); 
             std::ofstream ofs(ss.str(), std::ofstream::binary);
@@ -840,30 +1177,39 @@ void DpuV4eController::run(const std::vector<vart::TensorBuffer*> &inputs,
       layer_idx ++;
     } 
   }
-
+ 
   __TIC__(OUTPUT_D2H)
-  for (unsigned i=0; i < io_bufs.size(); i++)
-  {
-    // instead of downloading all {output, input, intermediate},
-    // just download output region
-    // io_bufs[i]->download();
-    for (unsigned j=0; j< xdpu_io_output_offset.size(); j++) {
-      const auto outSize = get_output_tensors()[j]->get_element_num();
-      uint8_t* dataPtr;
-      if (create_tb_batch)
-        dataPtr = ((uint8_t *)output_tensor_buffers[j]->data().first)+outSize*i;
-      else
-        dataPtr = (uint8_t *)output_tensor_buffers[i*xdpu_io_output_offset.size()+j]->data().first;
-      //__TIC_PROFILING__(OUTPUT)
-      if (xclUnmgdPread(xcl_handle, 0, (void*)dataPtr,
-        outSize,
-        io_addrs[i] + xdpu_io_output_offset[j]))
-        throw std::runtime_error("Error: download failed");
-      //__TOC_PROFILING__(OUTPUT)
+  if (!tensorbuffer_phy) { 
+    for (unsigned i=0; i < inputBs; i++)
+    {
+      // instead of downloading all {output, input, intermediate},
+      // just download output region
+      // io_bufs[i]->download();
+      for (unsigned j=0; j< xdpu_io_output_offset.size(); j++) {
+        const auto outSize = get_output_tensors()[j]->get_element_num();
+        uint8_t* dataPtr;
+        if (create_tb_batch)
+          dataPtr = ((uint8_t *)output_tensor_buffers[j]->data().first)+outSize*i;
+        else
+          dataPtr = (uint8_t *)output_tensor_buffers[i*xdpu_io_output_offset.size()+j]->data().first;
+        //__TIC_PROFILING__(OUTPUT)
+        if(split_io) {
+          if (xclUnmgdPread(xcl_handle, 0, (void*)dataPtr,
+            outSize,
+            out_addrs[i] + xdpu_io_output_offset[j]))
+            throw std::runtime_error("Error: download failed");
+        } else {
+          if (xclUnmgdPread(xcl_handle, 0, (void*)dataPtr,
+            outSize,
+            io_addrs[i] + xdpu_io_output_offset[j]))
+            throw std::runtime_error("Error: download failed");
+        }
+        //__TOC_PROFILING__(OUTPUT)
+      }
     }
   }
   __TOC__(OUTPUT_D2H)
-  if(create_tb_outside) {
+  if((!tensorbuffer_phy) &&create_tb_outside) {
     for (unsigned i=0; i < output_tensors_.size(); i++  ) {
       unsigned cnt=0;
       for (unsigned j=0; j < outputs.size(); j++) {

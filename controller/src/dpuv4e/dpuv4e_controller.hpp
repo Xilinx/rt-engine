@@ -20,9 +20,15 @@ class DpuV4eController
   void init(const std::string &meta);
   void init(const xir::Subgraph* subgraph);
   void init_graph(const xir::Subgraph* subgraph);
-  std::vector<const xir::Tensor*> get_merged_io_tensors() const;
+  std::vector<const xir::Tensor*> get_merged_io_tensors(int size) const;
   std::vector<vart::TensorBuffer*> init_tensor_buffer(std::vector<const xir::Tensor*> tensors, int batchSupport, unsigned runEngone=1);
   void free_buffers(std::vector<vart::TensorBuffer*> &tbufs, bool isInput);
+  std::unordered_map<vart::TensorBuffer*, std::tuple<vector<vart::TensorBuffer*>, vector<vart::TensorBuffer*>>> tbuf2hwbufio2_;
+  std::unordered_map<vart::TensorBuffer*, std::tuple<vart::TensorBuffer*, vart::TensorBuffer*>> tbuf2hwbufio_;
+  //std::tuple<vart::TensorBuffer*, vart::TensorBuffer*, vart::TensorBuffer*> tbuf2hwbufio_;
+  //std::unordered_map<vart::TensorBuffer*, vector<vart::TensorBuffer*>> tbuf2hwbufin2_;
+  std::mutex hwbufio_mtx_;
+  std::mutex hwbufio2_mtx_;
   std::unordered_map<vart::TensorBuffer*, vart::TensorBuffer*> tbuf2hwbuf_;
   std::unordered_map<vart::TensorBuffer*, vector<vart::TensorBuffer*>> tbuf2hwbuf2_;
   std::mutex hwbuf_mtx_;
@@ -40,9 +46,14 @@ class DpuV4eController
   std::vector<std::int32_t> xdpu_io_input_offset;
   std::vector<std::int32_t> xdpu_io_output_offset;
   int32_t xdpu_io_total_size;
+  int32_t xdpu_total_in_size;
+  int32_t xdpu_total_out_size;
   std::vector<float> input_scales_;
   std::vector<float> output_scales_;
-
+  size_t getInputBufferSize();
+  vector<int32_t> getInputOffsets();
+  size_t getOutputBufferSize();
+  vector<int32_t> getOutputOffsets();
   void data_float2fix(int8_t* dataDst, float* dataSrc, int size, float scale);
   void data_fix2float(float* dataDst, int8_t* dataSrc, int size, float scale);
   //****************************************************
@@ -83,6 +94,7 @@ class DpuV4eController
   bool dump_mode_;
   std::string dump_folder_;
   bool debug_mode_;
+  int split_io;
 
 };
 
