@@ -31,6 +31,7 @@ find_package(xir REQUIRED)
 find_package(xip REQUIRED)
 find_package(vart COMPONENTS runner REQUIRED)
 find_package(glog REQUIRED)
+find_package(Protobuf REQUIRED) # rt-engine does not need, but this is forced upon us by target-factory
 
 # XRM not yet supported
 #add_definitions(-DXRM)
@@ -110,6 +111,7 @@ target_link_libraries(
   ${PROJECT_NAME}
   PRIVATE
   target-factory::target-factory 
+  ${Protobuf_LIBRARIES}
   vart::runner
   xip::butler
   XRT::XRT
