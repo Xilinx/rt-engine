@@ -4,12 +4,9 @@
 #include <memory>
 #include <dirent.h>
 #include <iostream>
-
+#include <cstring>
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wignored-qualifiers"
-#include "butler_client.h"
-#include "butler_cu_selection_algo.h"
-#include "butler_dev.h"
 #pragma GCC diagnostic pop
  
 #ifdef XRM  
@@ -110,6 +107,7 @@ static const std::string find_kernel_name(std::string name) {
   return ret;
 }
 
+/*
 namespace {
 DeviceInfo*
 createDeviceInfoFromXCU(butler::xCU& xcu,std::string& name) {
@@ -218,6 +216,7 @@ ButlerResource::~ButlerResource() {
   if (client_.get())
     client_->releaseResources(handle_);
 }
+*/
 
 #ifdef XRM
 static std::vector<std::string> get_xclbins_in_dir(std::string path) {
@@ -251,10 +250,10 @@ XrmResource::XrmResource(std::string kernelName, std::string xclbin)
     throw std::runtime_error("Error: failed to connect to XRM");
 
   // prepare request
-  memset(cu_prop_.get(), 0, sizeof(xrmCuProperty));
-  memset(cu_rsrc_.get(), 0, sizeof(xrmCuResource));
-  strcpy(cu_prop_->kernelName, std::string(kernelName).c_str());
-  strcpy(cu_prop_->kernelAlias, "");
+  std::memset(cu_prop_.get(), 0, sizeof(xrmCuProperty));
+  std::memset(cu_rsrc_.get(), 0, sizeof(xrmCuResource));
+  std::strcpy(cu_prop_->kernelName, std::string(kernelName).c_str());
+  std::strcpy(cu_prop_->kernelAlias, "");
   cu_prop_->devExcl = false;
   cu_prop_->requestLoad = 100;
   cu_prop_->poolId = 0;
@@ -266,7 +265,7 @@ XrmResource::XrmResource(std::string kernelName, std::string xclbin)
   {
     // try to load xclbin
     char xclbinPath[XRM_MAX_PATH_NAME_LEN];
-    strcpy(xclbinPath, xclbins[i].c_str()); // XRM does not take const char* :(
+    std::strcpy(xclbinPath, xclbins[i].c_str()); // XRM does not take const char* :(
     int err 
       = xrmCuAllocWithLoad(context_, cu_prop_.get(), xclbinPath, cu_rsrc_.get());
     if (err)
@@ -340,11 +339,7 @@ DeviceHandle::DeviceHandle(std::string kernelName, std::string xclbin) {
     return;
   }
 
-#ifndef XRM
-  resource_.reset(new ButlerResource(kernelName, xclbin));
-#else
   resource_.reset(new XrmResource(kernelName, xclbin));
-#endif
 }
 
 /*

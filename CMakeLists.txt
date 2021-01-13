@@ -28,22 +28,32 @@ find_package(pybind11 REQUIRED)
 find_package(unilog REQUIRED)
 find_package(target-factory REQUIRED)
 find_package(xir REQUIRED)
-find_package(xip REQUIRED)
 find_package(vart COMPONENTS runner REQUIRED)
 find_package(glog REQUIRED)
 find_package(Protobuf REQUIRED) # rt-engine does not need, but this is forced upon us by target-factory
 
 # XRM not yet supported
-#add_definitions(-DXRM)
-#find_package(XRM REQUIRED)
+add_definitions(-DXRM)
+find_package(XRM REQUIRED)
+
+message (${XRM_FOUND})
+message (${XRM_VERSION})
+message (${XRM_CMAKE_DIR})
+message (${XRM_INCLUDE_DIRS})
+message (${XRM_LIBRARIES})
 
 # Fix Some Day
 # Would prefer to find XRT the normal way
 find_package(Xrt REQUIRED)
 #find_package(XRT REQUIRED PATHS /opt/xilinx/xrt)
 
-find_path(JSONC_INCLUDE_DIRS NAMES json-c) 
+find_path(JSONC_INCLUDE_DIRS NAMES json-c)
 find_library(JSONC_LIBRARIES NAME json-c REQUIRED)
+#set (JSONC_INCLUDE_DIRS /home/bryanloz/anaconda3/envs/magic/include)
+#set (JSONC_LIBRARIES /home/bryanloz/anaconda3/envs/magic/lib/libjson-c.so)
+
+message (${JSONC_INCLUDE_DIRS})
+message (${JSONC_LIBRARIES})
 
 file(
   GLOB_RECURSE
@@ -81,7 +91,7 @@ file(
 include_directories(
   ${OpenCV_INCLUDE_DIRS}
   ${XRT_INCLUDE_DIRS}
-  ${xip_INCLUDE_DIRS}
+  ${XRM_INCLUDE_DIRS}
   ${unilog_INCLUDE_DIRS}
   ${target-factory_INCLUDE_DIRS}
   ${xir_INCLUDE_DIRS}
@@ -113,7 +123,7 @@ target_link_libraries(
   target-factory::target-factory 
   ${Protobuf_LIBRARIES}
   vart::runner
-  xip::butler
+  ${XRM_LIBRARIES}
   XRT::XRT
   #${XRT_OPENCL_LIBRARIES}
   #${XRT_CORE_LIBRARIES}
@@ -143,13 +153,6 @@ install(
 # Help Other CMAKE Prjs
 ##########################
 include(CMakePackageConfigHelpers)
-
-file(RELATIVE_PATH REL_INCLUDE_DIR
-  ${CMAKE_INSTALL_PREFIX}/share/cmake/${PROJECT_NAME}
-  ${CMAKE_INSTALL_PREFIX}/include/xip/butler
-  )
-
-set(CONF_INCLUDE_DIRS "\${${PROJECT_NAME}_CMAKE_DIR}/${REL_INCLUDE_DIR}")
 
 configure_file (
   ${CMAKE_SOURCE_DIR}/cmake/config.in
