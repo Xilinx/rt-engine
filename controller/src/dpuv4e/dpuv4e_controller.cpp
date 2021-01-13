@@ -512,18 +512,18 @@ std::vector<vart::TensorBuffer*> DpuV4eController::get_outputs(int batchsz) {
       std::unique_lock<std::mutex> lock(hwbuf2_mtx_);
       tbuf2hwbuf2_.emplace(tbufs[0], hwbufs);
     }
-    //if (split_io) {
-    //  auto hwbufin = create_tensor_buffers(get_merged_io_tensors(xdpu_total_in_size),false);
-    //  auto hwbufout = create_tensor_buffers(get_merged_io_tensors(xdpu_total_out_size),false);
-    //  {
-    //    std::unique_lock<std::mutex> lock(hwbufio2_mtx_);
-    //    tbuf2hwbufio2_.emplace(tbufs[0],std::make_tuple(hwbufin,hwbufout));
-    //  }
-    //  //{
-    //  //  std::unique_lock<std::mutex> lock(hwbufio2_mtx_);
-    //  //  tbuf2hwbufout2_.emplace(tbufs[0], hwbufout);
-    //  //}
-    //}
+    if (split_io) {
+      auto hwbufin = create_tensor_buffers(get_merged_io_tensors(xdpu_total_in_size),false);
+      auto hwbufout = create_tensor_buffers(get_merged_io_tensors(xdpu_total_out_size),false);
+      {
+        std::unique_lock<std::mutex> lock(hwbufio2_mtx_);
+        tbuf2hwbufio2_.emplace(tbufs[0],std::make_tuple(hwbufin,hwbufout));
+      }
+      //{
+      //  std::unique_lock<std::mutex> lock(hwbufio2_mtx_);
+      //  tbuf2hwbufout2_.emplace(tbufs[0], hwbufout);
+      //}
+    }
     return tbufs;
 
   } else if (batchsz == 1){
@@ -534,19 +534,19 @@ std::vector<vart::TensorBuffer*> DpuV4eController::get_outputs(int batchsz) {
       tbuf2hwbuf_.emplace(tbufs[i*output_tensors_.size()], hwbufs[i]);
       
     }
-    //if (split_io) {
-    //  auto hwbufin = create_tensor_buffers(get_merged_io_tensors(xdpu_total_in_size),false);
-    //  auto hwbufout = create_tensor_buffers(get_merged_io_tensors(xdpu_total_out_size),false);
-    //  for (int i=0;i<BATCHSIZE; i++) { 
-    //    std::unique_lock<std::mutex> lock(hwbufio_mtx_);
-    //    tbuf2hwbufio_.emplace(tbufs[i*output_tensors_.size()], std::make_tuple(hwbufin[i], hwbufout[i]));
-    //  }
-    //  //for (int i=0;i<BATCHSIZE; i++) {
-    //  //{
-    //  //  std::unique_lock<std::mutex> lock(hwbufio_mtx_);
-    //  //  tbuf2hwbufout_.emplace(tbufs[0], hwbufout[i]);
-    //  //}
-    //}
+    if (split_io) {
+      auto hwbufin = create_tensor_buffers(get_merged_io_tensors(xdpu_total_in_size),false);
+      auto hwbufout = create_tensor_buffers(get_merged_io_tensors(xdpu_total_out_size),false);
+      for (int i=0;i<BATCHSIZE; i++) { 
+        std::unique_lock<std::mutex> lock(hwbufio_mtx_);
+        tbuf2hwbufio_.emplace(tbufs[i*output_tensors_.size()], std::make_tuple(hwbufin[i], hwbufout[i]));
+      }
+      //for (int i=0;i<BATCHSIZE; i++) {
+      //{
+      //  std::unique_lock<std::mutex> lock(hwbufio_mtx_);
+      //  tbuf2hwbufout_.emplace(tbufs[0], hwbufout[i]);
+      //}
+    }
     return tbufs;
   } else {
     auto tbufs = init_tensor_buffer(output_tensors_,batchsz);
@@ -555,19 +555,19 @@ std::vector<vart::TensorBuffer*> DpuV4eController::get_outputs(int batchsz) {
       std::unique_lock<std::mutex> lock(hwbuf2_mtx_);
       tbuf2hwbuf2_.emplace(tbufs[0], hwbufs);
     }
-    //if (split_io) {
-    //  auto hwbufin = create_tensor_buffers(get_merged_io_tensors(xdpu_total_in_size),false);
-    //  auto hwbufout = create_tensor_buffers(get_merged_io_tensors(xdpu_total_out_size),false);
-    //  {
-    //    std::unique_lock<std::mutex> lock(hwbufio2_mtx_);
-    //    tbuf2hwbufio2_.emplace(tbufs[0],std::make_tuple( hwbufin, hwbufout));
-    //  }
-    //  //{
-    //  //  std::unique_lock<std::mutex> lock(hwbufio2_mtx_);
-    //  //  tbuf2hwbufout2_.emplace(tbufs[0], hwbufout);
-    //  //}
+    if (split_io) {
+      auto hwbufin = create_tensor_buffers(get_merged_io_tensors(xdpu_total_in_size),false);
+      auto hwbufout = create_tensor_buffers(get_merged_io_tensors(xdpu_total_out_size),false);
+      {
+        std::unique_lock<std::mutex> lock(hwbufio2_mtx_);
+        tbuf2hwbufio2_.emplace(tbufs[0],std::make_tuple( hwbufin, hwbufout));
+      }
+      //{
+      //  std::unique_lock<std::mutex> lock(hwbufio2_mtx_);
+      //  tbuf2hwbufout2_.emplace(tbufs[0], hwbufout);
+      //}
 
-    //}
+    }
     return tbufs;
 
   }
@@ -648,11 +648,12 @@ void DpuV4eController::free_buffers(std::vector<vart::TensorBuffer*> &tbufs, boo
 
       }
       tbuf2hwbuf_.erase(tbufs[ti]);
-      ////TODO
-      //{
-      //  std::unique_lock<std::mutex> lock(hwbufio_mtx_);
-      //  tbuf2hwbufio_.erase(tbufs[ti]);
-      //}
+      //TODO
+      if (split_io)
+      {
+        std::unique_lock<std::mutex> lock(hwbufio_mtx_);
+        tbuf2hwbufio_.erase(tbufs[ti]);
+      }
       for (auto it=bufs_.begin(); it != bufs_.end(); it++)
         if (it->get() == tbufs[ti])
         {
