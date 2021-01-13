@@ -56,8 +56,8 @@ using namespace chrono;
 #define XDPU_CONTROL_ADDR_2_H 0x114
 #define XDPU_CONTROL_ADDR_3_L 0x118
 #define XDPU_CONTROL_ADDR_3_H 0x11C
-
-#define BATCHSIZE 8
+#define DPUREG_ENGINE_NUM 0x1ec
+//#define batch_size_ 8
 
 DEF_ENV_PARAM(DPU_IP_LATENCY, "0");
 DEF_ENV_PARAM(XLNX_ENABLE_DUMP, "0");
@@ -232,6 +232,7 @@ void DpuV4eController::init_graph(const xir::Subgraph* subgraph) {
 
     }
   }
+  batch_size_ = read32_dpu_reg(handle,  0+ DPUREG_ENGINE_NUM);
   xclBOProperties boProp;
   dump_mode_ = dump_mode_|| ENV_PARAM(XLNX_ENABLE_DUMP);
   debug_mode_ = debug_mode_|| ENV_PARAM(XLNX_ENABLE_DEBUG_MODE);
@@ -242,7 +243,7 @@ void DpuV4eController::init_graph(const xir::Subgraph* subgraph) {
     dump_folder_ = ss.str();
     if(mkdir(dump_folder_.c_str(),S_IRUSR | S_IWUSR | S_IXUSR | S_IRWXG | S_IRWXO))
       throw std::runtime_error("Error: Create dump folder error");
-    for(auto i = 0;i<BATCHSIZE;i++) {
+    for(auto i = 0;i<batch_size_;i++) {
       std::string tmp = dump_folder_ + "/E" + std::to_string(i);
       if(mkdir(tmp.c_str(),S_IRUSR | S_IWUSR | S_IXUSR | S_IRWXG | S_IRWXO))
         throw std::runtime_error("Error: Create dump sub folder error"); 
@@ -529,7 +530,7 @@ std::vector<vart::TensorBuffer*> DpuV4eController::get_outputs(int batchsz) {
   } else if (batchsz == 1){
     auto tbufs = init_tensor_buffer(output_tensors_,batchsz,8);
     auto hwbufs = create_tensor_buffers(get_merged_io_tensors(xdpu_io_total_size),false);
-    for (int i=0;i<BATCHSIZE; i++) {
+    for (int i=0;i<batch_size_; i++) {
       std::unique_lock<std::mutex> lock(hwbuf_mtx_);
       tbuf2hwbuf_.emplace(tbufs[i*output_tensors_.size()], hwbufs[i]);
       
@@ -537,11 +538,11 @@ std::vector<vart::TensorBuffer*> DpuV4eController::get_outputs(int batchsz) {
     if (split_io) {
       auto hwbufin = create_tensor_buffers(get_merged_io_tensors(xdpu_total_in_size),false);
       auto hwbufout = create_tensor_buffers(get_merged_io_tensors(xdpu_total_out_size),false);
-      for (int i=0;i<BATCHSIZE; i++) { 
+      for (int i=0;i<batch_size_; i++) { 
         std::unique_lock<std::mutex> lock(hwbufio_mtx_);
         tbuf2hwbufio_.emplace(tbufs[i*output_tensors_.size()], std::make_tuple(hwbufin[i], hwbufout[i]));
       }
-      //for (int i=0;i<BATCHSIZE; i++) {
+      //for (int i=0;i<batch_size_; i++) {
       //{
       //  std::unique_lock<std::mutex> lock(hwbufio_mtx_);
       //  tbuf2hwbufout_.emplace(tbufs[0], hwbufout[i]);
@@ -571,7 +572,7 @@ std::vector<vart::TensorBuffer*> DpuV4eController::get_outputs(int batchsz) {
     return tbufs;
 
   }
-  //  for (unsigned i=0; i < BATCHSIZE; i++) {
+  //  for (unsigned i=0; i < batch_size_; i++) {
   //    void *reg0Ptr = NULL; 
   //    if (posix_memalign(&reg0Ptr, getpagesize(), xdpu_io_total_size))
   //      throw std::bad_alloc();
@@ -683,7 +684,7 @@ void DpuV4eController::run(const std::vector<vart::TensorBuffer*> &inputs,
     const std::vector<vart::TensorBuffer*> &outputs) {
   std::vector<vart::TensorBuffer*> input_tensor_buffers;
   std::vector<vart::TensorBuffer*> output_tensor_buffers;
-  unsigned inputBs = BATCHSIZE;
+  unsigned inputBs = batch_size_;
   //if (!split_io) { 
   if(inputs.size()%input_tensors_.size())
     throw std::runtime_error("Error: input tensorbuffers error");
@@ -694,7 +695,7 @@ void DpuV4eController::run(const std::vector<vart::TensorBuffer*> &inputs,
     inputBs = inputs.size()/input_tensors_.size();
   else
     inputBs = ibs;
-  if ((ibs < obs) || (inputBs > BATCHSIZE) )
+  if ((ibs < obs) || (inputBs > batch_size_) )
     throw std::runtime_error("Error: size of tensorbuffer not supported");
   //}
   bool create_tb_outside=false;
@@ -778,10 +779,10 @@ void DpuV4eController::run(const std::vector<vart::TensorBuffer*> &inputs,
   auto bo_addr = context.get_bo_addr();
   
   // get device buffers for input TensorBuffers
-  std::vector<XrtDeviceBuffer*> io_bufs(BATCHSIZE);
-  std::vector<uint64_t> io_addrs(BATCHSIZE);
-  std::vector<uint64_t> in_addrs(BATCHSIZE);
-  std::vector<uint64_t> out_addrs(BATCHSIZE);
+  std::vector<XrtDeviceBuffer*> io_bufs(batch_size_);
+  std::vector<uint64_t> io_addrs(batch_size_);
+  std::vector<uint64_t> in_addrs(batch_size_);
+  std::vector<uint64_t> out_addrs(batch_size_);
   if (!tensorbuffer_phy) { 
     if (create_tb_batch) {
       {
@@ -895,7 +896,7 @@ void DpuV4eController::run(const std::vector<vart::TensorBuffer*> &inputs,
 
   }
 //  } else {
-  //  for (unsigned i=0; i < BATCHSIZE; i++) {
+  //  for (unsigned i=0; i < batch_size_; i++) {
   //    void *reg0Ptr = NULL; 
   //    if (posix_memalign(&reg0Ptr, getpagesize(), xdpu_io_total_size))
   //      throw std::bad_alloc();
