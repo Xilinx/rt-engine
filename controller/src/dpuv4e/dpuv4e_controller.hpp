@@ -95,6 +95,6 @@ class DpuV4eController
   std::string dump_folder_;
   bool debug_mode_;
   int split_io;
-
+  uint32_t batch_size_;
 };
 
