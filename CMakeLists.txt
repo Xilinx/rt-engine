@@ -31,16 +31,7 @@ find_package(xir REQUIRED)
 find_package(vart COMPONENTS runner REQUIRED)
 find_package(glog REQUIRED)
 find_package(Protobuf REQUIRED) # rt-engine does not need, but this is forced upon us by target-factory
-
-# XRM not yet supported
-add_definitions(-DXRM)
 find_package(XRM REQUIRED)
-
-message (${XRM_FOUND})
-message (${XRM_VERSION})
-message (${XRM_CMAKE_DIR})
-message (${XRM_INCLUDE_DIRS})
-message (${XRM_LIBRARIES})
 
 # Fix Some Day
 # Would prefer to find XRT the normal way

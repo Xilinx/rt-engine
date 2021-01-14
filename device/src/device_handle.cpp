@@ -9,9 +9,7 @@
 #pragma GCC diagnostic ignored "-Wignored-qualifiers"
 #pragma GCC diagnostic pop
  
-#ifdef XRM  
-  #include <xrm.h>
-#endif
+#include <xrm.h>
 
 #include "experimental/xrt++.hpp"
 #include "xrt_bin_stream.hpp"
@@ -107,118 +105,6 @@ static const std::string find_kernel_name(std::string name) {
   return ret;
 }
 
-/*
-namespace {
-DeviceInfo*
-createDeviceInfoFromXCU(butler::xCU& xcu,std::string& name) {
-  std::string kernelName = find_kernel_name(name);
-  if (kernelName.find("DPUCAHX8L") != std::string::npos)
-    return
-      new DeviceInfo{
-        .cu_base_addr = xcu.getBaseAddr(),
-        .ddr_bank = 0,//getDDRBankFromButlerBitmask(xcu.getKernelArgMemIdxMapAt(0)),
-        .device_index = size_t(xcu.getFPGAIdx()),
-        .cu_index = size_t(xcu.getCUIdx()),
-        .cu_mask = (1u << xcu.getCUIdx()),
-        .xclbin_path = xcu.getXCLBINPath(),
-        .full_name = name,
-        .device_id = xcu.getOCLDev(),
-        .xdev = xcu.getXDev(),
-        .fingerprint = 0,
-      };
-
-  else
-
-    return
-      new DeviceInfo{
-        .cu_base_addr = xcu.getBaseAddr(),
-        .ddr_bank = getDDRBankFromButlerBitmask(xcu.getKernelArgMemIdxMapAt(0)),
-        .device_index = size_t(xcu.getFPGAIdx()),
-        .cu_index = size_t(xcu.getCUIdx()),
-        .cu_mask = (1u << xcu.getCUIdx()),
-        .xclbin_path = xcu.getXCLBINPath(),
-        .full_name = name,
-        .device_id = xcu.getOCLDev(),
-        .xdev = xcu.getXDev(),
-        .fingerprint = 0,
-      };
-}
-}
-
-ButlerResource::ButlerResource(std::string kernelName, std::string xclbin) {
-  client_.reset(new butler::ButlerClient());
-  if (client_->Ping() != butler::errCode::SUCCESS)
-    throw std::runtime_error("Error: cannot ping butler server");
-
-  // first, try to acquire using the given kernelName
-  std::string realKernelName(kernelName);
-  std::pair<butler::Alloc, std::vector<butler::xCU>> acquireResult;
-  acquireResult = client_->acquireCU(realKernelName, xclbin);
-  if (acquireResult.first.myErrCode != butler::errCode::SUCCESS
-    && xclbin.find(".xclbin") != std::string::npos)
-  {
-    // that did not work, try to acquire using CU kernel names
-    std::string fnm = std::string(xclbin);
-    xir::XrtBinStream binstream(fnm);
-    // Try to acquire a new CU from xclbin
-    auto cu_num = binstream.get_num_of_cu();
-    for (int cuidx = 0; cuidx < cu_num; cuidx++) {
-      realKernelName = find_kernel_name(binstream.get_cu(cuidx));
-      // Try to acquire a new CU
-      acquireResult = client_->acquireCU(realKernelName, xclbin);
-      auto alloc = acquireResult.first;
-      if (alloc.myErrCode != butler::errCode::SUCCESS) {
-        continue;
-      }
-      break;
-    }
-  }
-
-  auto alloc = acquireResult.first;
-
-  // If we can't acquire our own resource...
-  if (alloc.myErrCode != butler::errCode::SUCCESS) {
-    // Try to share one that has previously been acquired by this process
-    acquireResult = client_->subscribeService(realKernelName);
-    alloc = acquireResult.first;
-    if (alloc.myErrCode != butler::errCode::SUCCESS) {
-      std::cerr << alloc << std::endl;
-      throw std::runtime_error("Error: could not acquire device handle");
-    }
-    else { // We are successfully able to share
-      std::cout << "Device acquired (Sharing CU)" << std::endl << alloc << std::endl;
-      auto xcus = acquireResult.second;
-      auto it = xcus.begin();
-      std::advance(it, rand() % xcus.size());
-      auto xcu = *it; // Choose random CU from service
-      auto cu_full_name = xcu.getKernelName() + ":" + xcu.getName() + ":" +
-                          std::to_string(xcu.getFPGAIdx()) + ":" +
-                          std::to_string(xcu.getCUIdx());
-      info_.reset(createDeviceInfoFromXCU(xcu,cu_full_name));
-      handle_ = alloc.myHandle;
-    }
-  }
-  else {
-    std::cout << "Device acquired (New CU)" << std::endl << alloc << std::endl;
-    auto xcu = acquireResult.second[0];
-    auto cu_full_name = xcu.getKernelName() + ":" + xcu.getName() + ":" +
-                        std::to_string(xcu.getFPGAIdx()) + ":" +
-                        std::to_string(xcu.getCUIdx());
-    info_.reset(createDeviceInfoFromXCU(xcu,cu_full_name));
-    handle_ = alloc.myHandle;
-    std::vector<butler::handle> handles;
-    handles.push_back(alloc.myHandle);
-    client_->publishService(realKernelName,handles);
-  }
-}
-
-ButlerResource::~ButlerResource() {
-  if (client_.get())
-    client_->releaseResources(handle_);
-}
-*/
-
-#ifdef XRM
 static std::vector<std::string> get_xclbins_in_dir(std::string path) {
   if (path.find(".xclbin") != std::string::npos)
     return {path};
@@ -329,7 +215,6 @@ XrmResource::XrmResource(std::string kernelName, std::string xclbin)
 XrmResource::~XrmResource() { 
   xrmCuRelease(context_, cu_rsrc_.get()); 
 }
-#endif
 
 ///////////////////////////////////////////////
 
