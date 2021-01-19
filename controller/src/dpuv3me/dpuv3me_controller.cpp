@@ -622,8 +622,8 @@ void DpuV3meController::free_buffers(std::vector<vart::TensorBuffer*> &tbufs, bo
   }
 }
 
-static void _show_regs(xclDeviceHandle xcl_handle){
-  for(unsigned long offset : {0x1800000}){
+static void _show_regs(xclDeviceHandle xcl_handle, uint64_t cuba){
+  for(unsigned long offset : {cuba}){
     std::cout << "LOAD START:" << read32_dpu_reg(xcl_handle,  offset+ DPUREG_LOAD_START) << std::endl;
     std::cout << "LOAD END  :" << read32_dpu_reg(xcl_handle,  offset+ DPUREG_LOAD_END) << std::endl;
     std::cout << "SAVE START:" << read32_dpu_reg(xcl_handle,  offset+ DPUREG_SAVE_START) << std::endl;
@@ -852,7 +852,7 @@ auto trigger_dpu_func = [&](){
               && ecmd->state != ERT_CMD_STATE_COMPLETED; wait_count++);
 
       if (ecmd->state != ERT_CMD_STATE_COMPLETED) {
-        _show_regs(xcl_handle);
+        _show_regs(xcl_handle, handle_->get_device_info().cu_base_addr);
         std::cout << "Error: CU timeout when do preload " << std::endl;
         throw std::runtime_error("Error: CU timeout when do preload "
           + std::to_string(handle_->get_device_info().cu_index));
@@ -929,12 +929,12 @@ auto trigger_dpu_func = [&](){
 
   if (ecmd->state != ERT_CMD_STATE_COMPLETED)
   {
-    _show_regs(xcl_handle);
+    _show_regs(xcl_handle, handle_->get_device_info().cu_base_addr);
     std::cout << "Error: CU timeout " << std::endl;
     throw std::runtime_error("Error: CU timeout " + std::to_string(handle_->get_device_info().cu_index));
   }
   if(ENV_PARAM(DPU_IP_COUNTER)){
-    _show_regs(xcl_handle);
+    _show_regs(xcl_handle, handle_->get_device_info().cu_base_addr);
   }
 
 
