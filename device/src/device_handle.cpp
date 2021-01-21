@@ -29,8 +29,8 @@ DeviceResource::DeviceResource(std::string kernelName, std::string xclbin) {
   const int deviceIdx = 0;
   naive_resource_mgr_on_ = true;
   auto cuIdx = naive_resource_mgr_cu_idx_.fetch_add(1);
-
   xir::XrtBinStream binstream(xclbin);
+  if (cuIdx > (binstream.get_num_of_cu()-1)) cuIdx = rand()%binstream.get_num_of_cu(); 
   if (cuIdx >= binstream.get_num_of_cu())
     throw std::runtime_error("Error: no CUs available");
 
@@ -141,7 +141,7 @@ XrmResource::XrmResource(std::string kernelName, std::string xclbin)
   std::strcpy(cu_prop_->kernelName, std::string(kernelName).c_str());
   std::strcpy(cu_prop_->kernelAlias, "");
   cu_prop_->devExcl = false;
-  cu_prop_->requestLoad = 100;
+  cu_prop_->requestLoad = 1;
   cu_prop_->poolId = 0;
 
   // get available xclbins
@@ -154,15 +154,32 @@ XrmResource::XrmResource(std::string kernelName, std::string xclbin)
     std::strcpy(xclbinPath, xclbins[i].c_str()); // XRM does not take const char* :(
     int err 
       = xrmCuAllocWithLoad(context_, cu_prop_.get(), xclbinPath, cu_rsrc_.get());
-    if (err)
-      continue; // keep trying other xclbins
+    if (err) {
+      naive_resource_mgr_on_ = true;
+      std::string fnm = std::string(xclbinPath);
+      xir::XrtBinStream binstream(fnm);
+      // Try to acquire a new CU from xclbin
+      auto cu_num = binstream.get_num_of_cu();
+      auto cuIdx = naive_resource_mgr_cu_idx_.fetch_add(1);
+      if (cuIdx > (cu_num-1)) cuIdx =  rand() % cu_num;
+      auto realKernelName = find_kernel_name(binstream.get_cu(cuIdx));
+      //std::memset(cu_prop_.get(), 0, sizeof(xrmCuProperty));
+      //std::memset(cu_rsrc_.get(), 0, sizeof(xrmCuResource));
+      std::strcpy(cu_prop_->kernelName, std::string(realKernelName).c_str());
+      //cu_prop_->devExcl = false;
+      //cu_prop_->requestLoad = 1;
+      //cu_prop_->poolId = 0;
+      err = xrmCuAllocWithLoad(context_, cu_prop_.get(), xclbinPath, cu_rsrc_.get());
+      if (err) {
+        continue; // keep trying other xclbins
+      }
+    }
 
     std::cout << "Device acquired " << cu_rsrc_->xclbinFileName << std::endl;
 
     auto cu_full_name = std::string(cu_prop_->kernelName) + ":" + 
                         std::to_string(cu_rsrc_->deviceId) + ":" +
                         std::to_string(cu_rsrc_->cuId);
-
     info_.reset(new DeviceInfo{
         .cu_base_addr = cu_rsrc_->baseAddr,
         .ddr_bank = cu_rsrc_->membankId,
@@ -213,6 +230,8 @@ XrmResource::XrmResource(std::string kernelName, std::string xclbin)
 }
 
 XrmResource::~XrmResource() { 
+  if (naive_resource_mgr_on_)
+    naive_resource_mgr_cu_idx_--;
   xrmCuRelease(context_, cu_rsrc_.get()); 
 }
 
