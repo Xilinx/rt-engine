@@ -323,8 +323,8 @@ void DpuV3meController::init_graph(const xir::Subgraph* subgraph) {
   if(ENV_PARAM(XLNX_ENABLE_FINGERPRINT_CHECK)) {
     if (subgraph->has_attr("dpu_fingerprint")) {
       const uint64_t fingerprint = subgraph->get_attr<std::uint64_t>("dpu_fingerprint");
-      uint32_t low = read32_dpu_reg(handle,  0+ VERSION_CODE_L);
-      uint32_t high = read32_dpu_reg(handle,  0+ VERSION_CODE_H);
+      uint32_t low = read32_dpu_reg(handle,  handle_->get_device_info().cu_base_addr + VERSION_CODE_L);
+      uint32_t high = read32_dpu_reg(handle,  handle_->get_device_info().cu_base_addr + VERSION_CODE_H);
       uint64_t version = high;
       version = (version << 32) + low;
       if (version != fingerprint)
