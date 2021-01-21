@@ -39,7 +39,7 @@ find_package(Xrt REQUIRED)
 #find_package(XRT REQUIRED PATHS /opt/xilinx/xrt)
 
 find_path(JSONC_INCLUDE_DIRS NAMES json-c)
-find_library(JSONC_LIBRARIES NAME json-c REQUIRED)
+find_library(JSONC_LIBRARIES NAMES json-c REQUIRED)
 #set (JSONC_INCLUDE_DIRS /home/bryanloz/anaconda3/envs/magic/include)
 #set (JSONC_LIBRARIES /home/bryanloz/anaconda3/envs/magic/lib/libjson-c.so)
 
