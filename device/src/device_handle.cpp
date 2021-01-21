@@ -18,6 +18,8 @@
 static std::atomic<bool> naive_resource_mgr_on_(false);
 static std::atomic<unsigned> naive_resource_mgr_cu_idx_(0);
 
+static std::mutex g_allocation_lock;
+
 DeviceResource::DeviceResource(std::string kernelName, std::string xclbin) {
   // fallback unmanaged/caveman resource manager
   auto num_devices = xclProbe();
@@ -176,6 +178,9 @@ XrmResource::XrmResource(std::string kernelName, std::string xclbin)
         .fingerprint = 0,
     });
 
+    // Wait turn to run OCL Commands
+    std::lock_guard<std::mutex> lockGuard0(g_allocation_lock);
+
     cl_platform_id platform_id;
     char cl_platform_vendor[1001];
     char cl_platform_name[1001];
@@ -238,6 +243,10 @@ std::mutex XclDeviceHandle::use_count_mutex_;
 XclDeviceHandle::XclDeviceHandle(std::string kernelName, std::string xclbin)
     : DeviceHandle(kernelName, xclbin), context_(nullptr), commands_(nullptr),
       program_(nullptr) {
+
+  // Wait turn to run OCL Commands
+  std::lock_guard<std::mutex> lockGuard0(g_allocation_lock);
+
   // create context
   int err;
   context_ =
