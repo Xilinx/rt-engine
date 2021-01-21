@@ -31,11 +31,11 @@ find_package(xir REQUIRED)
 find_package(vart COMPONENTS runner REQUIRED)
 find_package(glog REQUIRED)
 find_package(Protobuf REQUIRED) # rt-engine does not need, but this is forced upon us by target-factory
+find_package(XRM REQUIRED)
 
 # Fix Some Day
 # Would prefer to find XRT the normal way
 find_package(Xrt REQUIRED)
-find_package(Xrm REQUIRED)
 #find_package(XRT REQUIRED PATHS /opt/xilinx/xrt)
 
 find_path(JSONC_INCLUDE_DIRS NAMES json-c)
@@ -114,7 +114,7 @@ target_link_libraries(
   target-factory::target-factory 
   ${Protobuf_LIBRARIES}
   vart::runner
-  ${XRM_LIBRARYIES}
+  ${XRM_LIBRARIES}
   XRT::XRT
   #${XRT_OPENCL_LIBRARIES}
   #${XRT_CORE_LIBRARIES}
