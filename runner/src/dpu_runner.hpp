@@ -111,4 +111,5 @@ private:
 
 extern "C" {
   vart::Runner* create_runner(const xir::Subgraph* subgraph);
+  vart::Runner* create_runner_with_attrs(const xir::Subgraph* subgraph, xir::Attrs* attrs);
 }
