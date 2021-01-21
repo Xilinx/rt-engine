@@ -101,3 +101,12 @@ vart::Runner* create_runner(const xir::Subgraph* subgraph) {
      auto ret = std::make_unique<vart::DpuRunner>(subgraph);
      return ret.release();
 }
+
+
+/** @brief create dpu runner with attrs
+*/
+vart::Runner* create_runner_with_attrs(const xir::Subgraph* subgraph, xir::Attrs* attrs) {
+     auto ret = std::make_unique<vart::DpuRunner>(subgraph);
+     return ret.release();
+}
+
