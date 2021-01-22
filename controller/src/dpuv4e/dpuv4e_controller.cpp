@@ -472,7 +472,7 @@ DpuV4eController::get_merged_io_tensors(int size) const {
   const std::vector<std::int32_t> dims = { 1, 1, 1, size};
   xir::Tensor *tensor = xir::Tensor::create("inout", dims, xir::DataType{xir::DataType::INT, 8}).release();
   //static xir::Tensor tensor("inout", dims, xir::Tensor::DataType::INT8); 
-  return std::vector<const xir::Tensor*>(8, tensor);
+  return std::vector<const xir::Tensor*>(batch_size_, tensor);
 }
 
 std::vector<vart::TensorBuffer*> get_tensor_buffer_pointer(
@@ -490,10 +490,10 @@ std::vector<vart::TensorBuffer*> DpuV4eController::get_inputs(int batchsz) {
 
   if ((batchsz == -1))
   // for default defination
-    return init_tensor_buffer(input_tensors_,8);
+    return init_tensor_buffer(input_tensors_,batch_size_);
   else if (batchsz == 1)
   // for mlperf defination
-    return init_tensor_buffer(input_tensors_,batchsz,8);
+    return init_tensor_buffer(input_tensors_,batchsz,batch_size_);
   else
   // for other user-requested batchsz
     return init_tensor_buffer(input_tensors_,batchsz);
@@ -507,7 +507,7 @@ std::vector<vart::TensorBuffer*> DpuV4eController::get_outputs(int batchsz) {
   //  throw std::runtime_error("Error: custom batch size not supported for this DPU");
 
   if ((batchsz == -1)) {
-    auto tbufs = init_tensor_buffer(output_tensors_,8);
+    auto tbufs = init_tensor_buffer(output_tensors_,batch_size_);
     auto hwbufs = create_tensor_buffers(get_merged_io_tensors(xdpu_io_total_size),false);
     {
       std::unique_lock<std::mutex> lock(hwbuf2_mtx_);
@@ -528,7 +528,7 @@ std::vector<vart::TensorBuffer*> DpuV4eController::get_outputs(int batchsz) {
     return tbufs;
 
   } else if (batchsz == 1){
-    auto tbufs = init_tensor_buffer(output_tensors_,batchsz,8);
+    auto tbufs = init_tensor_buffer(output_tensors_,batchsz,batch_size_);
     auto hwbufs = create_tensor_buffers(get_merged_io_tensors(xdpu_io_total_size),false);
     for (int i=0;i<batch_size_; i++) {
       std::unique_lock<std::mutex> lock(hwbuf_mtx_);
