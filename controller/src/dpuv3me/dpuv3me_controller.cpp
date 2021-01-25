@@ -811,8 +811,9 @@ void DpuV3meController::run(const std::vector<vart::TensorBuffer*> &inputs,
 
 
 auto trigger_dpu_func = [&](){
+  __TIC__(DPU_TRIGGER)
 
-  auto t1 = std::chrono::high_resolution_clock::now();
+  //auto t1 = std::chrono::high_resolution_clock::now();
 
   std::vector<std::pair<int, int> > regVals;
   if (0 == program_once_complete) {
@@ -937,10 +938,11 @@ auto trigger_dpu_func = [&](){
     _show_regs(xcl_handle);
   }
 
+  __TOC__(DPU_TRIGGER)
 
-  auto t2 = std::chrono::high_resolution_clock::now();
-  std::chrono::duration<double, std::micro> fp_us = t2 - t1;
-  std::cout << "dpu trigger: us " << fp_us.count() << std::endl;
+  //auto t2 = std::chrono::high_resolution_clock::now();
+  //std::chrono::duration<double, std::micro> fp_us = t2 - t1;
+  //std::cout << "dpu trigger: us " << fp_us.count() << std::endl;
 
 };
 
