@@ -163,13 +163,16 @@ XrmResource::XrmResource(std::string kernelName, std::string xclbin)
       auto cuIdx = naive_resource_mgr_cu_idx_.fetch_add(1);
       if (cuIdx > (cu_num-1)) cuIdx =  rand() % cu_num;
       auto realKernelName = find_kernel_name(binstream.get_cu(cuIdx));
-      //std::memset(cu_prop_.get(), 0, sizeof(xrmCuProperty));
-      //std::memset(cu_rsrc_.get(), 0, sizeof(xrmCuResource));
-      std::strcpy(cu_prop_->kernelName, std::string(realKernelName).c_str());
-      //cu_prop_->devExcl = false;
-      //cu_prop_->requestLoad = 1;
-      //cu_prop_->poolId = 0;
-      err = xrmCuAllocWithLoad(context_, cu_prop_.get(), xclbinPath, cu_rsrc_.get());
+      if (kernelName != realKernelName) {
+        //std::memset(cu_prop_.get(), 0, sizeof(xrmCuProperty));
+        //std::memset(cu_rsrc_.get(), 0, sizeof(xrmCuResource));
+        std::cout << realKernelName << std::endl;
+        std::strcpy(cu_prop_->kernelName, std::string(realKernelName).c_str());
+        //cu_prop_->devExcl = false;
+        //cu_prop_->requestLoad = 1;
+        //cu_prop_->poolId = 0;
+        err = xrmCuAllocWithLoad(context_, cu_prop_.get(), xclbinPath, cu_rsrc_.get());
+      }
       if (err) {
         continue; // keep trying other xclbins
       }
