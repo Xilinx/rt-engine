@@ -143,8 +143,15 @@ XrmResource::XrmResource(std::string kernelName, std::string xclbin)
   std::strcpy(cu_prop_->kernelName, std::string(kernelName).c_str());
   std::strcpy(cu_prop_->kernelAlias, "");
   cu_prop_->devExcl = false;
-  cu_prop_->requestLoad = 1;
-  cu_prop_->poolId = 0;
+
+  // Temporary hack until XRM supports the allocation policy we need
+  // see: https://jira.xilinx.com/browse/CR-1070396
+  if (std::getenv("RTE_XRM_DONT_SHARE_CU"))
+    cu_prop_->requestLoad = 100;
+  else
+    cu_prop_->requestLoad = 1;
+
+  cu_prop_->poolId = 0; // Allocate CUs from the system pool
 
   // get available xclbins
   auto xclbins = get_xclbins_in_dir(xclbin);
