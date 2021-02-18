@@ -1,8 +1,10 @@
 #include "dpuv3int8_controller.hpp"
+#include <mutex>
 
 #define BATCH_SIZE 4
 
 using namespace std;
+std::mutex globalMutex;
 
 Dpuv3Int8Controller::Dpuv3Int8Controller(std::string meta) : XclDpuController<XclDeviceHandle, XclDeviceBuffer, XclDeviceBuffer>(meta) {
   
@@ -150,7 +152,7 @@ void Dpuv3Int8Controller::initializeTaskDRUVariables()
       reg_val[REG_IDX_TASK_DRU_SRC_NTRANS]     = std::ceil((inH*inW*inCh)/64.0)+1;
       reg_val[REG_IDX_TASK_DRU_DST_NTRANS]     = (4*inH*outW*16*(std::ceil(inCh*kW/16.0)))/64.0;
       reg_val[REG_IDX_TASK_DRU_PL_CORR]        = padL*inCh;
-      reg_val[REG_IDX_TASK_DRU_PR_CORR]        = (padR+inW)*inCh;
+      reg_val[REG_IDX_TASK_DRU_PR_CORR]        = (padL+inW)*inCh;
       reg_val[REG_IDX_TASK_DRU_IW_CORR]        = inW*inCh;
       reg_val[REG_IDX_TASK_DRU_SW_CORR]        = sW*inCh;
       reg_val[REG_IDX_TASK_DRU_WCG_CORR]       = wcgCorr;
@@ -196,7 +198,7 @@ void Dpuv3Int8Controller::initCreateBuffers()
     
     const std::vector<std::int32_t> swapdims = { int32_t(xmodel_->getSwapBufSize()) };
     const std::vector<std::int32_t> druSrcdims = { int32_t(BATCH_SIZE*xmodel_->getInW()*xmodel_->getInH()*xmodel_->getInCh())};
-    const std::vector<std::int32_t> druDstdims = swapdims;
+    const std::vector<std::int32_t> druDstdims = { int32_t(xmodel_->getInW()*xmodel_->getInH()*BATCH_SIZE*ceil((float)xmodel_->getInCh()/16)*16)};
 
     xir::Tensor *instr_t = xir::Tensor::create("instr", instrdims, xir::DataType{xir::DataType::XINT, 8}).release();
     xir::Tensor *swap_t = xir::Tensor::create("swap", swapdims, xir::DataType{xir::DataType::XINT, 8}).release();
@@ -343,6 +345,7 @@ Dpuv3Int8Controller::get_outputs(int batchsz) {
 std::vector<vart::TensorBuffer*>
 Dpuv3Int8Controller::create_hw_buffers(std::vector<vart::TensorBuffer*> stdBuf, bool isInput) {
   
+  std::unique_lock<std::mutex> lock(globalMutex);
   std::vector<vart::TensorBuffer*> hwBuf;
   std::vector<vart::TensorBuffer*> swapBuf;
   std::vector<vart::TensorBuffer*> druSrcBuf;
