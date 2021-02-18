@@ -33,6 +33,7 @@ find_package(glog REQUIRED)
 find_package(Protobuf REQUIRED) # rt-engine does not need, but this is forced upon us by target-factory
 find_package(XRM REQUIRED)
 
+
 # Fix Some Day
 # Would prefer to find XRT the normal way
 find_package(Xrt REQUIRED)
@@ -40,11 +41,8 @@ find_package(Xrt REQUIRED)
 
 find_path(JSONC_INCLUDE_DIRS NAMES json-c)
 find_library(JSONC_LIBRARIES NAMES json-c REQUIRED)
-#set (JSONC_INCLUDE_DIRS /home/bryanloz/anaconda3/envs/magic/include)
-#set (JSONC_LIBRARIES /home/bryanloz/anaconda3/envs/magic/lib/libjson-c.so)
-
-message (${JSONC_INCLUDE_DIRS})
-message (${JSONC_LIBRARIES})
+#message (${JSONC_INCLUDE_DIRS})
+#message (${JSONC_LIBRARIES})
 
 file(
   GLOB_RECURSE
@@ -214,44 +212,10 @@ cpack_add_component_group(all)
 cpack_add_component(base GROUP all)
 
 #########################
-# Test Executables
+# Testing
 #########################
-
-file(
-  GLOB
-  TESTS
-  "tests/*"
-  )
-
-foreach(test ${TESTS})
-  get_filename_component(exe ${test} NAME)
-  file(GLOB_RECURSE TEST_SRCS "tests/${exe}/*.cpp")
-  add_executable("${exe}.exe" ${TEST_SRCS})
-  target_link_libraries(
-    "${exe}.exe"
-    PRIVATE
-    ${PROJECT_NAME}
-    opencv_core
-    opencv_imgproc
-    opencv_highgui
-    opencv_imgcodecs
-    ${Boost_SYSTEM_LIBRARY}
-    ${Boost_FILESYSTEM_LIBRARY}
-    vart::runner
-    glog::glog
-    ${JSONC_LIBRARIES}
-    )
-  set_target_properties(
-    "${exe}.exe"
-    PROPERTIES
-    INSTALL_RPATH ${CMAKE_INSTALL_PREFIX}/lib
-    INSTALL_RPATH_USE_LINK_PATH TRUE
-    )
-  install(
-    TARGETS
-    "${exe}.exe"
-    COMPONENT tests
-    DESTINATION bin
-    )
-endforeach()
-
+find_package(GTest)
+if(${GTest_FOUND})
+  enable_testing()
+  add_subdirectory(tests)
+endif()
