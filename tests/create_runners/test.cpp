@@ -27,61 +27,35 @@ namespace fs = std::experimental::filesystem;
 
 /*
  * This Testcase will verify that a number of runners can be created in parallel
+ *   Test case depends on two environment variables
+ *   XLNX_VART_FIRMWARE must be set to the appropriate XCLBIN Directory
+ *   XMODEL must be set to the appropriate compiled model compatible with aforementioned XCLBIN
  */
 
+int create_runners(unsigned int numRunners) {
 
-std::string
-configure() {
-  std::string var_name("XLNX_VART_FIRMWARE=");
-  std::vector<std::pair<std::string, std::string>> configs;
+  const char* xclbinP = std::getenv("XLNX_VART_FIRMWARE");
+  if (!xclbinP)
+    throw std::runtime_error("XLNX_VART_FIRMWARE is not set!");
+  std::string xclbin(xclbinP);
 
-  // dpuv3int8 xclbin, xmodel pair
-  configs.emplace_back(
-    "/opt/xilinx/overlaybins/dpuv3int8",
-    "../../tests/models/dpuv3int8/resnet50_handwritten.xmodel"
-  );
+  const char* xmodelP = std::getenv("XMODEL");
+  if (!xmodelP)
+    throw std::runtime_error("XMODEL is not set!");
+  std::string xmodel(xmodelP);
 
-  // TODO fix below, and add more configs
-  // dpuv4e xclbin, xmodel pair
-  configs.emplace_back(
-    "/opt/xilinx/overlaybins/dpuv4e",
-    "../../tests/models/dpuv4e/resnet50_handwritten.xmodel"
-  );
+  std::unique_ptr<xir::Graph> graph = xir::Graph::deserialize(xmodel);
+  std::vector<xir::Subgraph *> subgraphs = graph->get_root_subgraph()->children_topological_sort();
+  auto subgraph = subgraphs[1];
 
-  for (auto& config : configs) {
-    if (fs::exists(config.first)) {
-      auto env = var_name + config.first;
-      char* envp = (char*)malloc(env.size());
-      memcpy(envp,env.c_str(),env.size());
-      putenv(envp);
-      return config.second;
-    }
-  }
+  std::vector<std::unique_ptr<vart::Runner>> runners;
+  std::vector<std::thread> threads(numRunners);
 
-  throw std::runtime_error("Can't find any installed xclbins");
-}
+  for (auto& thread : threads)
+    thread = std::thread([&] { runners.push_back(vart::Runner::create_runner(subgraph, "run")); });
+  for (auto& thread : threads)
+    thread.join();
 
-int
-create_runners(unsigned int numRunners) {
-  try {
-  
-    std::string xmodel = configure();
-
-    std::unique_ptr<xir::Graph> graph = xir::Graph::deserialize(xmodel);
-    std::vector<xir::Subgraph *> subgraphs = graph->get_root_subgraph()->children_topological_sort();
-    auto subgraph = subgraphs[1];
-
-    std::vector<std::unique_ptr<vart::Runner>> runners;
-    std::vector<std::thread> threads(numRunners);
-
-    for (auto& thread : threads)
-      thread = std::thread([&] { runners.push_back(vart::Runner::create_runner(subgraph, "run")); });
-    for (auto& thread : threads)
-      thread.join();
-  }
-  catch (...) {
-    return EXIT_FAILURE;
-  }
   return EXIT_SUCCESS;
 }
 
