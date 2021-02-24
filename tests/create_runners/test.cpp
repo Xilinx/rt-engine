@@ -59,7 +59,6 @@ int create_runners(unsigned int numRunners) {
   return EXIT_SUCCESS;
 }
 
-// TODO: How to avoid hardcoding for dpuv3int8?
 TEST(UnitTests, create_one_runner) {
   ASSERT_TRUE( create_runners(1) == EXIT_SUCCESS );
 }
