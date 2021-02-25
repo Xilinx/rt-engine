@@ -17,13 +17,11 @@
 #include <gtest/gtest.h>
 #include <string>
 #include <vector>
+#include <map>
 #include <thread>
 #include <vart/runner.hpp>
 #include <xir/graph/graph.hpp>
 #include <cstdlib>
-#include <experimental/filesystem>
-
-namespace fs = std::experimental::filesystem;
 
 /*
  * This Testcase will verify that a number of runners can be created in parallel
@@ -32,17 +30,32 @@ namespace fs = std::experimental::filesystem;
  *   XMODEL must be set to the appropriate compiled model compatible with aforementioned XCLBIN
  */
 
-int create_runners(unsigned int numRunners) {
+class CreateRunnerTest : public testing::Test {
+protected:
+  void SetUp() override {
+    // Grab our required environment variables
+    std::vector<std::string> environment = {
+      "XLNX_VART_FIRMWARE",
+      "XLNX_XMODEL"
+    };
+    for (auto& var : environment)
+      env_[var] = std::string(std::getenv(var.c_str()));
 
-  const char* xclbinP = std::getenv("XLNX_VART_FIRMWARE");
-  if (!xclbinP)
-    throw std::runtime_error("XLNX_VART_FIRMWARE is not set!");
-  std::string xclbin(xclbinP);
+    start_time_ = time(nullptr);
+  }
 
-  const char* xmodelP = std::getenv("XMODEL");
-  if (!xmodelP)
-    throw std::runtime_error("XMODEL is not set!");
-  std::string xmodel(xmodelP);
+  void TearDown() override {
+    end_time_ = time(nullptr);
+    EXPECT_TRUE(end_time_ - start_time_ <= 10000) << "The test took too long.";
+  }
+
+  time_t start_time_;
+  time_t end_time_;
+  std::map<std::string, std::string> env_;
+};
+
+int create_runners(std::string &xmodel, unsigned int numRunners) {
+
 
   std::unique_ptr<xir::Graph> graph = xir::Graph::deserialize(xmodel);
   std::vector<xir::Subgraph *> subgraphs = graph->get_root_subgraph()->children_topological_sort();
@@ -59,14 +72,14 @@ int create_runners(unsigned int numRunners) {
   return EXIT_SUCCESS;
 }
 
-TEST(UnitTests, create_one_runner) {
-  ASSERT_TRUE( create_runners(1) == EXIT_SUCCESS );
+TEST_F(CreateRunnerTest, create_one_runner) {
+  ASSERT_TRUE( create_runners(env_["XLNX_XMODEL"], 1) == EXIT_SUCCESS );
 }
 
-TEST(UnitTests, create_four_runners) {
-  EXPECT_TRUE( create_runners(4) == EXIT_SUCCESS );
+TEST_F(CreateRunnerTest, create_four_runners) {
+  EXPECT_TRUE( create_runners(env_["XLNX_XMODEL"], 4) == EXIT_SUCCESS );
 }
 
-TEST(UnitTests, create_five_runners) {
-  EXPECT_TRUE( create_runners(5) == EXIT_SUCCESS );
+TEST_F(CreateRunnerTest, create_five_runners) {
+  EXPECT_TRUE( create_runners(env_["XLNX_XMODEL"], 5) == EXIT_SUCCESS );
 }

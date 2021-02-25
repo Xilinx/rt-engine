@@ -1,6 +1,6 @@
 
 add_executable(
-  run_tests
+  run_rtengine_tests
   ${CMAKE_CURRENT_SOURCE_DIR}/common/Inference.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/common/cpuUtil.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/common/XirKeys.cpp
@@ -9,13 +9,13 @@ add_executable(
   )
 
 target_include_directories(
-  run_tests
+  run_rtengine_tests
   PRIVATE
   ${CMAKE_CURRENT_SOURCE_DIR}/common
   )
 
 target_link_libraries(
-  run_tests
+  run_rtengine_tests
   PRIVATE
   ${PROJECT_NAME}
   opencv_core
@@ -32,7 +32,22 @@ target_link_libraries(
   stdc++fs
   )
 
+set_target_properties(
+  run_rtengine_tests
+  PROPERTIES
+  INSTALL_RPATH ${CMAKE_INSTALL_PREFIX}/lib
+  INSTALL_RPATH_USE_LINK_PATH TRUE
+  )
+
 include(GoogleTest)
 gtest_discover_tests(
-  run_tests
+  run_rtengine_tests
+  )
+
+install(
+  TARGETS
+  run_rtengine_tests
+  EXPORT ${PROJECT_NAME}-targets
+  COMPONENT base
+  DESTINATION bin
   )
