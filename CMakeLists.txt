@@ -96,6 +96,7 @@ include_directories(
   ${CMAKE_SOURCE_DIR}/controller/src/dpuv3int8
   ${CMAKE_SOURCE_DIR}/vitis/src
   )
+        #${CMAKE_SOURCE_DIR}/tests/common
 
 add_library(
   ${PROJECT_NAME}
@@ -219,3 +220,38 @@ if(${GTest_FOUND})
   enable_testing()
   add_subdirectory(tests)
 endif()
+
+# This is currently broken for vart_dpuv4e
+set(TESTS "app" "dpuv3int8"  "engine"  "vart_dpuv3int8"  "vart_dpuv3me"  "vart_dpuv4e"  "vart_samples")
+foreach(test ${TESTS})
+  get_filename_component(exe ${test} NAME)
+  file(GLOB_RECURSE TEST_SRCS "tests/${exe}/*.cpp")
+  add_executable("${exe}.exe" ${TEST_SRCS})
+  target_link_libraries(
+    "${exe}.exe"
+    PRIVATE
+    ${PROJECT_NAME}
+    opencv_core
+    opencv_imgproc
+    opencv_highgui
+    opencv_imgcodecs
+    ${Boost_SYSTEM_LIBRARY}
+    ${Boost_FILESYSTEM_LIBRARY}
+    vart::runner
+    glog::glog
+    ${JSONC_LIBRARIES}
+    )
+  set_target_properties(
+    "${exe}.exe"
+    PROPERTIES
+    INSTALL_RPATH ${CMAKE_INSTALL_PREFIX}/lib
+    INSTALL_RPATH_USE_LINK_PATH TRUE
+    )
+  install(
+    TARGETS
+    "${exe}.exe"
+    COMPONENT tests
+    DESTINATION bin
+    )
+endforeach()
+
