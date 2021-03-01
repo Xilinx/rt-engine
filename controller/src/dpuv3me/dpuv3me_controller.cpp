@@ -323,8 +323,8 @@ void DpuV3meController::init_graph(const xir::Subgraph* subgraph) {
   if(ENV_PARAM(XLNX_ENABLE_FINGERPRINT_CHECK)) {
     if (subgraph->has_attr("dpu_fingerprint")) {
       const uint64_t fingerprint = subgraph->get_attr<std::uint64_t>("dpu_fingerprint");
-      uint32_t low = read32_dpu_reg(handle,  0+ VERSION_CODE_L);
-      uint32_t high = read32_dpu_reg(handle,  0+ VERSION_CODE_H);
+      uint32_t low = read32_dpu_reg(handle,  handle_->get_device_info().cu_base_addr + VERSION_CODE_L);
+      uint32_t high = read32_dpu_reg(handle,  handle_->get_device_info().cu_base_addr + VERSION_CODE_H);
       uint64_t version = high;
       version = (version << 32) + low;
       if (version != fingerprint)
@@ -811,8 +811,9 @@ void DpuV3meController::run(const std::vector<vart::TensorBuffer*> &inputs,
 
 
 auto trigger_dpu_func = [&](){
+  __TIC__(DPU_TRIGGER)
 
-  auto t1 = std::chrono::high_resolution_clock::now();
+  //auto t1 = std::chrono::high_resolution_clock::now();
 
   std::vector<std::pair<int, int> > regVals;
   if (0 == program_once_complete) {
@@ -937,10 +938,11 @@ auto trigger_dpu_func = [&](){
     _show_regs(xcl_handle, handle_->get_device_info().cu_base_addr);
   }
 
+  __TOC__(DPU_TRIGGER)
 
-  auto t2 = std::chrono::high_resolution_clock::now();
-  std::chrono::duration<double, std::micro> fp_us = t2 - t1;
-  std::cout << "dpu trigger: us " << fp_us.count() << std::endl;
+  //auto t2 = std::chrono::high_resolution_clock::now();
+  //std::chrono::duration<double, std::micro> fp_us = t2 - t1;
+  //std::cout << "dpu trigger: us " << fp_us.count() << std::endl;
 
 };
 

@@ -45,9 +45,12 @@ class DpuV4eController
   std::vector<const xir::Tensor*> output_tensors_;
   std::vector<std::int32_t> xdpu_io_input_offset;
   std::vector<std::int32_t> xdpu_io_output_offset;
-  int32_t xdpu_io_total_size;
-  int32_t xdpu_total_in_size;
+  //int32_t xdpu_io_total_size;
+  int32_t xdpu_total_reg_size[3];
   int32_t xdpu_total_out_size;
+  int32_t xdpu_total_in_size;
+  uint8_t input_regid;
+  uint8_t output_regid;
   std::vector<float> input_scales_;
   std::vector<float> output_scales_;
   size_t getInputBufferSize();
@@ -60,7 +63,7 @@ class DpuV4eController
   // Debug instruction support
   //****************************************************
   /** address info: <offset, size> */
-  using address_info = std::tuple<uint64_t,int32_t,std::string>; 
+  using address_info = std::tuple<uint64_t,int32_t,std::string,int32_t>; 
   /**
    * layer information
    * @param code_addr: address for instruction
@@ -95,6 +98,6 @@ class DpuV4eController
   std::string dump_folder_;
   bool debug_mode_;
   int split_io;
-  uint32_t batch_size_;
+  int batch_size_;
 };
 
