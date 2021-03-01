@@ -58,8 +58,8 @@ using namespace chrono;
 #define XDPU_CONTROL_ADDR_3_H 0x11C
 #define DPUREG_ENGINE_NUM 0x1ec
 //#define batch_size_ 8
-
-DEF_ENV_PARAM(DPU_IP_LATENCY, "0");
+DEF_ENV_PARAM(DEBUG_DPU_CONTROLLER, "0")
+DEF_ENV_PARAM(XLNX_SHOW_DPU_COUNTER, "0");
 DEF_ENV_PARAM(XLNX_ENABLE_DUMP, "0");
 DEF_ENV_PARAM(XLNX_ENABLE_DEBUG_MODE, "0");
 DEF_ENV_PARAM(XLNX_ENABLE_FINGERPRINT_CHECK, "1");
@@ -139,7 +139,7 @@ std::vector<vart::TensorBuffer*> DpuV4eController::init_tensor_buffer(std::vecto
         new vart::CpuFlatTensorBuffer(data, tensor));
       tbufs.emplace_back(tbuf.get());
       {
-        std::unique_lock<std::mutex> lock(hwbuf_mtx_);
+        std::unique_lock<std::mutex> lock(hwbufio_mtx_);
         bufs_.emplace_back(std::move(tbuf));
       }
     }
@@ -218,11 +218,16 @@ void DpuV4eController::init_graph(const xir::Subgraph* subgraph) {
   auto handle = contexts_[0]->get_dev_handle();
   if(ENV_PARAM(XLNX_ENABLE_FINGERPRINT_CHECK)) {
     if (subgraph->has_attr("dpu_fingerprint")) {
+
       const uint64_t fingerprint = subgraph->get_attr<std::uint64_t>("dpu_fingerprint");
       uint32_t low = read32_dpu_reg(handle,  0+ VERSION_CODE_L);
       uint32_t high = read32_dpu_reg(handle,  0+ VERSION_CODE_H);
       uint64_t version = high;
       version = (version << 32) + low;
+      LOG_IF(INFO, ENV_PARAM(DEBUG_DPU_CONTROLLER))
+        << "DPU fingerprint: "  //
+        << version      //
+        ;
       if (version != fingerprint)
         throw std::runtime_error("Error: subgraph's version is mismatch with xclbin");
     } else {
@@ -254,21 +259,6 @@ void DpuV4eController::init_graph(const xir::Subgraph* subgraph) {
   // Get one subgraph
   const xir::Subgraph* subgraph_ = subgraph; // check subgraph_->get_name()
 
-  // Load parameter
-  size_t parameter_size = 0;
-  const char * parameter_value = NULL;
-  std::map<std::string, std::vector<char>> reg_id_to_parameter_value;
-  if (subgraph_->has_attr("reg_id_to_parameter_value")) {
-    reg_id_to_parameter_value =
-      subgraph_->get_attr<std::map<std::string, std::vector<char>>>("reg_id_to_parameter_value");
-    for (const auto& c : reg_id_to_parameter_value) {
-      if (!c.second.empty()) {
-        parameter_size = c.second.size();
-        parameter_value = (const char *)&c.second[0];
-        break;
-      }
-    }
-  }
   // Get Reg ID size
   size_t total_io_size = 0;
   split_io = 0;
@@ -279,28 +269,25 @@ void DpuV4eController::init_graph(const xir::Subgraph* subgraph) {
       subgraph_->get_attr<std::map<std::string, std::string>>("reg_id_to_context_type_v2");
     auto reg_id_to_size =
       subgraph_->get_attr<std::map<std::string, int32_t>>("reg_id_to_size");
-    //size_t *totol_reg_size = new size_t[reg_id_to_context_type.size()];
-    //split_io = 0;
-    for(auto &r : reg_id_to_context_type_v2) {
-       
-      if (r.first == "REG_3") {
-        split_io = 1;
-      }
-
-    }
+    int io_cnt = 0;
     for(auto &r : reg_id_to_context_type_v2) {
       if ((r.second == "INTERFACE") || (r.second == "WORKSPACE")) {
           total_io_size += reg_id_to_size.at(r.first);
       }
-        if (r.first == "REG_1") { 
-          xdpu_total_reg_size[0] = reg_id_to_size.at(r.first);
-        } else if (r.first == "REG_2") {
-          xdpu_total_reg_size[1] = reg_id_to_size.at(r.first);
-        } else if (r.first == "REG_3") {
-          xdpu_total_reg_size[2] = reg_id_to_size.at(r.first);
-        }
+      if ((r.second != "CONST")) {
+        auto reg_id_str = r.first;
+        int reg_id = reg_id_str[reg_id_str.length()-1]- '0';
+        xdpu_total_reg_map.emplace(std::make_pair(reg_id,  reg_id_to_size.at(r.first)));
+        io_cnt ++;
+        LOG_IF(INFO, ENV_PARAM(DEBUG_DPU_CONTROLLER))
+          << "io reg_id: "  //
+          << reg_id 
+          << "  size: " 
+          << reg_id_to_size.at(r.first)      //
+          ;
+      }
     }
-
+    if (io_cnt > 1) split_io =1;
   } 
   else { //for vai1.3 xmodel
     auto reg_id_to_context_type =
@@ -311,31 +298,61 @@ void DpuV4eController::init_graph(const xir::Subgraph* subgraph) {
     for(auto &r : reg_id_to_context_type) {
       if (r.second == "DATA") {
           total_io_size += reg_id_to_size.at(r.first);
-        if (r.first == "REG_1") { 
-          xdpu_total_reg_size[0] = reg_id_to_size.at(r.first);
-        } else if (r.first == "REG_2") {
-          xdpu_total_reg_size[1] = reg_id_to_size.at(r.first);
-        } else if (r.first == "REG_3") {
-          xdpu_total_reg_size[2] = reg_id_to_size.at(r.first);
-        }
-        //if(count < 1) {
-        ////cout << count <<endl;
-        //  total_io_size += reg_id_to_size.at(r.first);
-        //  xdpu_total_reg_size[0] = reg_id_to_size.at(r.first);
-        //}
-        //// old xmodel 
-        //if (count == 1) {
-        //  //total_reg2_size = reg_id_to_size.at(r.first);
-        //  xdpu_total_reg_size[1] = reg_id_to_size.at(r.first);
-        //}
-        //if (count == 2) {
-        //  //total_reg3_size = reg_id_to_size.at(r.first);
-        //  xdpu_total_reg_size[2] = reg_id_to_size.at(r.first);
-        //}
+        
+        auto reg_id_str = r.first;
+        int reg_id = reg_id_str[reg_id_str.length()-1]- '0';
+        xdpu_total_reg_map.emplace(std::make_pair(reg_id,  reg_id_to_size.at(r.first)));
+        LOG_IF(INFO, ENV_PARAM(DEBUG_DPU_CONTROLLER))
+          << "io reg_id: "  //
+          << reg_id 
+          << "  size: " 
+          <<reg_id_to_size.at(r.first)      //
+          ;
+        
         count++;
       }
     }
     if (count > 1) split_io=1;
+  }
+  
+  // Load parameter
+  size_t parameter_size = 0;
+  const char * parameter_value = NULL;
+  std::map<std::string, std::vector<char>> reg_id_to_parameter_value;
+  if (subgraph_->has_attr("reg_id_to_parameter_value")) {
+    reg_id_to_parameter_value =
+      subgraph_->get_attr<std::map<std::string, std::vector<char>>>("reg_id_to_parameter_value");
+    for (const auto& c : reg_id_to_parameter_value) {
+      if (!c.second.empty()) {
+        parameter_size = c.second.size();
+        auto reg_id_str = c.first;
+        int reg_id = reg_id_str[reg_id_str.length()-1]-'0';
+        parameter_value = (const char *)&c.second[0];
+        // reg0
+        if (parameter_size) {
+          void *reg0Ptr = NULL; 
+          if (posix_memalign(&reg0Ptr, getpagesize(), parameter_size))
+            throw std::bad_alloc();
+          for (unsigned i=0; i < parameter_size; i++) ((char*)reg0Ptr)[i] = parameter_value[i];
+          auto reg0Mem 
+            = xclAllocUserPtrBO(handle, reg0Ptr, parameter_size, handle_->get_device_info().ddr_bank);
+          xclSyncBO(handle, reg0Mem, XCL_BO_SYNC_BO_TO_DEVICE, parameter_size, 0);
+          xclGetBOProperties(handle, reg0Mem, &boProp);
+          reg0_addr_ = boProp.paddr;
+          free(reg0Ptr);
+        } else {
+          reg0_addr_ = 0;
+        }
+        LOG_IF(INFO, ENV_PARAM(DEBUG_DPU_CONTROLLER))
+          << "parameter reg_id: "  //
+          << reg_id 
+          << "  size: " 
+          << parameter_size      //
+          ;
+        xdpu_total_dpureg_map.emplace(std::make_pair(reg_id ,reg0_addr_));
+        //break;
+      }
+    }
   }
   //xdpu_io_total_size = total_io_size;
 
@@ -355,10 +372,10 @@ void DpuV4eController::init_graph(const xir::Subgraph* subgraph) {
     xir::Tensor *tensor = xir::Tensor::create(in_tensor->get_name(), in_tensor->get_shape(), in_tensor->get_data_type()).release();
     tensor->set_attrs(std::move(attrs));
     input_regid = out->get_attr<std::int32_t>("reg_id");
-    xdpu_total_in_size = xdpu_total_reg_size[input_regid-1]; 
     input_tensors_.emplace_back(tensor);
 
   }
+  xdpu_total_in_size = xdpu_total_reg_map.find(int(input_regid))->second; 
 
   // Get output offset
   for(auto &out_tensor : output_tensors) {
@@ -370,17 +387,14 @@ void DpuV4eController::init_graph(const xir::Subgraph* subgraph) {
     layer.outputs.emplace_back(std::make_tuple(ddr_addr, 
         out_tensor->get_data_size(), layer_info::name_map(out->get_name()),out->get_attr<std::int32_t>("reg_id")));
     auto attrs = out->get_attrs();
-    //std::unique_ptr<xir::Tensor> tensor(
-    //  new xir::Tensor(out_name, out->get_shape(),xir::Tensor::DataType::INT8));
     xir::Tensor *tensor = xir::Tensor::create(out_tensor->get_name(), out_tensor->get_shape(), out_tensor->get_data_type()).release();
     tensor->set_attrs(std::move(attrs));
     //auto tensor = out;
-
     output_regid = out->get_attr<std::int32_t>("reg_id");
-    xdpu_total_out_size = xdpu_total_reg_size[output_regid-1]; 
     output_tensors_.emplace_back(tensor);
 
   }
+  xdpu_total_out_size = xdpu_total_reg_map.find(output_regid)->second; 
   //in release mode: using dbg_layers_ to store first inputs and final outputs information  
   dbg_layers_.clear();
   dbg_layers_.emplace_back(std::move(layer));
@@ -399,6 +413,10 @@ void DpuV4eController::init_graph(const xir::Subgraph* subgraph) {
     xclGetBOProperties(handle, codeMem, &boProp);
     code_addr_ = boProp.paddr;
     free(codePtr);
+    LOG_IF(INFO, ENV_PARAM(DEBUG_DPU_CONTROLLER))
+      << "code size: "  //
+      << size
+      ;
 
   } else {
     auto children = subgraph_->get_children(); 
@@ -440,21 +458,6 @@ void DpuV4eController::init_graph(const xir::Subgraph* subgraph) {
 
   }
 
-  // reg0
-  if (parameter_size) {
-    void *reg0Ptr = NULL; 
-    if (posix_memalign(&reg0Ptr, getpagesize(), parameter_size))
-      throw std::bad_alloc();
-    for (unsigned i=0; i < parameter_size; i++) ((char*)reg0Ptr)[i] = parameter_value[i];
-    auto reg0Mem 
-      = xclAllocUserPtrBO(handle, reg0Ptr, parameter_size, handle_->get_device_info().ddr_bank);
-    xclSyncBO(handle, reg0Mem, XCL_BO_SYNC_BO_TO_DEVICE, parameter_size, 0);
-    xclGetBOProperties(handle, reg0Mem, &boProp);
-    reg0_addr_ = boProp.paddr;
-    free(reg0Ptr);
-  } else {
-    reg0_addr_ = 0;
-  }
   program_once_complete = 0;
 }
 
@@ -514,75 +517,65 @@ std::vector<vart::TensorBuffer*> DpuV4eController::get_outputs(int batchsz) {
   // TODO if batchsz != 8 or 1, create_tensor_buffers for user-requested batchsz
   // E.g., batchsz=1 for MLperf
   if ((batchsz == -1)) {
+    LOG_IF(INFO, ENV_PARAM(DEBUG_DPU_CONTROLLER))
+      << "generate tensorbuffer.data in batch";
     auto tbufs = init_tensor_buffer(output_tensors_,batch_size_);
-    if (xdpu_total_reg_size[0]) {
-      auto hwbufs = create_tensor_buffers(get_merged_io_tensors(xdpu_total_reg_size[0]),false);
-      {
-        std::unique_lock<std::mutex> lock(hwbuf2_mtx_);
-        tbuf2hwbuf2_.emplace(tbufs[0], hwbufs);
+    std::unordered_map<int,std::vector<vart::TensorBuffer*>>  hwbuf;
+    auto iter = xdpu_total_reg_map.begin();
+    while(iter !=xdpu_total_reg_map.end()) {
+      auto buf = create_tensor_buffers(get_merged_io_tensors(iter->second),false);
+      if (buf.empty()) {
+        throw std::runtime_error("Error: memory buffer allocate fail");
       }
+      hwbuf.emplace(std::make_pair(iter->first,buf));
+      iter++;
     }
-    std::vector<vart::TensorBuffer*>  hwbufreg2;//= create_tensor_buffers(get_merged_io_tensors(xdpu_total_reg_size[1]),false);
-    std::vector<vart::TensorBuffer*>  hwbufreg3;// = create_tensor_buffers(get_merged_io_tensors(xdpu_total_reg_size[2]),false);
-    if(xdpu_total_reg_size[1]) {
-      hwbufreg2 = create_tensor_buffers(get_merged_io_tensors(xdpu_total_reg_size[1]),false);
-    }
-    if(xdpu_total_reg_size[2]) {
-      hwbufreg3 = create_tensor_buffers(get_merged_io_tensors(xdpu_total_reg_size[2]),false);
-    }
-    if(xdpu_total_reg_size[1]||xdpu_total_reg_size[2]) {
+    {
       std::unique_lock<std::mutex> lock(hwbufio2_mtx_);
-      tbuf2hwbufio2_.emplace(tbufs[0],std::make_tuple(hwbufreg2,hwbufreg3));
-    
+      tbuf2hwbufsio2_.emplace(tbufs[0],hwbuf);
     }
     return tbufs;
 
   } else if (batchsz == 1){
+    LOG_IF(INFO, ENV_PARAM(DEBUG_DPU_CONTROLLER))
+      << "generate tensorbuffers in batch";
     auto tbufs = init_tensor_buffer(output_tensors_,batchsz,batch_size_);
-    if (xdpu_total_reg_size[0]) {
-      auto hwbufs = create_tensor_buffers(get_merged_io_tensors(xdpu_total_reg_size[0]),false);
-      for (int i=0;i<batch_size_; i++) {
-        std::unique_lock<std::mutex> lock(hwbuf_mtx_);
-        tbuf2hwbuf_.emplace(tbufs[i*output_tensors_.size()], hwbufs[i]);
-        
+    std::vector<std::pair<int,vector<vart::TensorBuffer*>>>  hwbuf;
+    auto iter = xdpu_total_reg_map.begin();
+    while(iter !=xdpu_total_reg_map.end()) {
+      auto buf = create_tensor_buffers(get_merged_io_tensors(iter->second),false);
+      if (buf.empty()) {
+        throw std::runtime_error("Error: memory buffer allocate fail");
       }
+      hwbuf.push_back(std::make_pair(iter->first, buf));
+      iter++;
     }
-    std::vector<vart::TensorBuffer*>  hwbufreg2;// = create_tensor_buffers(get_merged_io_tensors(xdpu_total_reg_size[1]),false);
-    std::vector<vart::TensorBuffer*>  hwbufreg3;// = create_tensor_buffers(get_merged_io_tensors(xdpu_total_reg_size[2]),false);
-    if(xdpu_total_reg_size[1]) {
-      hwbufreg2 = create_tensor_buffers(get_merged_io_tensors(xdpu_total_reg_size[1]),false);
-    }
-    if(xdpu_total_reg_size[2]) {
-      hwbufreg3 = create_tensor_buffers(get_merged_io_tensors(xdpu_total_reg_size[2]),false);
-    }
-    if(xdpu_total_reg_size[1] || xdpu_total_reg_size[2]) {
-      for (int i=0;i<batch_size_; i++) { 
-        std::unique_lock<std::mutex> lock(hwbufio_mtx_);
-        tbuf2hwbufio_.emplace(tbufs[i*output_tensors_.size()], std::make_tuple(hwbufreg2[i], hwbufreg3[i]));
+    for (int i=0;i<batch_size_; i++) 
+    {
+      std::unordered_map<int,vart::TensorBuffer*>  hwbuf2;
+      for (auto t:hwbuf) {
+        hwbuf2.emplace(std::make_pair(t.first,(t.second)[i]));
       }
+      std::unique_lock<std::mutex> lock(hwbufio_mtx_);
+      tbuf2hwbufsio_.emplace(tbufs[i],hwbuf2);
     }
     return tbufs;
   } else {
     auto tbufs = init_tensor_buffer(output_tensors_,batchsz);
-    if (xdpu_total_reg_size[0]) {
-      auto hwbufs = create_tensor_buffers(get_merged_io_tensors(xdpu_total_reg_size[0]),false);
-      {
-        std::unique_lock<std::mutex> lock(hwbuf2_mtx_);
-        tbuf2hwbuf2_.emplace(tbufs[0], hwbufs);
+    //std::vector<std::vector<vart::TensorBuffer*>>  hwbuf;
+    std::unordered_map<int,std::vector<vart::TensorBuffer*>>  hwbuf;
+    auto iter = xdpu_total_reg_map.begin();
+    while(iter !=xdpu_total_reg_map.end()) {
+      auto buf = create_tensor_buffers(get_merged_io_tensors(iter->second),false);
+      if (buf.empty()) {
+        throw std::runtime_error("Error: memory buffer allocate fail");
       }
+      hwbuf.emplace(std::make_pair(iter->first,buf));
+      iter++;
     }
-    std::vector<vart::TensorBuffer*> hwbufreg2; // = create_tensor_buffers(get_merged_io_tensors(xdpu_total_reg_size[1]),false);
-    std::vector<vart::TensorBuffer*> hwbufreg3;// = create_tensor_buffers(get_merged_io_tensors(xdpu_total_reg_size[2]),false);
-    if(xdpu_total_reg_size[1]) {
-      hwbufreg2 = create_tensor_buffers(get_merged_io_tensors(xdpu_total_reg_size[1]),false);
-    }
-    if(xdpu_total_reg_size[2]) {
-      hwbufreg3 = create_tensor_buffers(get_merged_io_tensors(xdpu_total_reg_size[2]),false);
-    }
-    if(xdpu_total_reg_size[1] || xdpu_total_reg_size[2]) {
+    {
       std::unique_lock<std::mutex> lock(hwbufio2_mtx_);
-      tbuf2hwbufio2_.emplace(tbufs[0],std::make_tuple( hwbufreg2, hwbufreg3));
-
+      tbuf2hwbufsio2_.emplace(tbufs[0],hwbuf);
     }
     return tbufs;
 
@@ -600,7 +593,7 @@ void DpuV4eController::data_float2fix(int8_t* dataDst, float* dataSrc, int size,
 }
 void DpuV4eController::free_buffers(std::vector<vart::TensorBuffer*> &tbufs, bool isInput) {
   if (isInput) {
-    std::unique_lock<std::mutex> lock(hwbuf_mtx_);
+    std::unique_lock<std::mutex> lock(hwbufio_mtx_);
     for (unsigned ti=0; ti < tbufs.size(); ti++)
     {
       for (auto it=bufs_.begin(); it != bufs_.end(); it++)
@@ -613,30 +606,25 @@ void DpuV4eController::free_buffers(std::vector<vart::TensorBuffer*> &tbufs, boo
 
   } else {
     // here only free the buffer that called in run(), run only call get_inputs(1)/get_outputs(1)
-    std::unique_lock<std::mutex> lock(hwbuf_mtx_);
+    std::unique_lock<std::mutex> lock(hwbufio_mtx_);
     for (unsigned ti=0; ti < tbufs.size(); ti++)
     {
-      if (xdpu_total_reg_size[0]) {
         {
           std::unique_lock<std::mutex> lock(tbuf_mtx_);
-          tbuf2dbuf_.erase(tbuf2hwbuf_[tbufs[ti]]);
-          for (auto it=tbufs_.begin(); it != tbufs_.end(); it++)
-            if (it->get() == tbuf2hwbuf_[tbufs[ti]])
-            {
-               tbufs_.erase(it);
-               break;
+          
+          auto bufs = tbuf2hwbufsio_[tbufs[ti]];
+          for (auto buf=bufs.begin(); buf != bufs.end(); buf++)  {
+            tbuf2dbuf_.erase(buf->second);
+            for (auto it=tbufs_.begin(); it != tbufs_.end(); it++) {
+              if (it->get() == buf->second)
+              {
+                   tbufs_.erase(it);
+                 break;
+              }
             }
-
+          }
         }
-        tbuf2hwbuf_.erase(tbufs[ti]);
-      }
-      //TODO
-      //if (split_io)
-      if(xdpu_total_reg_size[1] || xdpu_total_reg_size[2]) 
-      {
-        std::unique_lock<std::mutex> lock(hwbufio_mtx_);
-        tbuf2hwbufio_.erase(tbufs[ti]);
-      }
+        tbuf2hwbufsio_.erase(tbufs[ti]);
       for (auto it=bufs_.begin(); it != bufs_.end(); it++)
         if (it->get() == tbufs[ti])
         {
@@ -685,28 +673,16 @@ void DpuV4eController::run(const std::vector<vart::TensorBuffer*> &inputs,
   //if (!split_io) 
   {
   
-    std::unique_lock<std::mutex> lock(hwbuf_mtx_);
-    auto it = tbuf2hwbuf_.find(outputs[0]);
-    if (it == tbuf2hwbuf_.end())
+    std::unique_lock<std::mutex> lock(hwbufio_mtx_);
+    auto it = tbuf2hwbufsio_.find(outputs[0]);
+    if (it == tbuf2hwbufsio_.end())
     {
-      std::unique_lock<std::mutex> lock(hwbuf2_mtx_);
-      auto it = tbuf2hwbuf2_.find(outputs[0]);
-      if ((it == tbuf2hwbuf2_.end()))
+      std::unique_lock<std::mutex> lock(hwbufio2_mtx_);
+      auto it = tbuf2hwbufsio2_.find(outputs[0]);
+      if ((it == tbuf2hwbufsio2_.end()))
       {
-        if (xdpu_total_reg_size[1] || xdpu_total_reg_size[2]) { 
-          std::unique_lock<std::mutex> lock(hwbufio2_mtx_);
-          auto it = tbuf2hwbufio2_.find(outputs[0]);
-          if (it == tbuf2hwbufio2_.end()) {
-            std::unique_lock<std::mutex> lock(hwbufio_mtx_);
-            auto it = tbuf2hwbufio_.find(outputs[0]);
-            if (it == tbuf2hwbufio_.end()) {
-              create_tb_outside=true;
-            } 
-          }
-        } else {
-          create_tb_outside=true;
+        create_tb_outside=true;
 
-        }
       }
     }
   }
@@ -722,6 +698,8 @@ void DpuV4eController::run(const std::vector<vart::TensorBuffer*> &inputs,
   //    tensorbuffer_phy = true;
 //  if (!split_io) {
   if(create_tb_outside) {
+    LOG_IF(INFO, ENV_PARAM(DEBUG_DPU_CONTROLLER))
+      << "create tensorbuffer by user side";
     if (!tensorbuffer_phy) {
       input_tensor_buffers = get_inputs(1);
       output_tensor_buffers = get_outputs(1);
@@ -775,94 +753,77 @@ void DpuV4eController::run(const std::vector<vart::TensorBuffer*> &inputs,
   
   // get device buffers for input TensorBuffers
   std::vector<XrtDeviceBuffer*> io_bufs(batch_size_);
-  std::vector<vector<uint64_t>> reg_addrs(3);
-  for (unsigned int i = 0; i < reg_addrs.size(); i++)
-    reg_addrs[i].resize(batch_size_);
+  vector<std::tuple<int, int,uint64_t>> xdpu_total_dpureg_map2;
 
   std::vector<uint64_t> in_addrs(batch_size_);
   std::vector<uint64_t> out_addrs(batch_size_);
   if (!tensorbuffer_phy) { 
     if (create_tb_batch) {
-      if(xdpu_total_reg_size[0])
       {
-        std::unique_lock<std::mutex> lock(hwbuf2_mtx_);
-        auto it = tbuf2hwbuf2_.find(output_tensor_buffers[0]);
-        if ((it == tbuf2hwbuf2_.end()))
+        std::unique_lock<std::mutex> lock(hwbufio2_mtx_);
+        auto it = tbuf2hwbufsio2_.find(output_tensor_buffers[0]);
+        if ((it == tbuf2hwbufsio2_.end()))
           throw std::runtime_error("TensorBuffer not found");
         auto  hwbufs = it->second;
-        for (int i=0; i < inputBs; i++) {
-          io_bufs[i] = dynamic_cast<XrtDeviceBuffer*>(get_device_buffer(hwbufs[i]));
-          reg_addrs[0][i] = io_bufs[i]->get_phys_addr();
-        }
-      }
-      if(xdpu_total_reg_size[1] || xdpu_total_reg_size[2]) {
-        std::unique_lock<std::mutex> lock(hwbufio2_mtx_);
-        auto it = tbuf2hwbufio2_.find(output_tensor_buffers[0]);
-        if (it == tbuf2hwbufio2_.end())
-          throw std::runtime_error("TensorBuffer not found");
-        auto bufs = it->second;
-        if(xdpu_total_reg_size[1]) {
-          auto  hwbufsin = std::get<0>(bufs);
-          for (int i=0; i < inputBs; i++) {
-            auto bufs = dynamic_cast<XrtDeviceBuffer*>(get_device_buffer(hwbufsin[i]));
-            reg_addrs[1][i] = bufs->get_phys_addr();
+        auto iter = xdpu_total_reg_map.begin();
+        while(iter !=xdpu_total_reg_map.end()) {
+          
+          auto reg_map = hwbufs.find(iter->first);
+          if ((reg_map == hwbufs.end()))
+            throw std::runtime_error("TensorBuffer not found");
+          auto buf = reg_map->second;
+          for (int i=0; i < batch_size_; i++) {
+            io_bufs[i] = dynamic_cast<XrtDeviceBuffer*>(get_device_buffer(buf[i]));
+            //reg_addrs[iter->first-1][i] = io_bufs[i]->get_phys_addr();
+            xdpu_total_dpureg_map2.push_back(std::make_tuple(iter->first,i,io_bufs[i]->get_phys_addr()));
+            LOG_IF(INFO, ENV_PARAM(DEBUG_DPU_CONTROLLER))
+              <<"Engine : " << i<<  " workspace reg_id: " 
+              << iter->first
+              << " phy_addr: "
+              << io_bufs[i]->get_phys_addr();
           }
-        }
-        if(xdpu_total_reg_size[1]) {
-          auto  hwbufsout = std::get<1>(bufs);
-          for (int i=0; i < inputBs; i++) {
-            auto bufsout = dynamic_cast<XrtDeviceBuffer*>(get_device_buffer(hwbufsout[i]));
-            reg_addrs[2][i] = bufsout->get_phys_addr();
-          }
+          iter++;
         }
 
-      } 
+      }
 
     } else {
       for (unsigned i=0; i < io_bufs.size(); i++)
       {
-        vart::TensorBuffer* hwbuf;
-        if(xdpu_total_reg_size[0])
         {
-          std::unique_lock<std::mutex> lock(hwbuf_mtx_);
-          auto it = tbuf2hwbuf_.find(output_tensor_buffers[i*output_tensors_.size()]);
-          if (it == tbuf2hwbuf_.end())
+          std::unique_lock<std::mutex> lock(hwbufio_mtx_);
+          auto it = tbuf2hwbufsio_.find(output_tensor_buffers[i]);
+          if ((it == tbuf2hwbufsio_.end()))
             throw std::runtime_error("TensorBuffer not found");
-          hwbuf = it->second;
-          io_bufs[i] = dynamic_cast<XrtDeviceBuffer*>(get_device_buffer(hwbuf));
-          reg_addrs[0][i] = io_bufs[i]->get_phys_addr();
-
-        }
-        if(xdpu_total_reg_size[1] || xdpu_total_reg_size[2]) {
-          vart::TensorBuffer* hwbufin;
-          vart::TensorBuffer* hwbufout;
-          {
-            std::unique_lock<std::mutex> lock(hwbufio_mtx_);
-            auto it = tbuf2hwbufio_.find(output_tensor_buffers[i*output_tensors_.size()]);
-            if (it == tbuf2hwbufio_.end())
+          auto  hwbufs = it->second;
+          auto iter = xdpu_total_reg_map.begin();
+          while(iter !=xdpu_total_reg_map.end()) {
+            auto reg_map = hwbufs.find(iter->first);
+            if ((reg_map == hwbufs.end()))
               throw std::runtime_error("TensorBuffer not found");
-            auto bufs = it->second;
-            if (xdpu_total_reg_size[1]) {
-              hwbufin = std::get<0>(bufs);
-              auto bufin = dynamic_cast<XrtDeviceBuffer*>(get_device_buffer(hwbufin));
-              reg_addrs[1][i] = bufin->get_phys_addr();
-            }
-            
-            if (xdpu_total_reg_size[2]) {
-              hwbufout = std::get<1>(bufs);
-              auto bufout = dynamic_cast<XrtDeviceBuffer*>(get_device_buffer(hwbufout));
-              reg_addrs[2][i] = bufout->get_phys_addr();
-            }
+            auto buf = reg_map->second;
+            io_bufs[i] = dynamic_cast<XrtDeviceBuffer*>(get_device_buffer(buf));
+            //reg_addrs[iter->first-1][i] = io_bufs[i]->get_phys_addr();
+            xdpu_total_dpureg_map2.push_back(std::make_tuple(iter->first,i,io_bufs[i]->get_phys_addr()));
+            LOG_IF(INFO, ENV_PARAM(DEBUG_DPU_CONTROLLER))
+              <<"Engine : " << i<<  " workspace reg_id: " 
+              << iter->first
+              << " phy_addr: "
+              << io_bufs[i]->get_phys_addr();
+            iter++;
           }
 
-        } 
+        }
       }
     }
-    for (unsigned i=0; i < io_bufs.size(); i++) {
-      in_addrs[i] = reg_addrs[input_regid-1][i];
-      out_addrs[i] = reg_addrs[output_regid-1][i];
-
-    }
+     
+    for (auto iter2 : xdpu_total_dpureg_map2) {
+      if (std::get<0>(iter2) == input_regid)
+        in_addrs[std::get<1>(iter2)] = std::get<2>(iter2);
+      if (std::get<0>(iter2) == output_regid)
+        out_addrs[std::get<1>(iter2)] = std::get<2>(iter2);
+        
+      }
    
     
   } 
@@ -870,20 +831,22 @@ void DpuV4eController::run(const std::vector<vart::TensorBuffer*> &inputs,
 //TODO
   // for the condition that alloc memory without API
     if (split_io) {
-    //if(xdpu_total_reg_size[1] && xdpu_total_reg_size[2]) {
+    //if(xdpu_total_reg_map.find(1) && xdpu_total_reg_map.find(2)) {
       for (unsigned i=0; i < io_bufs.size(); i++) {
         if (create_tb_batch) { 
           for (unsigned t=0; t < inputs.size(); t++ ) {
             if (input_tensors_[0]->get_name().find(inputs[t]->get_tensor()->get_name()) != std::string::npos) {
               in_addrs[i] = inputs[t]->data().first-xdpu_io_input_offset[0]+i*input_tensors_[0]->get_element_num();
-              reg_addrs[input_regid-1][i] = in_addrs[i];
+              //reg_addrs[input_regid-1][i] = in_addrs[i];
+              xdpu_total_dpureg_map2.push_back(std::make_tuple(input_regid,i,in_addrs[i]));
               break;
             }
           }
           for (unsigned t=0; t < outputs.size(); t++ ) {
             if (output_tensors_[0]->get_name().find(outputs[t]->get_tensor()->get_name()) != std::string::npos) {
               out_addrs[i] = outputs[t]->data().first-xdpu_io_output_offset[0]+i*output_tensors_[0]->get_element_num();
-              reg_addrs[output_regid-1][i] = out_addrs[i];
+              //reg_addrs[output_regid-1][i] = out_addrs[i];
+              xdpu_total_dpureg_map2.push_back(std::make_tuple(output_regid,i,out_addrs[i]));
               break;
             }
           }
@@ -892,7 +855,8 @@ void DpuV4eController::run(const std::vector<vart::TensorBuffer*> &inputs,
           for (unsigned t=cnt; t < inputs.size(); t++ ) {
             if (input_tensors_[0]->get_name().find(inputs[t]->get_tensor()->get_name()) != std::string::npos) {
               in_addrs[i] = inputs[t]->data().first-xdpu_io_input_offset[0];
-              reg_addrs[input_regid-1][i] = in_addrs[i];
+              //reg_addrs[input_regid-1][i] = in_addrs[i];
+              xdpu_total_dpureg_map2.push_back(std::make_tuple(input_regid,i,in_addrs[i]));
               cnt = t;
               break;
             }
@@ -901,23 +865,27 @@ void DpuV4eController::run(const std::vector<vart::TensorBuffer*> &inputs,
           for (unsigned t=cnt_out; t < outputs.size(); t++ ) {
             if (output_tensors_[0]->get_name().find(outputs[t]->get_tensor()->get_name()) != std::string::npos) {
               out_addrs[i] = outputs[t]->data().first-xdpu_io_output_offset[0];
-              reg_addrs[output_regid-1][i] = out_addrs[i];
+              //reg_addrs[output_regid-1][i] = out_addrs[i];
+              xdpu_total_dpureg_map2.push_back(std::make_tuple(output_regid,i,out_addrs[i]));
               cnt_out = t;
               break;
             }
           }
 
         }
-        if(xdpu_total_reg_size[0] && (output_regid != input_regid) ) {
-          void *ioPtr = NULL;
-          xclBOProperties p;
-          if (posix_memalign(&ioPtr, getpagesize(), xdpu_total_reg_size[0]))
-            throw std::bad_alloc();
-          auto ioMem 
-            = xclAllocUserPtrBO(xcl_handle, ioPtr, xdpu_total_reg_size[0], handle_->get_device_info().ddr_bank);
-          xclGetBOProperties(xcl_handle, ioMem, &p);
-          reg_addrs[0][i] = p.paddr;
-          free(ioPtr);
+        for (auto it = xdpu_total_reg_map.begin();it != xdpu_total_reg_map.end(); it++) {
+          if((it->first != input_regid) && (it->first != output_regid) ) {
+            void *ioPtr = NULL;
+            xclBOProperties p;
+            if (posix_memalign(&ioPtr, getpagesize(), xdpu_total_reg_map.find(it->first)->second))
+              throw std::bad_alloc();
+            auto ioMem 
+              = xclAllocUserPtrBO(xcl_handle, ioPtr, xdpu_total_reg_map.find(it->first)->second, handle_->get_device_info().ddr_bank);
+            xclGetBOProperties(xcl_handle, ioMem, &p);
+            xdpu_total_dpureg_map2.push_back(std::make_tuple(it->first,i,p.paddr));
+            //reg_addrs[0][i] = p.paddr;
+            free(ioPtr);
+          }
         }
       }
    } else {
@@ -926,64 +894,6 @@ void DpuV4eController::run(const std::vector<vart::TensorBuffer*> &inputs,
    }
 
   }
-//  } else {
-  //  for (unsigned i=0; i < batch_size_; i++) {
-  //    void *reg0Ptr = NULL; 
-  //    if (posix_memalign(&reg0Ptr, getpagesize(), xdpu_io_total_size))
-  //      throw std::bad_alloc();
-  //    for (unsigned i=0; i <xdpu_io_total_size; i++) ((char*)reg0Ptr)[i] = 0;
-  //    auto reg0Mem 
-  //      = xclAllocUserPtrBO(xcl_handle, reg0Ptr, xdpu_io_total_size, handle_->get_device_info().ddr_bank);
-  //    xclBOProperties p;
-  //    xclGetBOProperties(xcl_handle, reg0Mem, &p);
-  //    io_addrs[i] = p.paddr;
-  //    
-  //    auto mem2 = xclAllocUserPtrBO(xcl_handle,inputs[0]->data().first,xdpu_total_in_size,  handle_->get_device_info().ddr_bank);
-  //    xclBOProperties p2;
-  //    xclGetBOProperties(xcl_handle, mem2, &p2);
-  //    in_addrs[i] = p2.paddr;
-  //      const auto inSize = get_input_tensors()[0]->get_element_num();
-  //      if (xclUnmgdPwrite(xcl_handle, 0, (void *)inputs[0]->data().first, inSize,
-  //        in_addrs[i] + xdpu_io_input_offset[0]))
-  //        throw std::runtime_error("Error: upload failed");
-  //    auto mem3 = xclAllocUserPtrBO(xcl_handle,outputs[0]->data().first,xdpu_total_out_size,  handle_->get_device_info().ddr_bank);
- 
-  //    xclBOProperties p3;
-  //    xclGetBOProperties(xcl_handle, mem3, &p3);
-  //    out_addrs[i] = p3.paddr;
-  //   
-
-  //     //in_addrs[i] = inputs[i]->data().first;
-  //    //out_addrs[i] = outputs[i]->data().first;
-////    }
-  //}
-  //if (split_io) {
-  //  for (unsigned i=0; i < 8; i++) {
-  //      //const auto outSize = get_output_tensors()[0]->get_element_num();
-  //      //const auto outSize1 = get_output_tensors()[1]->get_element_num();
-  //      //const auto outSize2 = get_output_tensors()[2]->get_element_num();
-  //      //xclSyncBO(xcl_handle, mem3[i], XCL_BO_SYNC_BO_FROM_DEVICE, xdpu_total_out_size, 0);
-  //      //memcpy(((void*)outputs[0]->data().first)+i*outSize, (int8_t*)out_vir[i]+xdpu_io_output_offset[0], outSize);
-  //      //memcpy(((void*)outputs[1]->data().first)+i*outSize1,out_vir[i]+xdpu_io_output_offset[1], outSize1);
-  //      //memcpy(((void*)outputs[2]->data().first)+i*outSize2,out_vir[i]+xdpu_io_output_offset[2], outSize2);
-  //      const auto inSize = get_input_tensors()[0]->get_element_num();
-  //      //xclSyncBO(xcl_handle, mem2[i], XCL_BO_SYNC_BO_FROM_DEVICE, xdpu_total_in_size, 0);
-  //      //memcpy(inputs[0]->data().first+i*inSize, in_vir[i]+xdpu_io_input_offset[0], inSize);
-  //      if (xclUnmgdPread(xcl_handle, 0, (void *)inputs[0]->data().first, inSize,
-  //        in_addrs[i] + xdpu_io_input_offset[0]))
-  //        throw std::runtime_error("Error: upload failed");
-  //      const auto mode = std::ios_base::out | std::ios_base::binary | std::ios_base::trunc;
-  //      auto input_file = "./input"+ to_string(i)+".bin";
-  //      //auto output_file = "./output1_"+ to_string(i)+".bin";
-  //      //auto output_file1 = "./output2_"+ to_string(i)+".bin";
-  //      //auto output_file2 = "./output3_"+ to_string(i)+".bin";
-  //      //std::ofstream(output_file, mode).write((char*)outputs[0]->data().first+i*outSize,outSize);
-  //      //std::ofstream(output_file1, mode).write((char*)outputs[1]->data().first+i*outSize1,outSize1);
-  //      //std::ofstream(output_file2, mode).write((char*)outputs[2]->data().first+i*outSize2,outSize2);
-  //      std::ofstream(input_file, mode).write((char*)inputs[0]->data().first+i*inSize,inSize);
-  //  }
-  //}//
-  // upload batch of inputs
   //const auto inSize = get_input_tensors()[0]->get_element_num();
   __TIC__(INPUT_H2D)
   if (!tensorbuffer_phy) { 
@@ -1019,6 +929,8 @@ void DpuV4eController::run(const std::vector<vart::TensorBuffer*> &inputs,
   ecmd->opcode = ERT_EXEC_WRITE;
   ecmd->type = ERT_CTRL;
 
+  //LOG_IF(INFO, ENV_PARAM(DEBUG_DPU_CONTROLLER))
+  //   <<"Engine : " << i<<  " workspace reg_id: " 
 
   auto trigger_dpu_func = [&](){ 
 
@@ -1031,31 +943,20 @@ void DpuV4eController::run(const std::vector<vart::TensorBuffer*> &inputs,
     regVals.push_back(  { XDPU_CONTROL_HP / 4, 0x204040 });
     regVals.push_back(  { XDPU_CONTROL_INSTR_L / 4, code_addr_ & 0xFFFFFFFF });
     regVals.push_back(  { XDPU_CONTROL_INSTR_H / 4, (code_addr_ >> 32) & 0xFFFFFFFF });
-    regVals.push_back(  { XDPU_CONTROL_ADDR_0_L / 4, reg0_addr_ & 0xFFFFFFFF });
-    regVals.push_back(  { XDPU_CONTROL_ADDR_0_H / 4, (reg0_addr_ >> 32) & 0xFFFFFFFF });
- 
+    //regVals.push_back(  { XDPU_CONTROL_ADDR_0_L / 4, reg0_addr_ & 0xFFFFFFFF });
+    //regVals.push_back(  { XDPU_CONTROL_ADDR_0_H / 4, (reg0_addr_ >> 32) & 0xFFFFFFFF });
+    auto iter = xdpu_total_dpureg_map.begin();
+    while(iter !=xdpu_total_dpureg_map.end()) {
+      regVals.push_back(  { (XDPU_CONTROL_ADDR_0_L + 8*iter->first) / 4, iter->second & 0xFFFFFFFF });
+      regVals.push_back(  { (XDPU_CONTROL_ADDR_0_H + 8*iter->first) / 4, (iter->second >> 32) & 0xFFFFFFFF });
+      iter++;
+    }
 
     // program DPU input/output addrs
-    for (unsigned i=0; i < io_bufs.size(); i++) {
-      auto lowOffset = (XDPU_CONTROL_ADDR_1_L + (i*0x100)) / 4;
-      auto highOffset = (XDPU_CONTROL_ADDR_1_H + (i*0x100)) / 4;
-      if (xdpu_total_reg_size[0]) {
-        regVals.push_back({ lowOffset, reg_addrs[0][i] & 0xFFFFFFFF });
-        regVals.push_back({ highOffset, (reg_addrs[0][i] >> 32) & 0xFFFFFFFF });
-      }
-      if(xdpu_total_reg_size[1]) {
-        auto lowOffsetIn = (XDPU_CONTROL_ADDR_2_L + (i*0x100)) / 4;
-        auto highOffsetIn = (XDPU_CONTROL_ADDR_2_H + (i*0x100)) / 4;
-        regVals.push_back({ lowOffsetIn, reg_addrs[1][i] & 0xFFFFFFFF });
-        regVals.push_back({ highOffsetIn, (reg_addrs[1][i] >> 32) & 0xFFFFFFFF });
-      }
-      if(xdpu_total_reg_size[2]) {
-        auto lowOffsetOut = (XDPU_CONTROL_ADDR_3_L + (i*0x100)) / 4;
-        auto highOffsetOut = (XDPU_CONTROL_ADDR_3_H + (i*0x100)) / 4;
-        regVals.push_back({ lowOffsetOut, reg_addrs[2][i] & 0xFFFFFFFF });
-        regVals.push_back({ highOffsetOut, (reg_addrs[2][i] >> 32) & 0xFFFFFFFF });
-      }
-    }
+    for (auto iter2 : xdpu_total_dpureg_map2) {
+      regVals.push_back(  { (XDPU_CONTROL_ADDR_0_L + 8*std::get<0>(iter2) + std::get<1>(iter2)*0x100) / 4, std::get<2>(iter2) & 0xFFFFFFFF });
+      regVals.push_back(  { (XDPU_CONTROL_ADDR_0_H + 8*std::get<0>(iter2) + std::get<1>(iter2)*0x100) / 4, (std::get<2>(iter2) >> 32) & 0xFFFFFFFF });
+    } 
  
     int p = 6;
     for (unsigned i=0; i < regVals.size(); i++) {
@@ -1086,7 +987,7 @@ void DpuV4eController::run(const std::vector<vart::TensorBuffer*> &inputs,
       std::cout << "MISC END  :" << read32_dpu_reg(xcl_handle,  0+ DPUREG_MISC_END) << std::endl;
       throw std::runtime_error("Error: CU timeout " + std::to_string(handle_->get_device_info().cu_index));
     }
-    if(ENV_PARAM(DPU_IP_LATENCY))
+    if(ENV_PARAM(XLNX_SHOW_DPU_COUNTER))
       std::cout << "IP COUNTER:" << read32_dpu_reg(xcl_handle, 0+DPUREG_CYCLE_COUNTER) <<std::endl;
   // download results into output TensorBuffers
   };
@@ -1170,14 +1071,18 @@ void DpuV4eController::run(const std::vector<vart::TensorBuffer*> &inputs,
           auto size = std::get<1>(out);
           auto reg_id = std::get<3>(out);
           auto data = std::make_unique<char[]>(size);
-          for (unsigned i=0; i < io_bufs.size(); i++) {
-            if (xclUnmgdPread(xcl_handle, 0, data.get(), size, reg_addrs[reg_id-1][i] + offset))
-              throw std::runtime_error("Error: dump failed!");
-            std::stringstream ss;  
-            ss << dump_folder_ << "/E" << i << "/" << std::get<2>(out); 
-            std::ofstream ofs(ss.str(), std::ofstream::binary);
-            ofs.write(data.get(), size);
-            ofs.close(); 
+          //for (unsigned i=0; i < io_bufs.size(); i++) {
+          for (auto it :  xdpu_total_dpureg_map2 ) {
+            auto regid = std::get<0>(it); 
+            if (regid == reg_id) {
+              if (xclUnmgdPread(xcl_handle, 0, data.get(), size, std::get<2>(it) + offset))
+                throw std::runtime_error("Error: dump failed!");
+              std::stringstream ss;  
+              ss << dump_folder_ << "/E" << std::get<1>(it) << "/" << std::get<2>(out); 
+              std::ofstream ofs(ss.str(), std::ofstream::binary);
+              ofs.write(data.get(), size);
+              ofs.close(); 
+            }
           }
           tensor_idx++;
         }
