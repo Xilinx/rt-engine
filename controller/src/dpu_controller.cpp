@@ -154,7 +154,7 @@ XclDpuController<Dhandle, DbufIn, DbufOut>::create_tensor_buffers(
     void *data;
     if (posix_memalign(&data, getpagesize(), size))
       throw std::bad_alloc();
-
+    std::memset(data, 0, size);
     // make TensorBuffer to hold host memory
     std::unique_ptr<vart::CpuFlatTensorBuffer> tbuf(
       new vart::CpuFlatTensorBuffer(data, tensors[ti]));
