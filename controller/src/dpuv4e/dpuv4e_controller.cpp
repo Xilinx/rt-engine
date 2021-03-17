@@ -500,26 +500,27 @@ std::vector<vart::TensorBuffer*> get_tensor_buffer_pointer(
 std::vector<vart::TensorBuffer*> DpuV4eController::get_inputs(int batchsz) {
   // TODO if batchsz =! 8 or 1 , create_tensor_buffers for user-requested batchsz
   // E.g., batchsz=1 for MLperf Server Scenario
-
+  int input_bz = input_tensors_[0]->get_shape()[0];
   if ((batchsz == -1))
   // for default defination
-    return init_tensor_buffer(input_tensors_,batch_size_);
+    return init_tensor_buffer(input_tensors_,batch_size_*input_bz);
   else if (batchsz == 1)
   // for mlperf defination
-    return init_tensor_buffer(input_tensors_,batchsz,batch_size_);
+    return init_tensor_buffer(input_tensors_,batchsz*input_bz,batch_size_);
   else
   // for other user-requested batchsz
-    return init_tensor_buffer(input_tensors_,batchsz);
+    return init_tensor_buffer(input_tensors_,batchsz*input_bz);
  
 }
 
 std::vector<vart::TensorBuffer*> DpuV4eController::get_outputs(int batchsz) {
   // TODO if batchsz != 8 or 1, create_tensor_buffers for user-requested batchsz
   // E.g., batchsz=1 for MLperf
+  int output_bz = output_tensors_[0]->get_shape()[0];
   if ((batchsz == -1)) {
     LOG_IF(INFO, ENV_PARAM(DEBUG_DPU_CONTROLLER))
       << "generate tensorbuffer.data in batch";
-    auto tbufs = init_tensor_buffer(output_tensors_,batch_size_);
+    auto tbufs = init_tensor_buffer(output_tensors_,batch_size_*output_bz);
     std::unordered_map<int,std::vector<vart::TensorBuffer*>>  hwbuf;
     auto iter = xdpu_total_reg_map.begin();
     while(iter !=xdpu_total_reg_map.end()) {
@@ -539,7 +540,7 @@ std::vector<vart::TensorBuffer*> DpuV4eController::get_outputs(int batchsz) {
   } else if (batchsz == 1){
     LOG_IF(INFO, ENV_PARAM(DEBUG_DPU_CONTROLLER))
       << "generate tensorbuffers in batch";
-    auto tbufs = init_tensor_buffer(output_tensors_,batchsz,batch_size_);
+    auto tbufs = init_tensor_buffer(output_tensors_,batchsz*output_bz,batch_size_);
     std::vector<std::pair<int,vector<vart::TensorBuffer*>>>  hwbuf;
     auto iter = xdpu_total_reg_map.begin();
     while(iter !=xdpu_total_reg_map.end()) {
@@ -561,7 +562,7 @@ std::vector<vart::TensorBuffer*> DpuV4eController::get_outputs(int batchsz) {
     }
     return tbufs;
   } else {
-    auto tbufs = init_tensor_buffer(output_tensors_,batchsz);
+    auto tbufs = init_tensor_buffer(output_tensors_,batchsz*output_bz);
     //std::vector<std::vector<vart::TensorBuffer*>>  hwbuf;
     std::unordered_map<int,std::vector<vart::TensorBuffer*>>  hwbuf;
     auto iter = xdpu_total_reg_map.begin();
