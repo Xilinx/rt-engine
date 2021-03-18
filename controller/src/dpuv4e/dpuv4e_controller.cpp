@@ -216,12 +216,12 @@ static const xir::Tensor* find_tensor(const xir::Tensor* in_tensor, const xir::S
 }
 void DpuV4eController::init_graph(const xir::Subgraph* subgraph) {
   auto handle = contexts_[0]->get_dev_handle();
+  auto cu_base_addr = handle_->get_device_info().cu_base_addr;
   if(ENV_PARAM(XLNX_ENABLE_FINGERPRINT_CHECK)) {
     if (subgraph->has_attr("dpu_fingerprint")) {
-
       const uint64_t fingerprint = subgraph->get_attr<std::uint64_t>("dpu_fingerprint");
-      uint32_t low = read32_dpu_reg(handle,  0+ VERSION_CODE_L);
-      uint32_t high = read32_dpu_reg(handle,  0+ VERSION_CODE_H);
+      uint32_t low = read32_dpu_reg(handle,  cu_base_addr + VERSION_CODE_L);
+      uint32_t high = read32_dpu_reg(handle,  cu_base_addr + VERSION_CODE_H);
       uint64_t version = high;
       version = (version << 32) + low;
       LOG_IF(INFO, ENV_PARAM(DEBUG_DPU_CONTROLLER))
@@ -236,7 +236,7 @@ void DpuV4eController::init_graph(const xir::Subgraph* subgraph) {
 
     }
   }
-  batch_size_ = read32_dpu_reg(handle,  0+ DPUREG_ENGINE_NUM);
+  batch_size_ = read32_dpu_reg(handle,  cu_base_addr + DPUREG_ENGINE_NUM);
   xclBOProperties boProp;
   dump_mode_ = dump_mode_|| ENV_PARAM(XLNX_ENABLE_DUMP);
   debug_mode_ = debug_mode_|| ENV_PARAM(XLNX_ENABLE_DEBUG_MODE);
@@ -921,7 +921,7 @@ void DpuV4eController::run(const std::vector<vart::TensorBuffer*> &inputs,
     }
   }
   __TOC__(INPUT_H2D)
-
+  auto cu_base_addr = handle_->get_device_info().cu_base_addr;
   auto ecmd = reinterpret_cast<ert_start_kernel_cmd*>(bo_addr);
   ecmd->cu_mask = handle_->get_device_info().cu_mask;
   ecmd->extra_cu_masks = 0;
@@ -978,18 +978,18 @@ void DpuV4eController::run(const std::vector<vart::TensorBuffer*> &inputs,
     if (ecmd->state != ERT_CMD_STATE_COMPLETED) {
       std::cout << "Error: CU timeout " << std::endl;
 
-      std::cout << "LOAD START:" << read32_dpu_reg(xcl_handle,  0+ DPUREG_LOAD_START) << std::endl;
-      std::cout << "LOAD END  :" << read32_dpu_reg(xcl_handle,  0+ DPUREG_LOAD_END) << std::endl;
-      std::cout << "SAVE START:" << read32_dpu_reg(xcl_handle,  0+ DPUREG_SAVE_START) << std::endl;
-      std::cout << "SAVE END  :" << read32_dpu_reg(xcl_handle,  0+ DPUREG_SAVE_END) << std::endl;
-      std::cout << "CONV START:" << read32_dpu_reg(xcl_handle,  0+ DPUREG_CONV_START) << std::endl;
-      std::cout << "CONV END  :" << read32_dpu_reg(xcl_handle,  0+ DPUREG_CONV_END) << std::endl;
-      std::cout << "MISC START:" << read32_dpu_reg(xcl_handle,  0+ DPUREG_MISC_START) << std::endl;
-      std::cout << "MISC END  :" << read32_dpu_reg(xcl_handle,  0+ DPUREG_MISC_END) << std::endl;
+      std::cout << "LOAD START:" << read32_dpu_reg(xcl_handle,  cu_base_addr + DPUREG_LOAD_START) << std::endl;
+      std::cout << "LOAD END  :" << read32_dpu_reg(xcl_handle,  cu_base_addr + DPUREG_LOAD_END) << std::endl;
+      std::cout << "SAVE START:" << read32_dpu_reg(xcl_handle,  cu_base_addr + DPUREG_SAVE_START) << std::endl;
+      std::cout << "SAVE END  :" << read32_dpu_reg(xcl_handle,  cu_base_addr + DPUREG_SAVE_END) << std::endl;
+      std::cout << "CONV START:" << read32_dpu_reg(xcl_handle,  cu_base_addr + DPUREG_CONV_START) << std::endl;
+      std::cout << "CONV END  :" << read32_dpu_reg(xcl_handle,  cu_base_addr + DPUREG_CONV_END) << std::endl;
+      std::cout << "MISC START:" << read32_dpu_reg(xcl_handle,  cu_base_addr + DPUREG_MISC_START) << std::endl;
+      std::cout << "MISC END  :" << read32_dpu_reg(xcl_handle,  cu_base_addr + DPUREG_MISC_END) << std::endl;
       throw std::runtime_error("Error: CU timeout " + std::to_string(handle_->get_device_info().cu_index));
     }
     if(ENV_PARAM(XLNX_SHOW_DPU_COUNTER))
-      std::cout << "IP COUNTER:" << read32_dpu_reg(xcl_handle, 0+DPUREG_CYCLE_COUNTER) <<std::endl;
+      std::cout << "IP COUNTER:" << read32_dpu_reg(xcl_handle, cu_base_addr + DPUREG_CYCLE_COUNTER) <<std::endl;
   // download results into output TensorBuffers
   };
 
