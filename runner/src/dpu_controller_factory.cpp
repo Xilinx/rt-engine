@@ -27,6 +27,10 @@ std::shared_ptr<DpuController> DpuControllerFactory::get(std::string kernel, T s
   {
     return std::make_shared<SampleDpuController>(subgraph);
   }
+  else if (kernel == "DPUCAHX8H")
+  {
+    return std::make_shared<DpuV3eController>(subgraph);
+  }
   else
     throw std::runtime_error("Error: no DpuController found for " + kernel);
 }

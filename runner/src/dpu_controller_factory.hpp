@@ -8,6 +8,7 @@
 #include "dpuv3int8_controller.hpp"
 #include "dpuv3me_controller.hpp"
 #include "dpuv4e_controller.hpp"
+#include "dpuv3e_controller.hpp"
 
 class DpuControllerFactory {
   public:

@@ -93,6 +93,7 @@ include_directories(
   ${CMAKE_SOURCE_DIR}/controller/src
   ${CMAKE_SOURCE_DIR}/controller/src/dpuv3me
   ${CMAKE_SOURCE_DIR}/controller/src/dpuv4e
+  ${CMAKE_SOURCE_DIR}/controller/src/dpuv3e
   ${CMAKE_SOURCE_DIR}/controller/src/dpuv3int8
   ${CMAKE_SOURCE_DIR}/vitis/src
   )
@@ -222,7 +223,7 @@ if(${GTest_FOUND})
 endif()
 
 # This is currently broken for vart_dpuv4e
-set(TESTS "app" "dpuv3int8"  "engine"  "vart_dpuv3int8"  "vart_dpuv3me"  "vart_dpuv4e"  "vart_samples")
+set(TESTS "app" "dpuv3int8"  "engine"  "vart_dpuv3int8"  "vart_dpuv3me"  "vart_dpuv4e" "vart_dpuv3e" "vart_samples")
 foreach(test ${TESTS})
   get_filename_component(exe ${test} NAME)
   file(GLOB_RECURSE TEST_SRCS "tests/${exe}/*.cpp")
