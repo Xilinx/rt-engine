@@ -222,7 +222,7 @@ void DpuV3eController::init_graph(const xir::Subgraph* subgraph) {
   //auto full_name = handle_->get_device_info().full_name;
   //auto kernel_name = full_name.substr(0, full_name.find("_"));
   //std::cout << "kernel_name " << kernel_name << ", cu_index " << cu_index << std::endl;
-
+#if 0
   if(cu_index == 0) {
     axi_argv.push_back(0);
     axi_argv.push_back(19);
@@ -252,7 +252,28 @@ void DpuV3eController::init_graph(const xir::Subgraph* subgraph) {
     axi_w.push_back(14);
     axi_w.push_back(15);
   }
-
+#endif
+  if(cu_index == 0) {
+    axi_argv.push_back(0);
+    axi_argv.push_back(1);
+    axi_argv.push_back(16);
+    axi_argv.push_back(17);
+    axi_argv.push_back(2);
+    axi_i = 6;
+    axi_w.push_back(20);
+    axi_w.push_back(21);
+  }
+  else {
+    axi_argv.push_back(3);
+    axi_argv.push_back(4);
+    axi_argv.push_back(18);
+    axi_argv.push_back(19);
+    axi_argv.push_back(5);
+    axi_i = 7;
+    axi_w.push_back(22);
+    axi_w.push_back(23);
+  }
+  
   if(ENV_PARAM(XLNX_ENABLE_FINGERPRINT_CHECK)) {
     if (subgraph->has_attr("dpu_fingerprint")) {
       const uint64_t fingerprint = subgraph->get_attr<std::uint64_t>("dpu_fingerprint");
