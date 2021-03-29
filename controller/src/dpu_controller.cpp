@@ -17,6 +17,8 @@
 #include "dpu_runner.hpp"
 #include "json-c/json.h"
 #include "vitis/ai/target_factory.hpp"
+#include "vitis/ai/env_config.hpp"
+DEF_ENV_PARAM(DEBUG_DPU_CONTROLLER, "0")
 
 template <class Dhandle, class DbufIn, class DbufOut>
 XclDpuController<Dhandle, DbufIn, DbufOut>::XclDpuController(std::string meta) 
@@ -38,9 +40,15 @@ XclDpuController<Dhandle, DbufIn, DbufOut>::XclDpuController(std::string meta)
   if (!json_object_object_get_ex(jobj, "xclbin", &xclbinObj))
     throw std::runtime_error("Error: missing 'xclbin' field in meta.json");
   std::string xclbinPath = json_object_get_string(xclbinObj);
-  std::cout << "loading xclbin: " << xclbinPath << std::endl;
+  LOG_IF(INFO, ENV_PARAM(DEBUG_DPU_CONTROLLER))
+    << "loading xclbin: "  //
+    << xclbinPath      //
+    ;
+
   handle_.reset(new Dhandle(kernelName, xclbinPath));
-  std::cout << "done loading xclbin" << std::endl;
+  LOG_IF(INFO, ENV_PARAM(DEBUG_DPU_CONTROLLER))
+    << "done loading xclbin"  //
+    ;
 }
 
 template <class Dhandle, class DbufIn, class DbufOut>
@@ -60,9 +68,14 @@ XclDpuController<Dhandle, DbufIn, DbufOut>::XclDpuController(const xir::Subgraph
   if (xclbinPath == nullptr)
     throw std::runtime_error("Error: xclbinPath is not set, please consider setting XLNX_VART_FIRMWARE.");
 
-  std::cout << "loading xclbin: " << xclbinPath << std::endl;
+  LOG_IF(INFO, ENV_PARAM(DEBUG_DPU_CONTROLLER))
+    << "loading xclbin: "  //
+    << xclbinPath      //
+    ;
   handle_.reset(new Dhandle(kernelName, xclbinPath));
-  std::cout << "done loading xclbin" << std::endl;
+  LOG_IF(INFO, ENV_PARAM(DEBUG_DPU_CONTROLLER))
+    << "done loading xclbin"  //
+    ;
 }
 
 
