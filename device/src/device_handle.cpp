@@ -14,7 +14,10 @@
 #include "experimental/xrt++.hpp"
 #include "xrt_bin_stream.hpp"
 #include "device_handle.hpp"
+#include "vitis/ai/env_config.hpp"
+#include <glog/logging.h>
 
+DEF_ENV_PARAM(DEBUG_DEVICE_HANDLE, "0")
 static std::atomic<bool> naive_resource_mgr_on_(false);
 static std::atomic<unsigned> naive_resource_mgr_cu_idx_(0);
 
@@ -175,7 +178,6 @@ XrmResource::XrmResource(std::string kernelName, std::string xclbin)
       if (kernelName != realKernelName) {
         //std::memset(cu_prop_.get(), 0, sizeof(xrmCuProperty));
         //std::memset(cu_rsrc_.get(), 0, sizeof(xrmCuResource));
-        std::cout << realKernelName << std::endl;
         std::strcpy(cu_prop_->kernelName, std::string(realKernelName).c_str());
         //cu_prop_->devExcl = false;
         //cu_prop_->requestLoad = 1;
@@ -186,8 +188,12 @@ XrmResource::XrmResource(std::string kernelName, std::string xclbin)
         continue; // keep trying other xclbins
       }
     }
+    LOG_IF(INFO, ENV_PARAM(DEBUG_DEVICE_HANDLE))
+      << "Device acuqired : "  //
+      << cu_rsrc_->xclbinFileName      //
+      ;
 
-    std::cout << "Device acquired " << cu_rsrc_->xclbinFileName << std::endl;
+    //std::cout << "Device acquired " << cu_rsrc_->xclbinFileName << std::endl;
 
     auto cu_full_name = std::string(cu_prop_->kernelName) + ":" + 
                         std::to_string(cu_rsrc_->deviceId) + ":" +
