@@ -60,6 +60,7 @@ DEF_ENV_PARAM(DPU_HBM_START, "0");
 DEF_ENV_PARAM(DPU_OUTPUT_ADDR, "0");
 DEF_ENV_PARAM(DPU_HW_POST, "0");
 
+DEF_ENV_PARAM(DEBUG_DPU_CONTROLLER, "0");
 DEF_ENV_PARAM(XLNX_ENABLE_DUMP, "0");
 DEF_ENV_PARAM(XLNX_ENABLE_DEBUG_MODE, "0");
 DEF_ENV_PARAM(XLNX_ENABLE_FINGERPRINT_CHECK, "0");
@@ -169,125 +170,23 @@ static uint32_t read32_dpu_reg(xclDeviceHandle dpu_handle, uint64_t offset) {
 }
 
 DpuV3meController::DpuV3meController(std::string meta)
-  : XclDpuController<XrtDeviceHandle, XrtDeviceBuffer, XrtDeviceBuffer>(meta),dump_mode_(false),debug_mode_(false) {
-  // assign many contexts -- one for each worker thread
-  // threads cannot share contexts (or xclExecWait may miss the 'done' signal)
-  Engine& engine = Engine::get_instance();
-  for (unsigned i=0; i < engine.get_num_workers(); i++)
-    contexts_.emplace_back(new XrtContext(*handle_));
+  : DpuCloudController(meta) {
 
   dpu_hbm_start = ENV_PARAM(DPU_HBM_START)? ENV_PARAM(DPU_HBM_START) : 16;
-  init(meta);
+  for (int i=dpu_hbm_start; i<32;i++)
+    hbm.emplace_back(i);
+  init_graph(hbm,hbm);
 }
 
 DpuV3meController::DpuV3meController(const xir::Subgraph *subgraph) 
-  : XclDpuController<XrtDeviceHandle, XrtDeviceBuffer, XrtDeviceBuffer>(subgraph),dump_mode_(false),debug_mode_(false) {
-  Engine& engine = Engine::get_instance();
-  for (unsigned i=0; i < engine.get_num_workers(); i++)
-    contexts_.emplace_back(new XrtContext(*handle_));
+  : DpuCloudController(subgraph) {
 
   dpu_hbm_start = ENV_PARAM(DPU_HBM_START)? ENV_PARAM(DPU_HBM_START) : 16;
-  init(subgraph);
+  for (int i=dpu_hbm_start; i<32;i++)
+    hbm.emplace_back(i);
+  init_graph(hbm,hbm);
 }
 DpuV3meController::~DpuV3meController() {
-}
-std::vector<vart::TensorBuffer*> DpuV3meController::init_tensor_buffer(std::vector<const xir::Tensor*> tensors) {
- std::vector<vart::TensorBuffer*>  tbufs;
- for (unsigned bs=0; bs < BATCHSIZE; bs++) {
-    for (unsigned ti=0; ti < tensors.size(); ti++)
-    {
-      // allocate aligned host memory
-      const size_t dataSize = 1;//vart::size_of(tensors[ti]->get_data_type());
-      size_t size = tensors[ti]->get_element_num() * dataSize;
-      void *data;
-      if (posix_memalign(&data, getpagesize(), size))
-        throw std::bad_alloc();
-
-      // make TensorBuffer to hold host memory
-      std::unique_ptr<vart::CpuFlatTensorBuffer> tbuf(
-        new vart::CpuFlatTensorBuffer(data, tensors[ti]));
-      tbufs.emplace_back(tbuf.get());
-      {
-        std::unique_lock<std::mutex> lock(hwbuf_mtx_);
-        bufs_.emplace_back(std::move(tbuf));
-        //if(isInput)
-        //  input_tensor_buffers_.emplace_back(std::move(tbuf));
-        //else
-        //  output_tensor_buffers_.emplace_back(std::move(tbuf));
-      }
-    }
-  }
-  return tbufs;
-
-}
-
-void DpuV3meController::init(const xir::Subgraph *subgraph) {
-  if (subgraph->has_attr("device")&&(subgraph->get_attr<std::string>("device")=="DPU")) {
-    init_graph(subgraph);
-  }
-  else
-    throw std::runtime_error("Error: subgraph is not supported in DPURunner");
-
-}
-
-void DpuV3meController::init(const std::string &meta) {
-  // get directory of meta.json
-  size_t slash = meta.find_last_of("/");
-  auto dirpath = meta.substr(0, slash);
-  std::ifstream f(meta);
-  std::stringstream metabuf;
-  metabuf << f.rdbuf();
-  json_object *jobj = json_tokener_parse(metabuf.str().c_str());
-
-  // get xmode name
-  json_object *modelObj = NULL;
-  if (!json_object_object_get_ex(jobj, "filename", &modelObj))
-    throw std::runtime_error("Error: missing 'filename' field in meta.json");
-
-  std::string modelName = json_object_get_string(modelObj);
-  const string xmodel = dirpath + "/" +modelName;
-  cout << xmodel<< endl;
-
-  if (json_object_object_get_ex(jobj, "dump_mode", &modelObj)) {
-    dump_mode_ = json_object_get_boolean(modelObj);
-  }
-  if (json_object_object_get_ex(jobj, "debug_mode", &modelObj)) {
-    debug_mode_ = json_object_get_boolean(modelObj);
-  }
-
-  // Get all subgraphs
-  auto graph = xir::Graph::deserialize(xmodel);
-  auto root = graph->get_root_subgraph();
-  auto children = root->children_topological_sort();
-  std::vector<xir::Subgraph*> subgraph;
-  for (auto c : children) {
-    auto device = c->get_attr<std::string>("device");
-    if (device == "DPU") {
-      subgraph.emplace_back(c);
-    }
-  }
-  init_graph(subgraph[0]);
-}
-static const xir::Tensor* find_tensor(const xir::Tensor* in_tensor, const xir::Subgraph* subgraph, bool isInput) {
-    auto op_tmp = in_tensor->get_producer();
-    auto out = op_tmp->get_output_tensor();
-    if ((!isInput)&&(op_tmp->get_type() == "download")) {
-      auto input_ops = op_tmp->get_input_ops("input");
-      out = input_ops[0]->get_output_tensor();
-    } else if (!out->has_attr("reg_id")) {
-
-      auto fanout_ops = op_tmp->get_fanout_ops();
-      auto subgraph_ops = subgraph->get_ops();
-      auto ops = std::vector<const xir::Op*>();
-      std::set_intersection(fanout_ops.begin(), fanout_ops.end(),
-                            subgraph_ops.begin(), subgraph_ops.end(),
-                            std::back_inserter(ops));
-      auto upload_op = ops.front();
-      out = upload_op->get_output_tensor();
-
-  }
-  return out;
-
 }
 std::tuple<uint64_t,int32_t,std::string> DpuV3meController::alloc_and_fill_device_memory(xclDeviceHandle handle, std::vector<char> code) {
   xclBOProperties boProp;
@@ -299,7 +198,6 @@ std::tuple<uint64_t,int32_t,std::string> DpuV3meController::alloc_and_fill_devic
   for (unsigned i=0; i < size; i++){
     ((char*)codePtr)[i] = code[i];
   }
-
   for (int idx=dpu_hbm_start; idx<32; idx++) {
     auto codeMem = xclAllocUserPtrBO(handle, codePtr, size, idx);
     if (codeMem == NULLBO) {
@@ -318,310 +216,19 @@ std::tuple<uint64_t,int32_t,std::string> DpuV3meController::alloc_and_fill_devic
   //free(codePtr);
   return data;
 }
-void DpuV3meController::init_graph(const xir::Subgraph* subgraph) {
-  auto handle = contexts_[0]->get_dev_handle();
-  if(ENV_PARAM(XLNX_ENABLE_FINGERPRINT_CHECK)) {
-    if (subgraph->has_attr("dpu_fingerprint")) {
-      const uint64_t fingerprint = subgraph->get_attr<std::uint64_t>("dpu_fingerprint");
-      uint32_t low = read32_dpu_reg(handle,  handle_->get_device_info().cu_base_addr + VERSION_CODE_L);
-      uint32_t high = read32_dpu_reg(handle,  handle_->get_device_info().cu_base_addr + VERSION_CODE_H);
-      uint64_t version = high;
-      version = (version << 32) + low;
-      if (version != fingerprint)
-        throw std::runtime_error("Error: subgraph's version is mismatch with xclbin");
-    } else {
 
-      throw std::runtime_error("Error: no hardware info in subgraph");
-
-    }
-  }
-  xclBOProperties boProp;
-  dump_mode_ = dump_mode_|| ENV_PARAM(XLNX_ENABLE_DUMP);
-  debug_mode_ = debug_mode_|| ENV_PARAM(XLNX_ENABLE_DEBUG_MODE);
-  if(dump_mode_) {
-    auto t = std::chrono::system_clock::to_time_t(std::chrono::system_clock::now()); 
-    std::stringstream ss;
-    ss << "dump_" << std::put_time(std::localtime(&t), "%Y%m%d%H%M%S"); 
-    dump_folder_ = ss.str();
-    if(mkdir(dump_folder_.c_str(),S_IRUSR | S_IWUSR | S_IXUSR | S_IRWXG | S_IRWXO))
-      throw std::runtime_error("Error: Create dump folder error");
-    for(auto i = 0;i < BATCHSIZE; i++) {
-      std::string tmp = dump_folder_ + "/E" + std::to_string(i);
-      if(mkdir(tmp.c_str(),S_IRUSR | S_IWUSR | S_IXUSR | S_IRWXG | S_IRWXO))
-        throw std::runtime_error("Error: Create dump sub folder error"); 
-    } 
-  }
-
-  code_addr_ = 0x0ul;
-  reg0_addr_ = 0x0ul;
-  preload_code_addr_ = 0x0ul;
-  preload_reg0_addr_ = 0x0ul;
-  program_once_complete = 0;
-
-  //auto graph = subgraph->get_graph();
-  // Get one subgraph
-  const xir::Subgraph* subgraph_ = subgraph; // check subgraph_->get_name()
-
-  // Load parameter
-  size_t parameter_size = 0;
-  const char * parameter_value = NULL;
-  std::map<std::string, std::vector<char>> reg_id_to_parameter_value;
-  if (subgraph_->has_attr("reg_id_to_parameter_value")) {
-    reg_id_to_parameter_value =
-      subgraph_->get_attr<std::map<std::string, std::vector<char>>>("reg_id_to_parameter_value");
-    for (const auto& c : reg_id_to_parameter_value) {
-      if (!c.second.empty()) {
-        parameter_size = c.second.size();
-        parameter_value = (const char *)&c.second[0];
-        break;
-      }
-    }
-  }
-  // Get Reg ID size
-  auto reg_id_to_context_type =
-    subgraph_->get_attr<std::map<std::string, std::string>>("reg_id_to_context_type");
-  auto reg_id_to_size =
-    subgraph_->get_attr<std::map<std::string, int32_t>>("reg_id_to_size");
-  size_t total_io_size = 0;
-  for(auto &r : reg_id_to_context_type) {
-    if (r.second == "DATA") {
-      total_io_size += reg_id_to_size.at(r.first);
-    }
-  }
-  xdpu_io_total_size = total_io_size;
-
-  layer_info layer(subgraph_->get_name());
-  // Get input offset
-  auto input_tensors = subgraph_->get_input_tensors();
-  auto output_tensors = subgraph_->get_output_tensors();
-  for (auto &in_tensor : input_tensors) {
-    auto out = find_tensor(in_tensor,subgraph_,true);
-    auto ddr_addr = out->get_attr<std::int32_t>("ddr_addr");
-    xdpu_io_input_offset.emplace_back(ddr_addr);
-    input_scales_.push_back(pow(2,in_tensor->get_attr<std::int32_t>("fix_point")));
-    input_dims.emplace_back(in_tensor->get_shape());
-    layer.inputs.emplace_back(address_info(ddr_addr, 
-      in_tensor->get_data_size(), layer_info::name_map(out->get_name())));
-    auto attrs = out->get_attrs(); 
-    xir::Tensor *tensor = xir::Tensor::create(in_tensor->get_name(), in_tensor->get_shape(), in_tensor->get_data_type()).release();
-    tensor->set_attrs(std::move(attrs));
-    input_tensors_.emplace_back(tensor);
-
-  }
-
-  // Get output offset
-  for(auto &out_tensor : output_tensors) {
-    auto out = find_tensor(out_tensor,subgraph_,false);
-    auto ddr_addr = out->get_attr<std::int32_t>("ddr_addr");
-    xdpu_io_output_offset.emplace_back(ddr_addr);
-    output_scales_.push_back(pow(2,(-1)*out_tensor->get_attr<std::int32_t>("fix_point")));
-    output_dims.emplace_back(out->get_shape()); 
-    layer.outputs.emplace_back(std::make_tuple(ddr_addr, 
-        out_tensor->get_data_size(), layer_info::name_map(out->get_name())));
-    auto attrs = out->get_attrs();
-    //std::unique_ptr<xir::Tensor> tensor(
-    //  new xir::Tensor(out_name, out->get_shape(),xir::Tensor::DataType::INT8));
-    xir::Tensor *tensor = xir::Tensor::create(out_tensor->get_name(), out_tensor->get_shape(), out_tensor->get_data_type()).release();
-    tensor->set_attrs(std::move(attrs));
-    //auto tensor = out;
-    output_tensors_.emplace_back(tensor);
-
-  }
-
-  //in release mode: using dbg_layers_ to store first inputs and final outputs inform
-  dbg_layers_.clear();
-  dbg_layers_.emplace_back(std::move(layer));
-
-  // Load mc_code
-  if(!debug_mode_) {
-    auto& mc_code = subgraph_->get_attr<std::vector<char>>("mc_code");
-    auto& layer = dbg_layers_[0]; // release instruction layer is already in the vector 
-    layer.code_addr = alloc_and_fill_device_memory(handle, mc_code);
-    code_addr_ = std::get<0>(layer.code_addr);
-    if (subgraph_->has_attr("mc_code_preload")) {
-      auto& mc_code_preload = subgraph_->get_attr<std::vector<char>>("mc_code_preload");
-      if (mc_code_preload.size() > 0) {
-        layer.preload_code_addr = alloc_and_fill_device_memory(handle, mc_code_preload);
-        preload_code_addr_ = std::get<0>(layer.preload_code_addr);
-      }
-    }
-  } else {
-    auto children = subgraph_->get_children();
-    auto child_order = subgraph_->get_attr<std::vector<std::string>>("children_topological_sort");
-    for (const auto& child_name : child_order) {
-      auto child = std::find_if(children.begin(), children.end(),
-          [&child_name](auto g) { return g->get_name() == child_name; });
-
-      layer_info layer(child_name);
-      if ((*child)->has_attr("mc_code")) {
-        auto& mc_code = (*child)->get_attr<std::vector<char> >("mc_code");
-        layer.code_addr = alloc_and_fill_device_memory(handle, mc_code);
-        if ((*child)->has_attr("mc_code_preload")) {
-          auto& mc_code_preload = subgraph_->get_attr<std::vector<char>>("mc_code_preload");
-          if (mc_code_preload.size() > 0) {
-            layer.preload_code_addr = alloc_and_fill_device_memory(handle, mc_code_preload);
-          }
-        }
-      }
-
-      auto in_tensors = (*child)->get_input_tensors() ;
-      for(auto t: in_tensors) {
-        layer.inputs.emplace_back(address_info{t->get_attr<int32_t>("ddr_addr"), 
-            t->get_data_size(), layer_info::name_map(t->get_name())});
-      }
-      auto out_tensors = (*child)->get_output_tensors() ;
-      for(auto t: out_tensors) {
-        layer.outputs.emplace_back(address_info{t->get_attr<int32_t>("ddr_addr"), 
-            t->get_data_size(), layer_info::name_map(t->get_name())});
-      }
-      
-      dbg_layers_.emplace_back(std::move(layer));
-    }
-  }
-
-  // reg0
-  if (parameter_size) {
-    void *reg0Ptr = NULL;
-    if (posix_memalign(&reg0Ptr, getpagesize(), parameter_size))
-      throw std::bad_alloc();
-    for (unsigned i=0; i < parameter_size; i++) ((char*)reg0Ptr)[i] = parameter_value[i];
-
-    for (int idx=dpu_hbm_start; idx<32; idx++) {
-      auto reg0Mem  = xclAllocUserPtrBO(handle, reg0Ptr, parameter_size, idx);
-      if (reg0Mem == NULLBO) {
-        if (idx == 31) {
-          throw std::bad_alloc();
-        }else {
-          continue;
-        }
-      }
-      xclSyncBO(handle, reg0Mem, XCL_BO_SYNC_BO_TO_DEVICE, parameter_size, 0);
-      xclGetBOProperties(handle, reg0Mem, &boProp);
-      reg0_addr_ = boProp.paddr;
-      break;
-    }
-
-  } else {
-    reg0_addr_ = 0;
-  }
-  program_once_complete = 0;
+//std::vector<vart::TensorBuffer*> DpuV3meController::get_outputs(int batchsz) {
+//    return get_outputs_inner(hbm, batchsz);
+//}
+std::vector<unsigned> DpuV3meController::get_hbmw() {
+  return hbm;
 }
-
-std::vector<float> DpuV3meController::get_input_scale() {
-  return input_scales_;
+std::vector<unsigned> DpuV3meController::get_hbmc() {
+  return hbm;
 }
-
-std::vector<float> DpuV3meController::get_output_scale() {
-  return output_scales_;
+std::vector<unsigned> DpuV3meController::get_hbmio() {
+  return hbm;
 }
-std::vector<const xir::Tensor*> 
-DpuV3meController::get_input_tensors() const {
-  return input_tensors_;
-}
-
-std::vector<const xir::Tensor*> 
-DpuV3meController::get_output_tensors() const {
-  return output_tensors_;
-}
-
-std::vector<const xir::Tensor*>
-DpuV3meController::get_merged_io_tensors() const {
-  const std::vector<std::int32_t> dims = { 1, 1, 1, xdpu_io_total_size };
-  xir::Tensor *tensor = xir::Tensor::create("inout", dims, xir::DataType{xir::DataType::XINT, 8}).release();
-  //static xir::Tensor tensor("inout", dims, xir::Tensor::DataType::INT8); 
-  return std::vector<const xir::Tensor*>(8, tensor);
-}
-
-/*static std::vector<vart::TensorBuffer*> get_tensor_buffer_pointer(
-    std::vector<std::unique_ptr<vart::TensorBuffer>>& tensor_buffers) {
-  auto ret = std::vector<vart::TensorBuffer*>();
-  ret.reserve(tensor_buffers.size());
-  std::transform(tensor_buffers.begin(), tensor_buffers.end(),
-                 std::back_inserter(ret),
-                 [](auto& tensor_buffer) { return tensor_buffer.get(); });
-  return ret;
-}*/
-
-std::vector<vart::TensorBuffer*> DpuV3meController::get_inputs(int batchsz) {
-  if (batchsz != -1)
-    throw std::runtime_error("Error: custom batch size not supported for this DPU");
-//  return get_tensor_buffer_pointer(input_tensor_buffers_);
-  return init_tensor_buffer(input_tensors_);
-}
-
-std::vector<vart::TensorBuffer*> DpuV3meController::get_outputs(int batchsz) {
-  if (batchsz != -1)
-    throw std::runtime_error("Error: custom batch size not supported for this DPU");
-//  return get_tensor_buffer_pointer(output_tensor_buffers_);
-  auto tbufs = init_tensor_buffer(output_tensors_);
-  std::vector<vart::TensorBuffer*>  hwbufs;
-
-  for (int idx=dpu_hbm_start; idx<32; idx++){
-    hwbufs = create_tensor_buffers(get_merged_io_tensors(),false, idx);
-    if (!hwbufs.empty()) {
-      break;
-    }
-    if (0 && idx == 31) {
-      throw std::bad_alloc();
-    }
-  }
-
-  for (int i=0;i<BATCHSIZE; i++) {
-    std::unique_lock<std::mutex> lock(hwbuf_mtx_);
-    tbuf2hwbuf_.emplace(tbufs[i*output_tensors_.size()], hwbufs[i]);
-  }
-  return tbufs;
-}
-
-void DpuV3meController::data_fix2float(float* dataDst, int8_t* dataSrc, int size, float scale) {
-  for (int i = 0; i < size; i++)
-    dataDst[i] = (float)(dataSrc[i]*scale);
-}
-
-void DpuV3meController::data_float2fix(int8_t* dataDst, float* dataSrc, int size, float scale) {
-  for (int i = 0; i < size; i++)
-    dataDst[i] = (int8_t)(dataSrc[i]*scale);
-}
-
-void DpuV3meController::free_buffers(std::vector<vart::TensorBuffer*> &tbufs, bool isInput) {
-  if (isInput) {
-    std::unique_lock<std::mutex> lock(hwbuf_mtx_);
-    for (unsigned ti=0; ti < tbufs.size(); ti++)
-    {
-      for (auto it=bufs_.begin(); it != bufs_.end(); it++)
-        if (it->get() == tbufs[ti])
-        {
-          bufs_.erase(it);
-          break;
-        }
-    }
-
-  } else {
-    std::unique_lock<std::mutex> lock(hwbuf_mtx_);
-    for (unsigned ti=0; ti < tbufs.size(); ti++)
-    {
-      {
-        std::unique_lock<std::mutex> lock(tbuf_mtx_);
-        tbuf2dbuf_.erase(tbuf2hwbuf_[tbufs[ti]]);
-        for (auto it=tbufs_.begin(); it != tbufs_.end(); it++)
-          if (it->get() == tbuf2hwbuf_[tbufs[ti]])
-          {
-             tbufs_.erase(it);
-             break;
-          }
-
-      }
-      tbuf2hwbuf_.erase(tbufs[ti]);
-      for (auto it=bufs_.begin(); it != bufs_.end(); it++)
-        if (it->get() == tbufs[ti])
-        {
-           bufs_.erase(it);
-           break;
-        }
-    }
-  }
-}
-
 static void _show_regs(xclDeviceHandle xcl_handle, uint64_t cuba){
   for(unsigned long offset : {cuba}){
     std::cout << "LOAD START:" << read32_dpu_reg(xcl_handle,  offset+ DPUREG_LOAD_START) << std::endl;
@@ -692,63 +299,41 @@ void DpuV3meController::run(const std::vector<vart::TensorBuffer*> &inputs,
     const std::vector<vart::TensorBuffer*> &outputs) {
   std::vector<vart::TensorBuffer*> input_tensor_buffers;
   std::vector<vart::TensorBuffer*> output_tensor_buffers;
-  if(inputs.size()%input_tensors_.size())
+  if(inputs.size()%model_->get_input_tensors().size())
     throw std::runtime_error("Error: input tensorbuffers error");
-  unsigned ibs = inputs[0]->get_tensor()->get_shape()[0]/input_tensors_[0]->get_shape()[0];
-  unsigned obs = outputs[0]->get_tensor()->get_shape()[0]/output_tensors_[0]->get_shape()[0];
+  unsigned ibs = inputs[0]->get_tensor()->get_shape()[0]/model_->get_input_tensors()[0]->get_shape()[0];
+  unsigned obs = outputs[0]->get_tensor()->get_shape()[0]/model_->get_output_tensors()[0]->get_shape()[0];
 
   unsigned inputBs;
-  if ((inputs.size()/input_tensors_.size())>1)
-    inputBs = inputs.size()/input_tensors_.size();
+  if ((inputs.size()/model_->get_input_tensors().size())>1)
+    inputBs = inputs.size()/model_->get_input_tensors().size();
   else
     inputBs = ibs;
   if ((ibs < obs) || (inputBs > BATCHSIZE) )
     throw std::runtime_error("Error: size of tensorbuffer not supported");
-  bool create_tb_outside=false;
-  {
-    std::unique_lock<std::mutex> lock(hwbuf_mtx_);
-    auto it = tbuf2hwbuf_.find(outputs[0]);
-    if (it == tbuf2hwbuf_.end())
-    {
-      create_tb_outside=true;
-    }
-  }
-  if(create_tb_outside) {
-    input_tensor_buffers = get_inputs();
-    output_tensor_buffers = get_outputs();
-    for (unsigned i=0; i < input_tensors_.size(); i++ ) {
-      unsigned cnt=0;
-      for (unsigned j=0; j < inputs.size(); j++) {
-        if (input_tensors_[i]->get_name().find(inputs[j]->get_tensor()->get_name()) != std::string::npos) {
-          if (ibs == inputBs) { //one tensrobuffer store batch
-            for (unsigned b=0; b < ibs; b++) {
-              if (inputs[j]->get_tensor()->get_data_type().type == xir::DataType::FLOAT)
-                data_float2fix((int8_t*)input_tensor_buffers[b*input_tensors_.size()+i]->data().first,(float*)inputs[j]->data().first+b*input_tensors_[i]->get_element_num(),input_tensors_[i]->get_element_num(), input_scales_[i]);
-              else
-                memcpy((int8_t*)input_tensor_buffers[b*input_tensors_.size()+i]->data().first,(int8_t*)inputs[j]->data().first+b*input_tensors_[i]->get_element_num(),input_tensors_[i]->get_element_num());
-              cnt++;
-            }
-          }
-          else {
-            if (inputs[j]->get_tensor()->get_data_type().type == xir::DataType::FLOAT)
-              data_float2fix((int8_t*)input_tensor_buffers[cnt*input_tensors_.size()+i]->data().first,(float*)inputs[j]->data().first,input_tensors_[i]->get_element_num(), input_scales_[i]);
-            else
-              memcpy((int8_t*)input_tensor_buffers[cnt*input_tensors_.size()+i]->data().first,(int8_t*)inputs[j]->data().first,input_tensors_[i]->get_element_num());
-            cnt++;
-          }
+  bool create_tb_outside=check_tensorbuffer_outside(outputs);
+  bool create_tb_batch=false;
+  bool tensorbuffer_phy=false;
+  if (!create_tb_outside) {
 
-        }
-        
-      }
-      if (cnt == 0)
-        throw std::runtime_error("Error: invilad tensorbuffer input");
+    if (((ibs == inputBs)&&(ibs > 1) && (batch_size_ > 1)) || (batch_size_==1))
+    {
+      create_tb_batch = true;
+    }
+
+  }
+
+  if(create_tb_outside) {
+    LOG_IF(INFO, ENV_PARAM(DEBUG_DPU_CONTROLLER))
+      << "create tensorbuffer by user side";
+    if (!tensorbuffer_phy) {
+      tensorbuffer_trans(input_tensor_buffers, output_tensor_buffers,inputs,outputs, true);
     }
   }
   else {
     input_tensor_buffers = inputs;
     output_tensor_buffers = outputs;
   }
-
   Engine& engine = Engine::get_instance();
   const unsigned worker_id = engine.get_my_worker_id();
   if (worker_id >= contexts_.size())
@@ -759,45 +344,44 @@ void DpuV3meController::run(const std::vector<vart::TensorBuffer*> &inputs,
   auto bo_handle = context.get_bo_handle();
   auto bo_addr = context.get_bo_addr();
 
-  // get device buffers for input TensorBuffers
-  std::vector<XrtDeviceBuffer*> io_bufs(inputBs);
-  std::vector<uint64_t> io_addrs(inputBs);
-  for (unsigned i=0; i < inputBs; i++)
-  {
-    vart::TensorBuffer* hwbuf;
-    {
-      std::unique_lock<std::mutex> lock(hwbuf_mtx_);
-      auto it = tbuf2hwbuf_.find(output_tensor_buffers[i*output_tensors_.size()]);
-      if (it == tbuf2hwbuf_.end())
-        throw std::runtime_error("TensorBuffer not found");
-      hwbuf = it->second;
+  vector<std::tuple<int, int,uint64_t>> xdpu_total_dpureg_map2;
 
-    }
-    io_bufs[i] = dynamic_cast<XrtDeviceBuffer*>(get_device_buffer(hwbuf));
-    io_addrs[i] = io_bufs[i]->get_phys_addr(); 
+  std::vector<uint64_t> in_addrs(batch_size_);
+  std::vector<uint64_t> out_addrs(batch_size_);
+  if (!tensorbuffer_phy) {
+    xdpu_total_dpureg_map2 = get_dpu_reg_inside(create_tb_batch, in_addrs, out_addrs, output_tensor_buffers);
+  } else {
+    xdpu_total_dpureg_map2 = get_dpu_reg_outside(xcl_handle, create_tb_batch, in_addrs, out_addrs, inputs, outputs);
   }
+
 
   // upload batch of inputs
   //const auto inSize = get_input_tensors()[0]->get_element_num();
   __TIC__(INPUT_H2D)
-  for (unsigned i=0; i < io_bufs.size(); i++)
-  {
-    // instead of uploading all {output, input, intermediate}, 
-    // just upload input region
-    // io_bufs[i]->upload();
-   //const auto mode = std::ios_base::out | std::ios_base::binary | std::ios_base::trunc;
-   //  auto input_file = "./input"+ to_string(i)+".bin";
-   //  std::ofstream(input_file, mode).write((char*)inputs[i]->data().first,inSize);
+  if (!tensorbuffer_phy) {
+    for (int i=0; i < inputBs; i++)
+    {
+      // instead of uploading all {output, input, intermediate},
+      // just upload input region
+      // io_bufs[i]->upload();
+     //const auto mode = std::ios_base::out | std::ios_base::binary | std::ios_base::trunc;
+     //  auto input_file = "./input"+ to_string(i)+".bin";
+     //  std::ofstream(input_file, mode).write((char*)inputs[i]->data().first,inSize);
+      for (unsigned j=0; j < model_->get_input_offset().size(); j++) {
+        uint8_t* dataPtr;
+        const auto inSize = get_input_tensors()[j]->get_element_num();
+        if (create_tb_batch)
+          dataPtr = ((uint8_t*)input_tensor_buffers[j]->data().first)+inSize*i;
+        else
+          dataPtr =(uint8_t*)input_tensor_buffers[i*model_->get_input_offset().size()+j]->data().first;
+        if (xclUnmgdPwrite(xcl_handle, 0, (void *)dataPtr, inSize,
+          in_addrs[i] + model_->get_input_offset()[j]))
+          throw std::runtime_error("Error: upload failed");
+      }
 
-    for (unsigned j=0; j < xdpu_io_input_offset.size(); j++) {
-      const auto inSize = get_input_tensors()[j]->get_element_num();
-      if (xclUnmgdPwrite(xcl_handle, 0, (void *)input_tensor_buffers[i*xdpu_io_input_offset.size()+j]->data().first, inSize,
-      //if (xclUnmgdPwrite(xcl_handle, 0, inputs[i]->data().first, inSize,
-        io_addrs[i] + xdpu_io_input_offset[j]))
-        throw std::runtime_error("Error: upload failed");
     }
- 
   }
+
   __TOC__(INPUT_H2D)
   int p;
   int exec_buf_result;
@@ -833,8 +417,14 @@ auto trigger_dpu_func = [&](){
       // do preload
       regVals.push_back( { XDPU_CONTROL_INSTR_L / 4, preload_code_addr_ & 0xFFFFFFFF });
       regVals.push_back( { XDPU_CONTROL_INSTR_H / 4, (preload_code_addr_ >> 32) & 0xFFFFFFFF });
-      regVals.push_back( { XDPU_CONTROL_ADDR_0_L / 4, reg0_addr_ & 0xFFFFFFFF });
-      regVals.push_back( { XDPU_CONTROL_ADDR_0_H / 4, (reg0_addr_ >> 32) & 0xFFFFFFFF });
+//      regVals.push_back( { XDPU_CONTROL_ADDR_0_L / 4, reg0_addr_ & 0xFFFFFFFF });
+//      regVals.push_back( { XDPU_CONTROL_ADDR_0_H / 4, (reg0_addr_ >> 32) & 0xFFFFFFFF });
+      auto iter = xdpu_total_dpureg_map.begin();
+      while(iter !=xdpu_total_dpureg_map.end()) {
+        regVals.push_back(  { (XDPU_CONTROL_ADDR_0_L + 8*iter->first) / 4, iter->second & 0xFFFFFFFF });
+        regVals.push_back(  { (XDPU_CONTROL_ADDR_0_H + 8*iter->first) / 4, (iter->second >> 32) & 0xFFFFFFFF });
+        iter++;
+      }
 
       p = 6;
       for (unsigned i=0; i < regVals.size(); i++) {
@@ -864,19 +454,28 @@ auto trigger_dpu_func = [&](){
     //configure real code and parameter
     regVals.push_back( { XDPU_CONTROL_INSTR_L / 4, code_addr_ & 0xFFFFFFFF });
     regVals.push_back( { XDPU_CONTROL_INSTR_H / 4, (code_addr_ >> 32) & 0xFFFFFFFF });
-    regVals.push_back( { XDPU_CONTROL_ADDR_0_L / 4, reg0_addr_ & 0xFFFFFFFF });
-    regVals.push_back( { XDPU_CONTROL_ADDR_0_H / 4, (reg0_addr_ >> 32) & 0xFFFFFFFF });
-  }
-
-  // program DPU input/output addrs
-  // io_addrs.size should be 1 with v3me dpu
-  for (unsigned i=0; i < 1; i++) {
-      auto lowOffset = (XDPU_CONTROL_ADDR_1_L + (i*0x100)) / 4;
-      auto highOffset = (XDPU_CONTROL_ADDR_1_H + (i*0x100)) / 4;
-      regVals.push_back({ lowOffset, io_addrs[i] & 0xFFFFFFFF });
-      regVals.push_back({ highOffset, (io_addrs[i] >> 32) & 0xFFFFFFFF });
+    auto iter = xdpu_total_dpureg_map.begin();
+    while(iter !=xdpu_total_dpureg_map.end()) {
+      regVals.push_back(  { (XDPU_CONTROL_ADDR_0_L + 8*iter->first) / 4, iter->second & 0xFFFFFFFF });
+      regVals.push_back(  { (XDPU_CONTROL_ADDR_0_H + 8*iter->first) / 4, (iter->second >> 32) & 0xFFFFFFFF });
+      LOG_IF(INFO, ENV_PARAM(DEBUG_DPU_CONTROLLER))
+          << "parameter: "  //
+          << iter->second      //
+          ;
+      iter++;
     }
 
+//    regVals.push_back( { XDPU_CONTROL_ADDR_0_L / 4, reg0_addr_ & 0xFFFFFFFF });
+//    regVals.push_back( { XDPU_CONTROL_ADDR_0_H / 4, (reg0_addr_ >> 32) & 0xFFFFFFFF });
+  }
+    for (auto iter2 : xdpu_total_dpureg_map2) {
+      regVals.push_back(  { (XDPU_CONTROL_ADDR_0_L + 8*std::get<0>(iter2) + std::get<1>(iter2)*0x100) / 4, std::get<2>(iter2) & 0xFFFFFFFF });
+      regVals.push_back(  { (XDPU_CONTROL_ADDR_0_H + 8*std::get<0>(iter2) + std::get<1>(iter2)*0x100) / 4, (std::get<2>(iter2) >> 32) & 0xFFFFFFFF });
+   LOG_IF(INFO, ENV_PARAM(DEBUG_DPU_CONTROLLER))
+          << "io: "  //
+          << std::get<2>(iter2)      //
+          ;
+    }
 
   p = 6;
   for (unsigned i=0; i < regVals.size(); i++)
@@ -947,17 +546,17 @@ auto trigger_dpu_func = [&](){
 };
 
  auto t1 = std::chrono::high_resolution_clock::now();
-
+  auto dbg_layers = model_->get_dbg_layers();
   // program DPU request
   if(!debug_mode_) { //=== run release instructions
     if(dump_mode_ ) { // dump input
       int tensor_idx = 0;
-      for(auto& out: dbg_layers_[0].inputs) {
+      for(auto& out: dbg_layers[0].inputs) {
         auto offset = std::get<0>(out);
         auto size = std::get<1>(out);
         auto data = std::make_unique<char[]>(size);
-        for (unsigned i=0; i < io_bufs.size(); i++) {
-          if (xclUnmgdPread(xcl_handle, 0, data.get(), size, io_addrs[i] + offset))
+        for (unsigned i=0; i < in_addrs.size(); i++) {
+          if (xclUnmgdPread(xcl_handle, 0, data.get(), size, in_addrs[i] + offset))
             throw std::runtime_error("Error: dump failed!");
           std::stringstream ss;
           ss << dump_folder_ << "/E" << i << "/" << std::get<2>(out);
@@ -973,12 +572,12 @@ auto trigger_dpu_func = [&](){
 
     if(dump_mode_ ) {  // dump final output
       int tensor_idx = 0;
-      for(auto& out: dbg_layers_[0].outputs) {
+      for(auto& out: dbg_layers[0].outputs) {
         auto offset = std::get<0>(out);
         auto size = std::get<1>(out);
         auto data = std::make_unique<char[]>(size);
-        for (unsigned i=0; i < io_bufs.size(); i++) {
-          if (xclUnmgdPread(xcl_handle, 0, data.get(), size, io_addrs[i] + offset))
+        for (unsigned i=0; i < out_addrs.size(); i++) {
+          if (xclUnmgdPread(xcl_handle, 0, data.get(), size, out_addrs[i] + offset))
             throw std::runtime_error("Error: dump failed!");
           std::stringstream ss;
           ss << dump_folder_ << "/E" << i << "/" << std::get<2>(out);
@@ -991,15 +590,15 @@ auto trigger_dpu_func = [&](){
     }
   } else {//=== run debug instructions
     // dump first layer's inputs
-    if(dump_mode_ && (dbg_layers_.size() > 0)) {
-      auto& inputs = dbg_layers_[0].inputs;
+    if(dump_mode_ && (dbg_layers.size() > 0)) {
+      auto& inputs = dbg_layers[0].inputs;
       int tensor_idx = 0;
       for(auto& input: inputs) {
         auto offset = std::get<0>(input);
         auto size = std::get<1>(input);
         auto data = std::make_unique<char[]>(size);
-        for (unsigned i=0; i < io_bufs.size(); i++) {
-          if (xclUnmgdPread(xcl_handle, 0, data.get(), size, io_addrs[i] + offset))
+        for (unsigned i=0; i < in_addrs.size(); i++) {
+          if (xclUnmgdPread(xcl_handle, 0, data.get(), size, in_addrs[i] + offset))
             throw std::runtime_error("Error: dump failed!");
           std::stringstream ss;
           ss << dump_folder_ << "/E" << i << "/" << std::get<2>(input); 
@@ -1011,94 +610,78 @@ auto trigger_dpu_func = [&](){
     }
 
     int layer_idx = 1;
-    for(auto iter = dbg_layers_.begin() + 1;iter !=dbg_layers_.end();iter++) {
+    for(auto iter = dbg_layers.begin() + 1;iter !=dbg_layers.end();iter++) {
       auto layer = *iter;
-      if(std::get<1>(layer.code_addr) > 0) {
-        code_addr_ = std::get<0>(layer.code_addr);
-        preload_code_addr_ = std::get<0>(layer.preload_code_addr);
+      auto code_info = layer_debug_mode.find(layer.name);
+      if (code_info != layer_debug_mode.end()) {
+        if((code_info->second).second>0) {
+         code_addr_ = (code_info->second).first;
+         auto code_info_pre = layer_debug_mode_preload.find(layer.name);
+         if (code_info_pre != layer_debug_mode_preload.end()) {
+           if((code_info_pre->second).second>0) {
+             preload_code_addr_ = (code_info_pre->second).first;
+           }
+         }
+      //if(std::get<1>(layer.code_addr) > 0) {
+      //  code_addr_ = std::get<0>(layer.code_addr);
+       }
         trigger_dpu_func();
       }
+
         // Save the outputs to file
       if(dump_mode_) {
         int tensor_idx = 0;
         for(auto& out: layer.outputs) {
           auto offset = std::get<0>(out);
           auto size = std::get<1>(out);
+          auto reg_id = std::get<3>(out);
           auto data = std::make_unique<char[]>(size);
-          for (unsigned i=0; i < io_bufs.size(); i++) {
-            if (xclUnmgdPread(xcl_handle, 0, data.get(), size, io_addrs[i] + offset))
-              throw std::runtime_error("Error: dump failed!");
-            std::stringstream ss; 
-            ss << dump_folder_ << "/E" << i << "/" << std::get<2>(out);
-            std::ofstream ofs(ss.str(), std::ofstream::binary);
-            ofs.write(data.get(), size);
-            ofs.close();
+          //for (unsigned i=0; i < io_bufs.size(); i++) {
+          for (auto it :  xdpu_total_dpureg_map2 ) {
+            auto regid = std::get<0>(it);
+            if (regid == reg_id) {
+              if (xclUnmgdPread(xcl_handle, 0, data.get(), size, std::get<2>(it) + offset))
+                throw std::runtime_error("Error: dump failed!");
+              std::stringstream ss;
+              ss << dump_folder_ << "/E" << std::get<1>(it) << "/" << std::get<2>(out);
+              std::ofstream ofs(ss.str(), std::ofstream::binary);
+              ofs.write(data.get(), size);
+              ofs.close();
+            }
           }
-          tensor_idx++; 
+          tensor_idx++;
         }
       } 
       layer_idx ++;
     }
   }
 
-  // download results into output TensorBuffers
-  if(ENV_PARAM(DPU_OUTPUT_ADDR)) for (unsigned i=0; i < io_bufs.size(); i++)
-  {
-    for (unsigned j=0; j< xdpu_io_output_offset.size(); j++) {
-      const auto outSize = get_output_tensors()[j]->get_element_num();
-      std::cout << hex << "outSize:" << outSize << "@: "<< io_addrs[i] + xdpu_io_output_offset[j] <<std::endl;
-    }
-  }
 
  __TIC__(OUTPUT_D2H)
-  if(!ENV_PARAM(DPU_HW_POST)) for (unsigned i=0; i < io_bufs.size(); i++)
+  if((!tensorbuffer_phy)&& (!ENV_PARAM(DPU_HW_POST))) for (unsigned i=0; i < inputBs; i++)
   {
     // instead of downloading all {output, input, intermediate},
     // just download output region
     // io_bufs[i]->download();
-    for (unsigned j=0; j< xdpu_io_output_offset.size(); j++) {
-      const auto outSize = get_output_tensors()[j]->get_element_num();
-      //__TIC_PROFILING__(OUTPUT)
-      if (xclUnmgdPread(xcl_handle
-        , 0
-        , (void*)output_tensor_buffers[i*xdpu_io_output_offset.size()+j]->data().first
-        , outSize
-        , io_addrs[i] + xdpu_io_output_offset[j]))
-        throw std::runtime_error("Error: download failed");
-      //__TOC_PROFILING__(OUTPUT)
-    }
+      for (unsigned j=0; j< model_->get_output_offset().size(); j++) {
+        const auto outSize = get_output_tensors()[j]->get_element_num();
+        uint8_t* dataPtr;
+        if (create_tb_batch)
+          dataPtr = ((uint8_t *)output_tensor_buffers[j]->data().first)+outSize*i;
+        else
+          dataPtr = (uint8_t *)output_tensor_buffers[i*model_->get_output_offset().size()+j]->data().first;
+        //__TIC_PROFILING__(OUTPUT)
+        if (xclUnmgdPread(xcl_handle, 0, (void*)dataPtr,
+          outSize,
+          out_addrs[i] + model_->get_output_offset()[j]))
+          throw std::runtime_error("Error: download failed");
+        //__TOC_PROFILING__(OUTPUT)
+      }
+
   }
   __TOC__(OUTPUT_D2H)
-  if(create_tb_outside) {
-    for (unsigned i=0; i < output_tensors_.size(); i++  ) {
-      unsigned cnt=0;
-      for (unsigned j=0; j < outputs.size(); j++) {
-        if (output_tensors_[i]->get_name().find(outputs[j]->get_tensor()->get_name()) != std::string::npos) {
-          if (ibs == inputBs) {
-            for (unsigned b=0; b < obs; b++) {
-              if (outputs[j]->get_tensor()->get_data_type().type == xir::DataType::FLOAT)
-                data_fix2float((float*)outputs[j]->data().first+b*output_tensors_[i]->get_element_num(), (int8_t*)output_tensor_buffers[b*output_tensors_.size()+i]->data().first,output_tensors_[i]->get_element_num(),output_scales_[i]);
-              else
-                memcpy((char*)outputs[j]->data().first+b*output_tensors_[i]->get_element_num(), (void*)output_tensor_buffers[b*output_tensors_.size()+i]->data().first,output_tensors_[i]->get_element_num());
-              cnt++;
-            }
-          }
-          else {
-            if (outputs[j]->get_tensor()->get_data_type().type == xir::DataType::FLOAT)
-              data_fix2float((float*)outputs[j]->data().first,(int8_t*)output_tensor_buffers[cnt*output_tensors_.size()+i]->data().first,output_tensors_[i]->get_element_num(),output_scales_[i]);
-            else
-              memcpy((int8_t*)outputs[j]->data().first,(int8_t*)output_tensor_buffers[cnt*output_tensors_.size()+i]->data().first,output_tensors_[i]->get_element_num());
-            cnt++;
-
-          }
-
-        }
-      }
-      if (cnt == 0)
-        throw std::runtime_error("Error: invilad tensorbuffer output");
-    }
-    free_buffers(input_tensor_buffers,true);
-    free_buffers(output_tensor_buffers,false);
+  if((!tensorbuffer_phy) &&create_tb_outside) {
+    tensorbuffer_trans(input_tensor_buffers, output_tensor_buffers,inputs,outputs, false);
   }
 
 if(ENV_PARAM(CTRLER_RUN)){

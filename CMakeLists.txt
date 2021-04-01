@@ -91,6 +91,7 @@ include_directories(
   ${CMAKE_SOURCE_DIR}/runner/src
   ${CMAKE_SOURCE_DIR}/device/src
   ${CMAKE_SOURCE_DIR}/controller/src
+  ${CMAKE_SOURCE_DIR}/controller/src/common
   ${CMAKE_SOURCE_DIR}/controller/src/dpuv3me
   ${CMAKE_SOURCE_DIR}/controller/src/dpuv4e
   ${CMAKE_SOURCE_DIR}/controller/src/dpuv3e
