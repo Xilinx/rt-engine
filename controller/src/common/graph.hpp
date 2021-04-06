@@ -91,6 +91,9 @@ class DpuXmodel  {
   std::vector<std::pair<int32_t, int32_t>> get_xdpu_total_reg_map() {
     return xdpu_total_reg_map_out;
   }
+  std::vector<std::pair<int32_t, int32_t>> get_xdpu_workspace_reg_map() {
+    return xdpu_workspace_reg_map;
+  }
   std::vector<layer_info> dbg_layers_;
   bool dump_mode_;
   std::string dump_folder_;
@@ -118,6 +121,7 @@ class DpuXmodel  {
   std::vector<const xir::Tensor*> output_tensors_;
   std::vector<std::int32_t> xdpu_io_input_offset;
   std::vector<std::int32_t> xdpu_io_output_offset;
+  std::vector<std::pair<int32_t, int32_t>> xdpu_workspace_reg_map;
   std::unordered_map<int32_t, int32_t> xdpu_total_reg_map;
   std::vector<std::pair<int32_t, int32_t>> xdpu_total_reg_map_out;
   std::vector<std::tuple<char*, int32_t,int>> xdpu_parameter_map;

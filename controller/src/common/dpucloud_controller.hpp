@@ -71,7 +71,7 @@ class DpuCloudController
   int batch_size_;
   std::unordered_map<std::string, std::pair<uint64_t,int32_t>> layer_debug_mode;
   std::unordered_map<std::string, std::pair<uint64_t,int32_t>> layer_debug_mode_preload;
-  
+  std::unordered_map<int, std::vector<vart::TensorBuffer*>> xdpu_workspace_dpu; 
   std::shared_ptr<DpuXmodel> model_;
  private:
   int flag;

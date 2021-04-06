@@ -226,8 +226,7 @@ void DpuCloudController::init_graph(vector<unsigned> hbmw, vector<unsigned> hbmc
     } 
   }
   for (unsigned regc=0; regc<model_->get_xdpu_total_reg_map().size(); regc++) {
-    xdpu_total_reg_map.emplace((model_->get_xdpu_total_reg_map())[regc]);
-    
+    xdpu_total_reg_map.emplace((model_->get_xdpu_total_reg_map())[regc]); 
   }
 
     for (auto p : model_->get_parameter()) {
@@ -271,6 +270,16 @@ void DpuCloudController::init_graph(vector<unsigned> hbmw, vector<unsigned> hbmc
         xclSyncBO(handle, codeBO, XCL_BO_SYNC_BO_TO_DEVICE, get<1>(iter->code_addr_preload), 0);
         layer_debug_mode_preload.emplace(iter->name, std::make_pair( (uint64_t)xclGetDeviceAddr(handle, codeBO),get<1>(iter->code_addr_preload)));
       }
+    }
+  }
+  if (model_->get_xdpu_workspace_reg_map().size()>0) {
+    for(auto workspace : model_->get_xdpu_workspace_reg_map()) {
+       //auto wkBo = get_xrt_bo(workspace.second,)  
+       auto buf = create_tensor_buffers_hbm(get_merged_io_tensors(workspace.second),false, get_hbmio());
+       if (!buf.empty()) {
+       //auto io_buf = dynamic_cast<XrtDeviceBuffer*>(get_device_buffer(buf));
+         xdpu_workspace_dpu.emplace(workspace.first,buf);
+       }
     }
   }
   program_once_complete = 0;
@@ -369,12 +378,18 @@ std::vector<vart::TensorBuffer*> DpuCloudController::get_outputs_inner(vector<un
     std::unordered_map<int,std::vector<vart::TensorBuffer*>>  hwbuf;
     auto iter = xdpu_total_reg_map.begin();
     while(iter !=xdpu_total_reg_map.end()) {
-     // for (unsigned idx = 0; idx<hbm.size(); idx++){
-      auto buf = create_tensor_buffers_hbm(get_merged_io_tensors(iter->second),false, hbm);
-      if (!buf.empty()) {
-        hwbuf.emplace(std::make_pair(iter->first,buf));
+      auto reg_workspace = xdpu_workspace_dpu.find(iter->first);
+      if (reg_workspace != xdpu_workspace_dpu.end()) {
+        hwbuf.emplace(std::make_pair(iter->first,reg_workspace->second));
         iter++;
-      //  break;
+      } else {
+     // for (unsigned idx = 0; idx<hbm.size(); idx++){
+        auto buf = create_tensor_buffers_hbm(get_merged_io_tensors(iter->second),false, hbm);
+        if (!buf.empty()) {
+          hwbuf.emplace(std::make_pair(iter->first,buf));
+          iter++;
+        //  break;
+        }
       }
     }
     {
@@ -390,13 +405,19 @@ std::vector<vart::TensorBuffer*> DpuCloudController::get_outputs_inner(vector<un
     std::vector<std::pair<int,vector<vart::TensorBuffer*>>>  hwbuf;
     auto iter = xdpu_total_reg_map.begin();
     while(iter != xdpu_total_reg_map.end()) {
+      auto reg_workspace = xdpu_workspace_dpu.find(iter->first);
+      if (reg_workspace != xdpu_workspace_dpu.end()) {
+        hwbuf.push_back(std::make_pair(iter->first,reg_workspace->second));
+        iter++;
+      } else {
       //for (unsigned idx = 0; idx<hbm.size(); idx++){
-      auto buf = create_tensor_buffers_hbm(get_merged_io_tensors(iter->second),false,hbm);
-      if (!buf.empty()) {
+        auto buf = create_tensor_buffers_hbm(get_merged_io_tensors(iter->second),false,hbm);
+        if (!buf.empty()) {
           hwbuf.push_back(std::make_pair(iter->first, buf));
           iter++;
        //   break;
-       }
+        }
+      }
     }
     for (int i=0;i<batch_size_; i++) 
     {
@@ -414,13 +435,18 @@ std::vector<vart::TensorBuffer*> DpuCloudController::get_outputs_inner(vector<un
     std::unordered_map<int,std::vector<vart::TensorBuffer*>>  hwbuf;
     auto iter = xdpu_total_reg_map.begin();
     while(iter != xdpu_total_reg_map.end()) {
+      auto reg_workspace = xdpu_workspace_dpu.find(iter->first);
+      if (reg_workspace != xdpu_workspace_dpu.end()) {
+        hwbuf.emplace(std::make_pair(iter->first,reg_workspace->second));
+        iter++;
+      } else {
       //for (unsigned idx = 0; idx<hbm.size(); idx++){
-      auto buf = create_tensor_buffers_hbm(get_merged_io_tensors(iter->second),false,hbm);
-      if (!buf.empty()) {
-       hwbuf.emplace(std::make_pair(iter->first,buf));
-       iter++;
+        auto buf = create_tensor_buffers_hbm(get_merged_io_tensors(iter->second),false,hbm);
+        if (!buf.empty()) {
+          hwbuf.emplace(std::make_pair(iter->first,buf));
+          iter++;
+        }
       }
-      
     }
     {
       std::unique_lock<std::mutex> lock(hwbufio2_mtx_);

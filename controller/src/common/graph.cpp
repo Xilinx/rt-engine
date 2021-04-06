@@ -174,6 +174,9 @@ void DpuXmodel::init_graph(const xir::Subgraph* subgraph) {
         auto reg_id_str = r.first;
         int reg_id = reg_id_str[reg_id_str.length()-1]- '0';
         xdpu_total_reg_map.emplace(std::make_pair(reg_id,  reg_id_to_size.at(r.first)));
+        if (r.second == "WORKSPACE") {
+          xdpu_workspace_reg_map.emplace_back(std::make_pair(reg_id,  reg_id_to_size.at(r.first)));
+        }
         io_cnt ++;
         LOG_IF(INFO, ENV_PARAM(DEBUG_DPU_CONTROLLER))
           << "io reg_id: "  //
