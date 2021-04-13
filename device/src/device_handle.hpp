@@ -9,6 +9,8 @@
 #include <string>
 #include <xrt.h>
 #include <CL/opencl.h>
+#include "xrt/xrt_device.h"
+#include "xrt/xrt_kernel.h"
 
 namespace butler {
   class ButlerClient;
@@ -27,6 +29,9 @@ struct DeviceInfo {
   cl_device_id device_id;
   xrt_device *xdev;
   uint32_t fingerprint;
+  std::vector<unsigned> hbmc;
+  std::vector<unsigned> hbmw;
+  std::vector<unsigned> hbmio;
 };
 
 /* 
