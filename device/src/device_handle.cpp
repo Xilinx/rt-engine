@@ -9,7 +9,7 @@
 #pragma GCC diagnostic ignored "-Wignored-qualifiers"
 #pragma GCC diagnostic pop
  
-#include <xrm.h>
+#include <experimental/xrm_experimental.h>
 
 #include "experimental/xrt++.hpp"
 #include "xrt_bin_stream.hpp"
@@ -147,12 +147,7 @@ XrmResource::XrmResource(std::string kernelName, std::string xclbin)
   std::strcpy(cu_prop_->kernelAlias, "");
   cu_prop_->devExcl = false;
 
-  // Temporary hack until XRM supports the allocation policy we need
-  // see: https://jira.xilinx.com/browse/CR-1070396
-  if (std::getenv("RTE_XRM_DONT_SHARE_CU"))
-    cu_prop_->requestLoad = 100;
-  else
-    cu_prop_->requestLoad = 1;
+  cu_prop_->requestLoad = 1;
 
   cu_prop_->poolId = 0; // Allocate CUs from the system pool
 
@@ -164,8 +159,8 @@ XrmResource::XrmResource(std::string kernelName, std::string xclbin)
     // try to load xclbin
     char xclbinPath[XRM_MAX_PATH_NAME_LEN];
     std::strcpy(xclbinPath, xclbins[i].c_str()); // XRM does not take const char* :(
-    int err 
-      = xrmCuAllocWithLoad(context_, cu_prop_.get(), xclbinPath, cu_rsrc_.get());
+    int err
+      = xrmCuAllocLeastUsedWithLoad(context_, cu_prop_.get(), xclbinPath, cu_rsrc_.get()); 
     if (err) {
       naive_resource_mgr_on_ = true;
       std::string fnm = std::string(xclbinPath);
@@ -176,15 +171,11 @@ XrmResource::XrmResource(std::string kernelName, std::string xclbin)
       if (cuIdx > (cu_num-1)) cuIdx =  rand() % cu_num;
       auto realKernelName = find_kernel_name(binstream.get_cu(cuIdx));
       if (kernelName != realKernelName) {
-        //std::memset(cu_prop_.get(), 0, sizeof(xrmCuProperty));
-        //std::memset(cu_rsrc_.get(), 0, sizeof(xrmCuResource));
         std::strcpy(cu_prop_->kernelName, std::string(realKernelName).c_str());
-        //cu_prop_->devExcl = false;
-        //cu_prop_->requestLoad = 1;
-        //cu_prop_->poolId = 0;
-        err = xrmCuAllocWithLoad(context_, cu_prop_.get(), xclbinPath, cu_rsrc_.get());
+        err = xrmCuAllocLeastUsedWithLoad(context_, cu_prop_.get(), xclbinPath, cu_rsrc_.get());
       }
       if (err) {
+        naive_resource_mgr_cu_idx_--;
         continue; // keep trying other xclbins
       }
     }
@@ -247,7 +238,7 @@ XrmResource::XrmResource(std::string kernelName, std::string xclbin)
     return;
   }
 
-  throw std::runtime_error("Error: could not acquire device handle");
+  throw std::runtime_error("Error: Could not acquire CU");
 }
 
 XrmResource::~XrmResource() { 
