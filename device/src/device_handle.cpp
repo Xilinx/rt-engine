@@ -198,42 +198,6 @@ XrmResource::XrmResource(std::string kernelName, std::string xclbin)
     auto cu_full_name = std::string(cu_prop_->kernelName) + ":" + 
                         std::to_string(cu_rsrc_->deviceId) + ":" +
                         std::to_string(cu_rsrc_->cuId);
-
-    //Construct HBM VS Port connection info from xclbin
-    std::vector<unsigned> hbmc;
-    std::vector<unsigned> hbmw;
-    std::vector<unsigned> hbmio;
-    auto xclbin2 = xrt::xclbin(xclbin);
-    for (auto& kernel : xclbin2.get_kernels()){
-      if (0 != std::string(cu_prop_->kernelName).compare(kernel.get_name())) continue;
-      int idx = 0;
-      for (auto& cu: kernel.get_cus()){
-        if (idx != cu_rsrc_->cuId) continue;
-          int jdx = 0;
-          for (auto& arg: cu.get_args()){
-            if (0 != std::string(arg.get_name()).find("DPU_AXI_")) continue;
-            std::size_t found = std::string(arg.get_name()).find_last_of("_");
-            std::string cwio = std::string(arg.get_name()).substr(found+1);
-
-            if (std::string::npos != std::string(cwio).find("I")){
-              for (const auto& mem : arg.get_mems()) {
-                hbmc.push_back(mem.get_index());
-              }
-            } else if (std::string::npos != std::string(cwio).find("W")) {
-              for (const auto& mem : arg.get_mems()) {
-                hbmw.push_back(mem.get_index());
-              }
-            } else {
-              for (const auto& mem : arg.get_mems()) {
-                hbmio.push_back(mem.get_index());
-              }
-            }
-            jdx++;
-          }
-        idx++;
-      }
-    }
-
     info_.reset(new DeviceInfo{
         .cu_base_addr = cu_rsrc_->baseAddr,
         .ddr_bank = cu_rsrc_->membankId,
@@ -245,9 +209,6 @@ XrmResource::XrmResource(std::string kernelName, std::string xclbin)
         .device_id = nullptr,
         .xdev = nullptr,
         .fingerprint = 0,
-        .hbmc = hbmc,
-        .hbmw = hbmw,
-        .hbmio = hbmio,
     });
 
     // Wait turn to run OCL Commands
