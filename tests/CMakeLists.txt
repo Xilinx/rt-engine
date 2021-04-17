@@ -6,6 +6,7 @@ add_executable(
   ${CMAKE_CURRENT_SOURCE_DIR}/common/XirKeys.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/create_runners/test.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/inference/test.cpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/checker/test.cpp
   )
 
 target_include_directories(
