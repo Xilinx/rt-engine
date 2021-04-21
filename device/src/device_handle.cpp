@@ -170,7 +170,7 @@ XrmResource::XrmResource(std::string kernelName, std::string xclbin)
       auto cuIdx = naive_resource_mgr_cu_idx_.fetch_add(1);
       if (cuIdx > (cu_num-1)) cuIdx =  rand() % cu_num;
       auto realKernelName = find_kernel_name(binstream.get_cu(cuIdx));
-      if (kernelName != realKernelName) {
+      if (realKernelName.find(kernelName) != std::string::npos) {
         std::strcpy(cu_prop_->kernelName, std::string(realKernelName).c_str());
         err = xrmCuAllocLeastUsedWithLoad(context_, cu_prop_.get(), xclbinPath, cu_rsrc_.get());
       }
