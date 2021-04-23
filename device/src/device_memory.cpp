@@ -11,6 +11,10 @@ DeviceBuffer::DeviceBuffer(const DeviceHandle *handle, vart::TensorBuffer *tbuf,
   size_ = tbuf->get_tensor()->get_element_num() * dataSize;
 }
 
+DeviceBuffer::DeviceBuffer(const DeviceHandle *handle, void *data, size_t size, unsigned bank)
+  : handle_(handle), bank_(bank), size_(size), phys_addr_(0), data_(data) {
+}
+
 /*
  * XclDeviceBuffer
  */
@@ -49,6 +53,10 @@ XclDeviceBuffer::XclDeviceBuffer(const XclDeviceHandle *handle, vart::TensorBuff
     mem_, handle->get_device_info().device_id, sizeof(phys_addr_), &phys_addr_);
 }
 
+XclDeviceBuffer::XclDeviceBuffer(const XclDeviceHandle *handle, void *data, size_t size, unsigned bank)
+  : DeviceBuffer(handle, data, size, bank) {
+}
+
 void XclDeviceBuffer::upload() const {
   auto myHandle = dynamic_cast<const XclDeviceHandle*>(handle_);
   cl_event event;
@@ -73,6 +81,18 @@ void XclDeviceBuffer::download() const {
   clWaitForEvents(1, &event);
 }
 
+void XclDeviceBuffer::sync_for_read(uint64_t offset, size_t size) {
+}
+
+void XclDeviceBuffer::sync_for_write(uint64_t offset, size_t size) {
+}
+
+void XclDeviceBuffer::copy_from_host(const void* buf, size_t size, size_t offset) {
+}
+
+void XclDeviceBuffer::copy_to_host(void* buf, size_t size, size_t offset) {
+}
+
 XclDeviceBuffer::~XclDeviceBuffer() {
   clReleaseMemObject(mem_);
 }
@@ -93,6 +113,19 @@ XrtDeviceBuffer::XrtDeviceBuffer(const XrtDeviceHandle *handle, vart::TensorBuff
   phys_addr_ = p.paddr;
 }
 
+XrtDeviceBuffer::XrtDeviceBuffer(const XrtDeviceHandle *handle, void *data, size_t size, unsigned bank)
+  : DeviceBuffer(handle, data, size, bank) {
+  auto myHandle = dynamic_cast<const XrtDeviceHandle*>(handle_);
+  auto devHandle = myHandle->get_context().get_dev_handle();
+  mem_ = xclAllocUserPtrBO(devHandle, data_, size_, bank_);
+  if (mem_ == NULLBO)
+    throw std::bad_alloc();
+
+  xclBOProperties p;
+  xclGetBOProperties(devHandle, mem_, &p);
+  phys_addr_ = p.paddr;
+}
+
 void XrtDeviceBuffer::upload() const {
   auto myHandle = dynamic_cast<const XrtDeviceHandle*>(handle_);
   auto devHandle = myHandle->get_context().get_dev_handle();
@@ -103,6 +136,28 @@ void XrtDeviceBuffer::download() const {
   auto myHandle = dynamic_cast<const XrtDeviceHandle*>(handle_);
   auto devHandle = myHandle->get_context().get_dev_handle();
   xclSyncBO(devHandle, mem_, XCL_BO_SYNC_BO_FROM_DEVICE, size_, 0);
+}
+
+void XrtDeviceBuffer::sync_for_read(uint64_t offset, size_t size) {
+  copy_to_host(data_, size, offset);
+}
+
+void XrtDeviceBuffer::sync_for_write(uint64_t offset, size_t size) {
+  copy_from_host(data_, size, offset);
+}
+
+void XrtDeviceBuffer::copy_from_host(const void* buf, size_t size, size_t offset) {
+  auto myHandle = dynamic_cast<const XrtDeviceHandle*>(handle_);
+  auto devHandle = myHandle->get_context().get_dev_handle();
+  auto ok = xclUnmgdPwrite(devHandle, 0, buf, size, offset);
+  CHECK_EQ(ok, 0);
+}
+
+void XrtDeviceBuffer::copy_to_host(void* buf, size_t size, size_t offset) {
+  auto myHandle = dynamic_cast<const XrtDeviceHandle*>(handle_);
+  auto devHandle = myHandle->get_context().get_dev_handle();
+  auto ok = xclUnmgdPread(devHandle, 0, buf, size, offset);
+  CHECK_EQ(ok, 0);
 }
 
 XrtDeviceBuffer::~XrtDeviceBuffer() {
