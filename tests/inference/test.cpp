@@ -64,3 +64,50 @@ TEST_F(InferenceTest, classify_4_4) {
                       env_["XLNX_SYNSET"], env_["XLNX_GOLD"]);
   EXPECT_TRUE(inference.run() == EXIT_SUCCESS);
 }
+
+TEST_F(InferenceTest, res50_druOn_1cu_st_100img) {
+  unsigned num_queries = 25, num_threads = 1, num_runners = 1;
+  bool verbose = false;
+  Inference inference(env_["XLNX_XMODEL"], num_queries, num_threads, num_runners, env_["XLNX_IMAGE_DIR"], verbose,
+                      env_["XLNX_SYNSET"], env_["XLNX_GOLD"]);
+  EXPECT_TRUE(inference.run() == EXIT_SUCCESS);
+}
+
+TEST_F(InferenceTest, res50_druOn_1cu_st_1000img) {
+  unsigned num_queries = 250, num_threads = 1, num_runners = 1;
+  bool verbose = false;
+  Inference inference(env_["XLNX_XMODEL"], num_queries, num_threads, num_runners, env_["XLNX_IMAGE_DIR"], verbose,
+                      env_["XLNX_SYNSET"], env_["XLNX_GOLD"]);
+  EXPECT_TRUE(inference.run() == EXIT_SUCCESS);
+}
+
+TEST_F(InferenceTest, res50_druOn_1cu_st_10000img) {
+  unsigned num_queries = 2500, num_threads = 1, num_runners = 1;
+  bool verbose = false;
+  Inference inference(env_["XLNX_XMODEL"], num_queries, num_threads, num_runners, env_["XLNX_IMAGE_DIR"], verbose,
+                      env_["XLNX_SYNSET"], env_["XLNX_GOLD"]);
+  EXPECT_TRUE(inference.run() == EXIT_SUCCESS);
+}
+
+TEST_F(InferenceTest, res50_druOn_2cu_st_100img) {
+  unsigned num_queries = 25, num_threads = 1, num_runners = 2;
+  bool verbose = false;
+  Inference inference(env_["XLNX_XMODEL"], num_queries, num_threads, num_runners, env_["XLNX_IMAGE_DIR"], verbose,
+                      env_["XLNX_SYNSET"], env_["XLNX_GOLD"]);
+  EXPECT_TRUE(inference.run() == EXIT_SUCCESS);
+}
+TEST_F(InferenceTest, res50_druOn_2cu_st_1000img) {
+  unsigned num_queries = 250, num_threads = 1, num_runners = 2;
+  bool verbose = false;
+  Inference inference(env_["XLNX_XMODEL"], num_queries, num_threads, num_runners, env_["XLNX_IMAGE_DIR"], verbose,
+                      env_["XLNX_SYNSET"], env_["XLNX_GOLD"]);
+  EXPECT_TRUE(inference.run() == EXIT_SUCCESS);
+}
+TEST_F(InferenceTest, res50_druOn_2cu_st_10000img) {
+  unsigned num_queries = 2500, num_threads = 1, num_runners = 2;
+  bool verbose = false;
+  Inference inference(env_["XLNX_XMODEL"], num_queries, num_threads, num_runners, env_["XLNX_IMAGE_DIR"], verbose,
+                      env_["XLNX_SYNSET"], env_["XLNX_GOLD"]);
+  EXPECT_TRUE(inference.run() == EXIT_SUCCESS);
+}
+
