@@ -35,6 +35,8 @@ std::shared_ptr<DpuController> DpuControllerFactory::get(std::string kernel, T s
     throw std::runtime_error("Error: no DpuController found for " + kernel);
 }
 
+//template std::shared_ptr<DpuController>
+//DpuControllerFactory::get<const xir::Subgraph*>(std::string kernel, const xir::Subgraph* subgraph);
 template std::shared_ptr<DpuController>
 DpuControllerFactory::get<const xir::Subgraph*>(std::string kernel, const xir::Subgraph* subgraph);
 template std::shared_ptr<DpuController> 

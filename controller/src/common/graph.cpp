@@ -142,6 +142,36 @@ static const xir::Tensor* find_tensor(const xir::Tensor* in_tensor, const xir::S
   return out;
 
 }
+void DpuXmodel::init_vitis_tensors(int batch_size, size_t device_index) {
+  vitis_input_tensors_.clear();
+  vitis_output_tensors_.clear();
+  for (auto tensor : input_tensors_) {
+      auto dims = tensor->get_shape();
+      dims[0] = batch_size*dims[0];
+      auto vitis_tensor = xir::Tensor::create(tensor->get_name(), dims,
+                                                  tensor->get_data_type()).release();
+      auto attrs = tensor->get_attrs();
+       if (!attrs->has_attr("__device_id__")) {
+          attrs->set_attr<size_t>("__device_id__", device_index);
+        }
+
+      vitis_tensor->set_attrs(std::move(attrs));
+      vitis_input_tensors_.emplace_back(vitis_tensor);
+  }
+  for (auto tensor : output_tensors_) {
+      auto dims = tensor->get_shape();
+      dims[0] = batch_size*dims[0];
+      auto vitis_tensor = xir::Tensor::create(tensor->get_name(), dims,
+                                                  tensor->get_data_type()).release();
+      auto attrs = tensor->get_attrs();
+      //auto attrs = tensor->get_attrs();
+       if (!attrs->has_attr("__device_id__")) {
+          attrs->set_attr<size_t>("__device_id__", device_index);
+        }
+      vitis_tensor->set_attrs(std::move(attrs));
+      vitis_output_tensors_.emplace_back(vitis_tensor);
+  }
+}
 void DpuXmodel::init_graph(const xir::Subgraph* subgraph) {
   //auto handle = contexts_[0]->get_dev_handle();
   if(ENV_PARAM(XLNX_ENABLE_FINGERPRINT_CHECK)) {
@@ -248,38 +278,48 @@ void DpuXmodel::init_graph(const xir::Subgraph* subgraph) {
   // Get input offset
   auto input_tensors = subgraph_->get_input_tensors();
   auto output_tensors = subgraph_->get_output_tensors();
+  xdpu_total_in_size=0;
+  xdpu_total_out_size=0;
   for (auto &in_tensor : input_tensors) {
     auto out = find_tensor(in_tensor,subgraph_,true);
     auto ddr_addr = out->get_attr<std::int32_t>("ddr_addr");
     xdpu_io_input_offset.emplace_back(ddr_addr);
-    input_scales_.push_back(pow(2,in_tensor->get_attr<std::int32_t>("fix_point")));
+    //input_scales_.emplace(in_tensor->get_name(),pow(2,in_tensor->get_attr<std::int32_t>("fix_point")));
+    input_scales_.emplace_back(pow(2,in_tensor->get_attr<std::int32_t>("fix_point")));
+    auto dims = in_tensor->get_shape();
+    //dims[0] =4;
     input_dims.emplace_back(in_tensor->get_shape());
     layer.inputs.emplace_back(address_info(ddr_addr, 
       in_tensor->get_data_size(), layer_info::name_map(out->get_name()),out->get_attr<std::int32_t>("reg_id"))); 
     auto attrs = out->get_attrs(); 
-    xir::Tensor *tensor = xir::Tensor::create(in_tensor->get_name(), in_tensor->get_shape(), in_tensor->get_data_type()).release();
+    xir::Tensor *tensor = xir::Tensor::create(in_tensor->get_name(), dims, in_tensor->get_data_type()).release();
     tensor->set_attrs(std::move(attrs));
     input_regid = out->get_attr<std::int32_t>("reg_id");
     input_tensors_.emplace_back(tensor);
+    //xdpu_total_in_size += tensor->get_element_num(); 
 
   }
-  xdpu_total_in_size = xdpu_total_reg_map.find(int(input_regid))->second; 
+  xdpu_total_in_size = xdpu_total_reg_map.find(input_regid)->second; 
 
   // Get output offset
   for(auto &out_tensor : output_tensors) {
     auto out = find_tensor(out_tensor,subgraph_,false);
     auto ddr_addr = out->get_attr<std::int32_t>("ddr_addr");
     xdpu_io_output_offset.emplace_back(ddr_addr);
-    output_scales_.push_back(pow(2,(-1)*out_tensor->get_attr<std::int32_t>("fix_point")));
+    //output_scales_.emplace(out_tensor->get_name(),pow(2,(-1)*out_tensor->get_attr<std::int32_t>("fix_point")));
+    output_scales_.emplace_back(pow(2,(-1)*out_tensor->get_attr<std::int32_t>("fix_point")));
     output_dims.emplace_back(out->get_shape());
+    auto dims = out_tensor->get_shape();
+    //dims[0] =4;
     layer.outputs.emplace_back(std::make_tuple(ddr_addr, 
         out_tensor->get_data_size(), layer_info::name_map(out->get_name()),out->get_attr<std::int32_t>("reg_id")));
     auto attrs = out->get_attrs();
-    xir::Tensor *tensor = xir::Tensor::create(out_tensor->get_name(), out_tensor->get_shape(), out_tensor->get_data_type()).release();
+    xir::Tensor *tensor = xir::Tensor::create(out_tensor->get_name(), dims, out_tensor->get_data_type()).release();
     tensor->set_attrs(std::move(attrs));
     //auto tensor = out;
     output_regid = out->get_attr<std::int32_t>("reg_id");
     output_tensors_.emplace_back(tensor);
+    //xdpu_total_out_size += tensor->get_element_num(); 
 
   }
   xdpu_total_out_size = xdpu_total_reg_map.find(output_regid)->second; 

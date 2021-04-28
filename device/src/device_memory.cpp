@@ -139,24 +139,24 @@ void XrtDeviceBuffer::download() const {
 }
 
 void XrtDeviceBuffer::sync_for_read(uint64_t offset, size_t size) {
-  copy_to_host(data_, size, offset);
+  copy_to_host(data_+offset, size, offset);
 }
 
 void XrtDeviceBuffer::sync_for_write(uint64_t offset, size_t size) {
-  copy_from_host(data_, size, offset);
+  copy_from_host(data_+offset, size, offset);
 }
 
 void XrtDeviceBuffer::copy_from_host(const void* buf, size_t size, size_t offset) {
   auto myHandle = dynamic_cast<const XrtDeviceHandle*>(handle_);
   auto devHandle = myHandle->get_context().get_dev_handle();
-  auto ok = xclUnmgdPwrite(devHandle, 0, buf, size, offset);
+  auto ok = xclUnmgdPwrite(devHandle, 0, buf, size, get_phys_addr() + offset);
   CHECK_EQ(ok, 0);
 }
 
 void XrtDeviceBuffer::copy_to_host(void* buf, size_t size, size_t offset) {
   auto myHandle = dynamic_cast<const XrtDeviceHandle*>(handle_);
   auto devHandle = myHandle->get_context().get_dev_handle();
-  auto ok = xclUnmgdPread(devHandle, 0, buf, size, offset);
+  auto ok = xclUnmgdPread(devHandle, 0, buf, size, get_phys_addr() + offset);
   CHECK_EQ(ok, 0);
 }
 

@@ -19,7 +19,6 @@
 #include "vitis/ai/target_factory.hpp"
 #include "vitis/ai/env_config.hpp"
 #include "tensor_buffer_imp_host_phy.hpp"
-
 DEF_ENV_PARAM(DEBUG_DPU_CONTROLLER, "0")
 
 template <class Dhandle, class DbufIn, class DbufOut>
@@ -56,7 +55,9 @@ XclDpuController<Dhandle, DbufIn, DbufOut>::XclDpuController(std::string meta)
 template <class Dhandle, class DbufIn, class DbufOut>
 XclDpuController<Dhandle, DbufIn, DbufOut>::XclDpuController(const xir::Subgraph *subgraph) 
 : DpuController(subgraph) {
-
+  //if (attrs == nullptr) {
+  //  attrs = default_attrs_.get();
+  //} 
   std::string kernelName;
   if (subgraph->has_attr("dpu_fingerprint")) {
     const uint64_t fingerprint = subgraph->get_attr<std::uint64_t>("dpu_fingerprint");
@@ -74,7 +75,9 @@ XclDpuController<Dhandle, DbufIn, DbufOut>::XclDpuController(const xir::Subgraph
     << "loading xclbin: "  //
     << xclbinPath      //
     ;
+
   handle_.reset(new Dhandle(kernelName, xclbinPath));
+  
   LOG_IF(INFO, ENV_PARAM(DEBUG_DPU_CONTROLLER))
     << "done loading xclbin"  //
     ;
@@ -246,25 +249,31 @@ XclDpuController<Dhandle, DbufIn, DbufOut>::create_tensor_buffers(
       }
       tbuf->set_device_buffer(std::move(dbuf));
       dbufs.emplace_back(dbuf.get());
+      //dbufs_.emplace_back(std::move(dbuf));
     } else {
       auto dims = tensors[ti]->get_shape();
       auto batch = dims[0];
       CHECK_EQ(ddrBanks.size(), batch);
-      for (size_t dbuf_idx = 0; dbuf_idx < ddrBanks.size(); dbuf_idx++) {
+      for (size_t dbuf_idx = 0; dbuf_idx < dims[0]; dbuf_idx++) {
+        //void *data;
+        //if (posix_memalign(&data, getpagesize(), size))
+        //  throw std::bad_alloc();
+        //std::memset(data, 0, size);
         int ddrBank = ddrBanks[dbuf_idx];
         if (ddrBank < 0) ddrBank = handle_->get_device_info().ddr_bank;
         std::unique_ptr<DeviceBuffer> dbuf;
         try {
           if (isInput)
-            dbuf.reset(new DbufIn(handle_.get(), data, size / batch, ddrBank));
+            dbuf.reset(new DbufIn(handle_.get(), data+size/batch*dbuf_idx, size / batch, ddrBank));
           else
-            dbuf.reset(new DbufOut(handle_.get(), data, size / batch, ddrBank));
+            dbuf.reset(new DbufOut(handle_.get(), data+size/batch*dbuf_idx, size / batch, ddrBank));
         } catch(...) {
           tbufs.clear();
           return tbufs;
         }
         tbuf->set_device_buffer(std::move(dbuf));
         dbufs.emplace_back(dbuf.get());
+        //dbufs_.emplace_back(std::move(dbuf));
       }
     }
 
@@ -306,7 +315,7 @@ SampleDpuController::SampleDpuController(std::string meta)
 }
 
 SampleDpuController::SampleDpuController(const xir::Subgraph *subgraph) 
-: XclDpuController<XclDeviceHandle, XclDeviceBuffer, XclDeviceBuffer>(subgraph) {
+: XclDpuController<XclDeviceHandle, XclDeviceBuffer, XclDeviceBuffer>(subgraph)  {
 }
 
 
@@ -334,6 +343,8 @@ void SampleDpuController::execute(XclDeviceBuffer *in, XclDeviceBuffer *out) con
  */
 template XclDpuController<XclDeviceHandle, XclDeviceBuffer, XclDeviceBuffer>::XclDpuController(std::string meta);
 template XclDpuController<XrtDeviceHandle, XrtDeviceBuffer, XrtDeviceBuffer>::XclDpuController(std::string meta);
+//template XclDpuController<XclDeviceHandle, XclDeviceBuffer, XclDeviceBuffer>::XclDpuController(const xir::Subgraph *subgraph);
+//template XclDpuController<XrtDeviceHandle, XrtDeviceBuffer, XrtDeviceBuffer>::XclDpuController(const xir::Subgraph *subgraph);
 template XclDpuController<XclDeviceHandle, XclDeviceBuffer, XclDeviceBuffer>::XclDpuController(const xir::Subgraph *subgraph);
 template XclDpuController<XrtDeviceHandle, XrtDeviceBuffer, XrtDeviceBuffer>::XclDpuController(const xir::Subgraph *subgraph);
 template DeviceBuffer* XclDpuController<XclDeviceHandle, XclDeviceBuffer, XclDeviceBuffer>::get_device_buffer(vart::TensorBuffer *tb);

@@ -19,7 +19,7 @@
 #include <sstream>
 #include <xir/tensor/tensor.hpp>
 
-#include "vitis/ai/dim_calc.hpp"
+//#include "vitis/ai/dim_calc.hpp"
 #include "vitis/ai/env_config.hpp"
 
 DEF_ENV_PARAM(DEBUG_TENSOR_BUFFER_ALLOCATOR, "0");
@@ -27,7 +27,8 @@ namespace vart {
 namespace rt_engine {
 
 TensorBufferExtImpHostPhy::TensorBufferExtImpHostPhy(void* data, const xir::Tensor* tensor)
-    : TensorBuffer{tensor}, data_{data}, location_{location_t::HOST_PHY} {
+    : TensorBuffer{tensor},tensor_{tensor}, data_{data}, location_{location_t::HOST_PHY} {
+
   LOG_IF(INFO, ENV_PARAM(DEBUG_TENSOR_BUFFER_ALLOCATOR))
       << "TensorBufferExtImpHostPhy "
       << "@" << (void*)this << " created";
@@ -57,15 +58,19 @@ std::pair<uint64_t, size_t> TensorBufferExtImpHostPhy::data(
               tensor_->get_element_num() * size};
     }
     auto dims = tensor_->get_shape();
+    auto idx_real = idx;
+    //idx_real[0] = 0;
     auto offset = 0;
     for (std::size_t k = 0; k < tensor_->get_shape().size(); k++) {
       auto stride = 1;
       for (std::size_t m = k + 1; m < tensor_->get_shape().size(); m++) {
         stride *= dims[m];
       }
-      offset += idx[k] * stride;
+      offset += idx_real[k] * stride;
     }
     auto elem_num = tensor_->get_element_num();
+    //LOG_IF(INFO, ENV_PARAM(DEBUG_TENSOR_BUFFER_ALLOCATOR))
+    //<<data_ <<  " offset " << offset << " elem_num " << elem_num << " size " << size; 
     return {reinterpret_cast<uint64_t>(data_) + offset * size,
             (elem_num - offset) * size};
 }
@@ -73,8 +78,9 @@ std::pair<uint64_t, size_t> TensorBufferExtImpHostPhy::data(
 std::pair<uint64_t, size_t> TensorBufferExtImpHostPhy::data_phy(
     const std::vector<std::int32_t> idx) {
   std::pair<uint64_t, size_t> vir_data = data(idx);
-  uint64_t offset = std::get<0>(vir_data) - reinterpret_cast<uint64_t>(data_);
-  uint64_t phy_addr = dbufs_[0]->get_phys_addr();
+  //uint64_t offset = std::get<0>(vir_data) - reinterpret_cast<uint64_t>(data_);
+  uint64_t offset=0;
+  uint64_t phy_addr = dbufs_[idx[0]]->get_phys_addr();
   return {phy_addr + offset, std::get<1>(vir_data)};
 }
 
@@ -94,23 +100,24 @@ std::vector<std::tuple<int, uint64_t, int>> TensorBufferExtImpHostPhy::host_to_d
   } else {
     size_t batch_len = get_tensor()->get_data_size() / batch;
     CHECK_EQ(dbufs_.size(), batch);
-    size_t total_offset = (batch_len * batch_idx) + offset;
-    CHECK_LE(total_offset + size, get_tensor()->get_data_size());
+    //size_t total_offset = (batch_len * batch_idx) + offset;
+    //CHECK_LE(total_offset + size, get_tensor()->get_data_size());
 
     for (int i = 0; i < batch; i++) {
-      size_t batch_start = batch_len * i;
-      size_t batch_end = batch_len * (i + 1);
-      if (total_offset < batch_end) {
-        if (total_offset + size < batch_end) {
-          dev_buffers.push_back(std::make_tuple(i, total_offset - batch_start, size));
-          break;
-        } else {
-          size_t range_size = batch_end - total_offset;
-          dev_buffers.push_back(std::make_tuple(i, total_offset - batch_start, range_size));
-          total_offset = batch_end;
-          size -= range_size;
-        }
-      }
+          dev_buffers.push_back(std::make_tuple(i, offset, size));
+      //size_t batch_start = batch_len * i;
+      //size_t batch_end = batch_len * (i + 1);
+      //if (total_offset < batch_end) {
+      //  if (total_offset + size < batch_end) {
+      //    dev_buffers.push_back(std::make_tuple(i, total_offset - batch_start, size));
+      //    break;
+      //  } else {
+      //    size_t range_size = batch_end - total_offset;
+      //    dev_buffers.push_back(std::make_tuple(i, total_offset - batch_start, range_size));
+      //    total_offset = batch_end;
+      //    size -= range_size;
+      //  }
+      //}
     }
   }
 
@@ -149,17 +156,20 @@ void TensorBufferExtImpHostPhy::copy_to_host(size_t batch_idx, void* buf,
 }
 
 void TensorBufferExtImpHostPhy::set_device_buffer(std::unique_ptr<DeviceBuffer> dbuf) {
+//void TensorBufferExtImpHostPhy::set_device_buffer(DeviceBuffer* dbuf) {
   auto dims = get_tensor()->get_shape();
   auto batch = dims[0];
-  CHECK_EQ(dbufs_.size(), batch);
+  //CHECK_EQ(dbufs_.size(), batch);
 
-  if (dbuf->get_size() == dbufs_.size()) {
-    CHECK_EQ(dbufs_.size(), 0);
-  } else {
-    CHECK_EQ(dbuf->get_size(), get_tensor()->get_data_size() / batch);
-  }
+  //if (dbuf->get_size() == dbufs_.size()) {
+  //  CHECK_EQ(dbufs_.size(), 0);
+  //} else {
+  //  CHECK_EQ(dbuf->get_size(), get_tensor()->get_data_size() / batch);
+  //}
 
+  //dbufs_.emplace_back(std::move(dbuf));
   dbufs_.emplace_back(std::move(dbuf));
+
 }
 
 }  // namespace rt_engine

@@ -18,11 +18,12 @@ class DpuXmodel  {
     return xdpu_io_output_offset;
   }
   std::vector<const xir::Tensor*> get_input_tensors() {
-    return input_tensors_;
+    return vitis_input_tensors_;
   }
   std::vector<const xir::Tensor*> get_output_tensors() {
-    return output_tensors_;
+    return vitis_output_tensors_;
   }
+  void init_vitis_tensors(int batch_size, size_t device_index);
   /**
    * layer information
    * @param code_addr: address for instruction
@@ -76,7 +77,7 @@ class DpuXmodel  {
   int32_t get_total_insize() {
     return xdpu_total_in_size;
   }
-  uint8_t get_input_regid() {
+  int32_t get_input_regid() {
     return input_regid;
   }
   uint8_t get_output_regid() {
@@ -94,6 +95,8 @@ class DpuXmodel  {
   std::vector<std::pair<int32_t, int32_t>> get_xdpu_workspace_reg_map() {
     return xdpu_workspace_reg_map;
   }
+  int32_t get_total_out_size() { return xdpu_total_out_size;}
+  int32_t get_total_in_size() { return xdpu_total_in_size;}
   std::vector<layer_info> dbg_layers_;
   bool dump_mode_;
   std::string dump_folder_;
@@ -104,6 +107,8 @@ class DpuXmodel  {
   int32_t xdpu_total_in_size;
   uint8_t input_regid;
   uint8_t output_regid;
+  //std::unordered_map<string,float> input_scales_;
+  //std::unordered_map<string,float> output_scales_;
   std::vector<float> input_scales_;
   std::vector<float> output_scales_;
   uint64_t fingerprint;
@@ -119,6 +124,8 @@ class DpuXmodel  {
   std::vector<std::vector<std::int32_t>> output_dims;
   std::vector<const xir::Tensor*> input_tensors_;
   std::vector<const xir::Tensor*> output_tensors_;
+  std::vector<const xir::Tensor*> vitis_input_tensors_;
+  std::vector<const xir::Tensor*> vitis_output_tensors_;
   std::vector<std::int32_t> xdpu_io_input_offset;
   std::vector<std::int32_t> xdpu_io_output_offset;
   std::vector<std::pair<int32_t, int32_t>> xdpu_workspace_reg_map;
