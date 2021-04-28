@@ -632,7 +632,6 @@ void Dpuv3Int8Controller::run(const std::vector<vart::TensorBuffer*> &inputs,
   if (it == stdbuf2hwbuf_.end())
   {
     create_tb_outside=true;
-    std::cout << "WARNING: Running in non-performance mode." << std::endl;
   }
 
   // If the user has provided us TB
