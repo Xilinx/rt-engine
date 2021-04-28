@@ -57,11 +57,11 @@ TEST_F(InferenceTest, classify) {
 
   Inference inference (
     env_["XLNX_XMODEL"], 
-    env_["XLNX_NUM_QUERIES"],
-    env_["XLNX_NUM_THREADS"],
-    env_["XLNX_NUM_RUNNERS"],
+    static_cast<unsigned int>(std::stoul(env_["XLNX_NUM_QUERIES"])),
+    static_cast<unsigned int>(std::stoul(env_["XLNX_NUM_THREADS"])),
+    static_cast<unsigned int>(std::stoul(env_["XLNX_NUM_RUNNERS"])),
     env_["XLNX_IMAGE_DIR"],
-    env_["XLNX_VERBOSE"],
+    env_["XLNX_VERBOSE"] == "TRUE",
     env_["XLNX_SYNSET"],
     env_["XLNX_GOLD"]
   );
