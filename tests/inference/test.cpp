@@ -54,8 +54,7 @@ protected:
 
 
 TEST_F(InferenceTest, classify) {
-  unsigned num_queries = 1, num_threads = 1, num_runners = 1;
-  bool verbose = true;
+
   Inference inference (
     env_["XLNX_XMODEL"], 
     env_["XLNX_NUM_QUERIES"],
