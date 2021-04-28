@@ -92,14 +92,6 @@ DeviceResource::~DeviceResource() {
     naive_resource_mgr_cu_idx_--;
 }
 
-static uint64_t getDDRBankFromButlerBitmask(unsigned bitmask) {
-  const int numBits = sizeof(bitmask) * CHAR_BIT;
-  for (int i = 0; i < numBits; i++)
-    if (bitmask & (1 << i))
-      return i;
-
-  throw std::runtime_error("Error: unknown ddr_bank config");
-}
 static const std::string find_kernel_name(std::string name) {
   std::string ret;
   auto pos = name.find_first_of(':');
