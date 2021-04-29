@@ -456,10 +456,13 @@ std::vector<vart::TensorBuffer*>  DpuCloudController::create_tensor_buffers_hbm(
     if ((int)cnt != batch_size) {
       continue;
     }
-    cnt = 0; 
+    cnt = 0;
+
     buf = create_tensor_buffers(tensors,isInput,hbm_use);
     if (!buf.empty()) {
       break;
+    } else {
+      hbm_use.clear();
     }
     if (idx == (hbm.size()-1)) {
       throw std::bad_alloc();
