@@ -146,34 +146,59 @@ XrmResource::XrmResource(std::string kernelName, std::string xclbin)
   // get available xclbins
   auto xclbins = get_xclbins_in_dir(xclbin);
 
+  std::string deviceString;
+  std::vector<xrmCuResource*> xrmCuResourceUnWanted;
+  if (std::getenv("XLNX_ENABLE_DEVICES")){
+    std::string str(std::getenv("XLNX_ENABLE_DEVICES"));
+    deviceString = ',' + str + ',';
+  }
+
   for (unsigned i = 0; i < xclbins.size(); i++) 
   {
     // try to load xclbin
     char xclbinPath[XRM_MAX_PATH_NAME_LEN];
     std::strcpy(xclbinPath, xclbins[i].c_str()); // XRM does not take const char* :(
-    int err
-      = xrmCuAllocLeastUsedWithLoad(context_, cu_prop_.get(), xclbinPath, cu_rsrc_.get()); 
-    if (err) {
-      naive_resource_mgr_on_ = true;
-      std::string fnm = std::string(xclbinPath);
-      xir::XrtBinStream binstream(fnm);
-      // Try to acquire a new CU from xclbin
-      auto cu_num = binstream.get_num_of_cu();
-      auto cuIdx = naive_resource_mgr_cu_idx_.fetch_add(1);
-      if (cuIdx > (cu_num-1)) cuIdx =  rand() % cu_num;
-      auto realKernelName = find_kernel_name(binstream.get_cu(cuIdx));
-      if (realKernelName.find(kernelName) != std::string::npos) {
-        std::strcpy(cu_prop_->kernelName, std::string(realKernelName).c_str());
-        err = xrmCuAllocLeastUsedWithLoad(context_, cu_prop_.get(), xclbinPath, cu_rsrc_.get());
-      }
+    int err;
+
+    for (int idx = 0; true; idx++){
+      err = xrmCuAllocLeastUsedWithLoad(context_, cu_prop_.get(), xclbinPath, cu_rsrc_.get()); 
       if (err) {
-        naive_resource_mgr_cu_idx_--;
-        continue; // keep trying other xclbins
+        naive_resource_mgr_on_ = true;
+        std::string fnm = std::string(xclbinPath);
+        xir::XrtBinStream binstream(fnm);
+        // Try to acquire a new CU from xclbin
+        auto cu_num = binstream.get_num_of_cu();
+        auto cuIdx = naive_resource_mgr_cu_idx_.fetch_add(1);
+        if (cuIdx > (cu_num-1)) cuIdx =  rand() % cu_num;
+        auto realKernelName = find_kernel_name(binstream.get_cu(cuIdx));
+        if (realKernelName.find(kernelName) != std::string::npos) {
+          std::strcpy(cu_prop_->kernelName, std::string(realKernelName).c_str());
+          err = xrmCuAllocLeastUsedWithLoad(context_, cu_prop_.get(), xclbinPath, cu_rsrc_.get());
+        }
+      }
+      if (0==err){
+        if (!deviceString.empty() && std::string::npos == deviceString.find(','+std::to_string(cu_rsrc_->deviceId)+',')){
+          xrmCuResource *cu_rsrc = new xrmCuResource();;
+          std::memcpy(cu_rsrc, cu_rsrc_.get(), sizeof(xrmCuResource));
+          xrmCuResourceUnWanted.emplace_back(cu_rsrc);
+          continue;
+        }else {
+          break;
+        }
       }
     }
+    if (err) {
+      naive_resource_mgr_cu_idx_--;
+      continue; // keep trying other xclbins
+    }
+
     LOG_IF(INFO, ENV_PARAM(DEBUG_DEVICE_HANDLE))
       << "Device acuqired : "  //
       << cu_rsrc_->xclbinFileName      //
+      << ", deviceId : "  //
+      << cu_rsrc_->deviceId      //
+      << ", cuId : "  //
+      << cu_rsrc_->cuId      //
       ;
 
     //std::cout << "Device acquired " << cu_rsrc_->xclbinFileName << std::endl;
@@ -226,6 +251,11 @@ XrmResource::XrmResource(std::string kernelName, std::string xclbin)
     info_->xdev = xclGetXrtDevice(info_->device_id, &err);
 	  if (err)
 		  throw(std::runtime_error("Error: XrmResource failed to get xdev"));
+
+    for ( auto item: xrmCuResourceUnWanted){
+      xrmCuRelease(context_, item);
+      delete(item);
+    }
 
     return;
   }
