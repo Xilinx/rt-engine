@@ -44,6 +44,14 @@ find_library(JSONC_LIBRARIES NAMES json-c REQUIRED)
 #message (${JSONC_INCLUDE_DIRS})
 #message (${JSONC_LIBRARIES})
 
+if(TARGET jsoncpp_lib)
+  set(JSONCPP_LIBRARY_TARGET jsoncpp_lib)
+elseif(TARGET jsoncpp_static)
+  set(JSONCPP_LIBRARY_TARGET jsoncpp_static)
+else()
+  message("Can't find jsoncpp library target")
+endif()
+
 file(
   GLOB_RECURSE
   ENGINE_SRCS
@@ -120,7 +128,7 @@ target_link_libraries(
   #${XRT_OPENCL_LIBRARIES}
   #${XRT_CORE_LIBRARIES}
   glog::glog
-  jsoncpp_static
+  ${JSONCPP_LIBRARY_TARGET}
   ${JSONC_LIBRARIES}
   )
 set_target_properties(
