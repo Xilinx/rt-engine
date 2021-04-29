@@ -120,7 +120,7 @@ target_link_libraries(
   #${XRT_OPENCL_LIBRARIES}
   #${XRT_CORE_LIBRARIES}
   glog::glog
-  jsoncpp_lib
+  jsoncpp_static
   ${JSONC_LIBRARIES}
   )
 set_target_properties(
