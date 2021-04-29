@@ -33,7 +33,7 @@ void Dpuv3Int8Controller::initializeTensors()
       inHwDims = { int32_t(xmodel_->getInW()*xmodel_->getInH()*BATCH_SIZE*ceil((float)xmodel_->getInCh()/16)*16)};
     const std::vector<std::int32_t> outHwDims = { BATCH_SIZE, 1, 1, int32_t(xmodel_->getOutDdrSize())};
    
-    xir::Tensor *in_t = xir::Tensor::create("input", indims, xir::DataType{xir::DataType::XINT, 8}).release();
+    xir::Tensor *in_t = xir::Tensor::create(xmodel_->getInTensorsNames()[0], indims, xir::DataType{xir::DataType::XINT, 8}).release();
     xir::Tensor *in_hw = xir::Tensor::create("inputHw", inHwDims, xir::DataType{xir::DataType::XINT, 8}).release();
     xir::Tensor *op_hw = xir::Tensor::create("outputHw", outHwDims, xir::DataType{xir::DataType::XINT, 8}).release();
     
@@ -45,7 +45,7 @@ void Dpuv3Int8Controller::initializeTensors()
     for(uint32_t k=0; k<xmodel_->getOutputNum(); k++)
     {
       std::vector<std::int32_t> outputdims = { BATCH_SIZE, xmodel_->getOutTensorsDims()[k][0], xmodel_->getOutTensorsDims()[k][1], xmodel_->getOutTensorsDims()[k][2]};
-      xir::Tensor *outputOp = xir::Tensor::create("output"+std::to_string(k), outputdims, xir::DataType{xir::DataType::XINT, 8}).release();
+      xir::Tensor *outputOp = xir::Tensor::create(xmodel_->getOutTensorsNames()[k], outputdims, xir::DataType{xir::DataType::XINT, 8}).release();
       std::unique_ptr<xir::Tensor> outtensor;
       outtensor.reset(outputOp);
       outtensor->set_attr<std::int32_t>("fix_point", xmodel_->get_output_fix_point_values()[k]);

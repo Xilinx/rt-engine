@@ -82,7 +82,7 @@ int DpuRunner::wait(int jobid, int timeout) {
 ./cmake.sh --clean --build-dir=$PWD/cmake-build --install-prefix=$CONDA_PREFIX --conda --cmake-options="-DXRM_DIR=/opt/xilinx/xrm/share/cmake" --type=release
 
 # Link from and install to system
-./cmake.sh --clean --build-dir=$PWD/build
+./cmake.sh --clean --build-dir=$PWD/build --type=release
 ```
 
 ### Run Test Example
@@ -103,10 +103,10 @@ conda create -n rt-engine python=3.6 cmake opencv protobuf libprotobuf-static py
 
 For rt-engine Development (You want to use prebuilt conda packages for: unilog/targetfactory/xir/vart/xip/xrm/xrt):  
 ```
-conda create -n rt-engine python=3.6 cmake vart -c defaults -c conda-forge/label/gcc7 -c http://web/~bryanloz
+conda create -n rt-engine python=3.6 cmake vart -c defaults -c conda-forge/label/gcc7 -c http://artifactory/artifactory/vitis-ai
 ```
 
 For rt-engine Testing (You want everything from prebuilt conda packages)
 ```
-conda create -n rt-engine python=3.6 rt-engine -c defaults -c conda-forge/label/gcc7 -c http://web/~bryanloz
+conda create -n rt-engine python=3.6 rt-engine -c defaults -c conda-forge/label/gcc7 -c http://artifactory/artifactory/vitis-ai
 ```
