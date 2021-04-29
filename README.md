@@ -82,7 +82,7 @@ int DpuRunner::wait(int jobid, int timeout) {
 ./cmake.sh --clean --build-dir=$PWD/cmake-build --install-prefix=$CONDA_PREFIX --conda --cmake-options="-DXRM_DIR=/opt/xilinx/xrm/share/cmake" --type=release
 
 # Link from and install to system
-./cmake.sh --clean --build-dir=$PWD/build
+./cmake.sh --clean --build-dir=$PWD/build --type=release
 ```
 
 ### Run Test Example
