@@ -51,8 +51,8 @@ std::pair<uint64_t, size_t> TensorBufferExtImpView::data_x(
   std::vector<int32_t> idx;//= std::vector<int32_t>(idx_orig);
   auto dims_orig = get_tensor()->get_shape();
   if (idx_orig.size() == 0) {
-    for (int idx=0;idx<dims_orig.size();idx++)
-      dims_orig[idx] = 0;
+    for (size_t i = 0; i < dims_orig.size(); i++)
+      dims_orig[i] = 0;
     idx = std::vector<int32_t>(dims_orig);
   } else {
     idx = std::vector<int32_t>(idx_orig);

@@ -360,7 +360,7 @@ void DpuV3meController::run(const std::vector<vart::TensorBuffer*> &inputs,
   //const auto inSize = get_input_tensors()[0]->get_element_num();
   __TIC__(INPUT_H2D)
   if (!tensorbuffer_phy) {
-    for (int i=0; i < inputBs; i++)
+    for (unsigned i=0; i < inputBs; i++)
     {
       // instead of uploading all {output, input, intermediate},
       // just upload input region
@@ -604,7 +604,6 @@ auto trigger_dpu_func = [&](){
     // dump first layer's inputs
     if(dump_mode_ && (dbg_layers.size() > 0)) {
       auto& inputs = dbg_layers[0].inputs;
-      int tensor_idx = 0;
       for(auto& input: inputs) {
         auto offset = std::get<0>(input);
         auto size = std::get<1>(input);

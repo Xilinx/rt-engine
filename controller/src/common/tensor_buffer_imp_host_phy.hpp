@@ -21,7 +21,7 @@
 
 namespace vart {
 namespace rt_engine {
-class TensorBufferExtImpHostPhy : public  vart::TensorBuffer {
+class TensorBufferExtImpHostPhy : public vart::TensorBuffer {
  public:
   explicit TensorBufferExtImpHostPhy(void* data, const xir::Tensor* tensor);
   virtual ~TensorBufferExtImpHostPhy();
@@ -47,7 +47,7 @@ class TensorBufferExtImpHostPhy : public  vart::TensorBuffer {
  private:
   void *data_;
   const location_t location_;
-  xir::Tensor* tensor_;
+  const xir::Tensor* tensor_;
   std::vector<std::unique_ptr<DeviceBuffer>> dbufs_;
 
  private:

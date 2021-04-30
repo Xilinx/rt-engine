@@ -165,7 +165,6 @@ std::vector<vart::TensorBuffer*> DpuCloudController::init_tensor_buffer(std::vec
 
 std::vector<vart::TensorBuffer*> DpuCloudController::init_tensor_buffer_with_addr(std::vector<uint64_t> data, std::vector<int> tensor_offset, std::vector<const xir::Tensor*> tensors, int batchSupport, unsigned runEngine) {
  std::vector<vart::TensorBuffer*>  tbufs;
- int len=0; 
  for (unsigned bs=0; bs < runEngine; bs++) {
     for (unsigned ti=0; ti < tensors.size(); ti++)
     {
