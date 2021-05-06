@@ -15,6 +15,7 @@
 #include "xrt_bin_stream.hpp"
 #include "device_handle.hpp"
 #include "vitis/ai/env_config.hpp"
+#include "xir/xir.h"
 #include <glog/logging.h>
 
 DEF_ENV_PARAM(DEBUG_DEVICE_HANDLE, "0")
@@ -23,7 +24,8 @@ static std::atomic<unsigned> naive_resource_mgr_cu_idx_(0);
 
 static std::mutex g_allocation_lock;
 
-DeviceResource::DeviceResource(std::string kernelName, std::string xclbin) {
+
+DeviceResource::DeviceResource(std::string kernelName, std::string xclbin, xir::Attrs* attrs) {
   // fallback unmanaged/caveman resource manager
   auto num_devices = xclProbe();
   if (num_devices == 0)
@@ -31,11 +33,31 @@ DeviceResource::DeviceResource(std::string kernelName, std::string xclbin) {
 
   // simulate assigning a new cuIdx each time Controller creates DeviceResource 
   // TODO support multiple devices
-  const int deviceIdx = 0;
-  naive_resource_mgr_on_ = true;
-  auto cuIdx = naive_resource_mgr_cu_idx_.fetch_add(1);
+  //const int deviceIdx = 0;
+  //naive_resource_mgr_on_ = true;
+  //auto cuIdx = naive_resource_mgr_cu_idx_.fetch_add(1);
+  size_t deviceIdx=0;
+  size_t cuIdx=0;
   xir::XrtBinStream binstream(xclbin);
-  if (cuIdx > (binstream.get_num_of_cu()-1)) cuIdx = rand()%binstream.get_num_of_cu(); 
+  if (attrs != nullptr) {
+    if (attrs->has_attr("__device_id__")) { 
+      auto device_index = attrs->get_attr<size_t>("__device_id__");
+      if (device_index > (num_devices-1))
+        throw std::runtime_error("Error: no devices available");
+      deviceIdx = device_index;
+    }
+    if (attrs->has_attr("__device_core_id__")) {
+      auto cu_index = attrs->get_attr<size_t>("__device_core_id__");
+      if (cu_index > (binstream.get_num_of_cu()-1))
+        throw std::runtime_error("Error: no CU available");
+      cuIdx = cu_index;
+    }
+  } else {
+    naive_resource_mgr_on_ = true;
+    cuIdx = naive_resource_mgr_cu_idx_.fetch_add(1);
+    if (cuIdx > (binstream.get_num_of_cu()-1)) cuIdx = rand()%binstream.get_num_of_cu(); 
+  }
+
   if (cuIdx >= binstream.get_num_of_cu())
     throw std::runtime_error("Error: no CUs available");
 
@@ -123,7 +145,123 @@ static std::vector<std::string> get_xclbins_in_dir(std::string path) {
   return xclbinPaths;
 }
 
-XrmResource::XrmResource(std::string kernelName, std::string xclbin)
+int XrmResource::alloc_without_deviceId(std::string kernelName, char* xclbinPath, xir::Attrs* attrs) {
+  std::string fnm = std::string(xclbinPath);
+  xir::XrtBinStream binstream(fnm);
+  auto cu_num = binstream.get_num_of_cu();
+  std::strcpy(cu_prop_->kernelName, std::string(kernelName).c_str());
+  int err = xrmCuAllocLeastUsedWithLoad(context_, cu_prop_.get(), xclbinPath, cu_rsrc_.get()); 
+  int try_cnt=0;
+  while(err) {
+    naive_resource_mgr_on_ = true;
+    // Try to acquire a new CU from xclbin
+    auto cuIdx = naive_resource_mgr_cu_idx_.fetch_add(1);
+    if (cuIdx > (cu_num-1)) cuIdx =  cuIdx % cu_num;
+    auto realKernelName = find_kernel_name(binstream.get_cu(cuIdx));
+    if (realKernelName.find(kernelName) != std::string::npos) {
+      std::strcpy(cu_prop_->kernelName, std::string(realKernelName).c_str());
+      err = xrmCuAllocLeastUsedWithLoad(context_, cu_prop_.get(), xclbinPath, cu_rsrc_.get());
+    }
+    if(err) {
+      try_cnt++;
+      if (try_cnt >= cu_num)
+        break;
+    } else {
+      break;
+    }
+  }
+  for (int i=0; i<try_cnt; i++)  naive_resource_mgr_cu_idx_--;
+  return err;
+
+}
+int XrmResource::alloc_with_deviceId(std::string kernelName, char* xclbinPath, xir::Attrs* attrs, std::string devices) {
+  int err;
+  std::string fnm = std::string(xclbinPath);
+  xir::XrtBinStream binstream(fnm);
+  auto cu_num = binstream.get_num_of_cu();
+  auto device_index = attrs->get_attr<size_t>("__device_id__");
+  if (!devices.empty() && std::string::npos == devices.find(','+std::to_string(device_index)+','))
+    throw std::runtime_error("Error: no devices available");
+  err = xrmLoadOneDevice(context_, device_index, xclbinPath);
+  std::strcpy(cu_prop_->kernelName, std::string(kernelName).c_str());
+  err = xrmCuAllocFromDev(context_, device_index, cu_prop_.get(), cu_rsrc_.get());
+  int try_cnt=0;
+  while(err) {
+    naive_resource_mgr_on_ = true;
+    // Try to acquire a new CU from xclbin
+    auto cuIdx = naive_resource_mgr_cu_idx_.fetch_add(1);
+    if (cuIdx > (cu_num-1)) cuIdx =  cuIdx % cu_num;
+    auto realKernelName = find_kernel_name(binstream.get_cu(cuIdx));
+    if (realKernelName.find(kernelName) != std::string::npos) {
+      std::strcpy(cu_prop_->kernelName, std::string(realKernelName).c_str());
+      err = xrmCuAllocFromDev(context_, device_index, cu_prop_.get(), cu_rsrc_.get());
+    }
+    if(err) {
+      try_cnt++;
+      if (try_cnt >= cu_num)
+        break;
+    } else {
+      break;
+    }
+  }
+  for (int i=0; i<try_cnt; i++)  naive_resource_mgr_cu_idx_--;
+  return err;
+}
+
+int XrmResource::alloc_from_attrs(std::string kernelName, char* xclbinPath, xir::Attrs* attrs, std::string devices) {
+  int err=-1;
+  bool cu_correct=false;
+  std::vector<std::unique_ptr<xrmCuResource>> cu_rsrc;
+  std::string fnm = std::string(xclbinPath);
+  xir::XrtBinStream binstream(fnm);
+  auto cu_num = binstream.get_num_of_cu();
+  unsigned cnt=0;
+  while(!cu_correct) {
+    int try_cnt=0;
+    if (attrs != nullptr) {
+      if (attrs->has_attr("__device_id__")) {
+        err = alloc_with_deviceId(kernelName, xclbinPath, attrs, devices); 
+      } else {
+        err = alloc_without_deviceId(kernelName, xclbinPath, attrs); 
+      } 
+      if (0==err) {   
+        //TODO for XLNX_ENABLE_DEVICES, need to make sure XLNX_ENABLE_DEVICES config a correct value
+        //TODO for the condtion of "ALL"
+        if (!devices.empty() &&std::string::npos == devices.find(','+std::to_string(cu_rsrc_->deviceId)+',')){
+          xrmCuResource *cu_rsrc_copy = new xrmCuResource();;
+          std::memcpy(cu_rsrc_copy, cu_rsrc_.get(), sizeof(xrmCuResource));
+          cu_rsrc.emplace_back(cu_rsrc_copy);
+          continue;
+        }
+        //select correct CU
+        if (attrs->has_attr("__device_core_id__")) {
+          auto cu_index = attrs->get_attr<size_t>("__device_core_id__");
+          if (cu_rsrc_->cuId != cu_index) {
+            cu_rsrc.emplace_back(std::move(cu_rsrc_));
+            cu_rsrc_.reset(new xrmCuResource); 
+            std::memset(cu_rsrc_.get(), 0, sizeof(xrmCuResource));
+          } else {
+            cu_correct=true;
+          }
+        } else {
+          cu_correct=true;
+        }
+      }
+      if(cnt >= cu_num) { //for the condtion that etch CU alloc error, need exit.
+        for (unsigned sz=0;sz<cu_rsrc.size();sz++) xrmCuRelease(context_, cu_rsrc[sz].get());
+        return -1;
+      }
+      cnt++;
+    }
+  }
+  for (unsigned sz=0;sz<cu_rsrc.size();sz++)
+    xrmCuRelease(context_, cu_rsrc[sz].get());
+
+  return err;
+
+}
+
+XrmResource::XrmResource(std::string kernelName, std::string xclbin, xir::Attrs* attrs)
     : cu_prop_(new xrmCuProperty()), cu_rsrc_(new xrmCuResource()) {
   context_ = xrmCreateContext(XRM_API_VERSION_1);
   if (context_ == NULL)
@@ -159,8 +297,10 @@ XrmResource::XrmResource(std::string kernelName, std::string xclbin)
     char xclbinPath[XRM_MAX_PATH_NAME_LEN];
     std::strcpy(xclbinPath, xclbins[i].c_str()); // XRM does not take const char* :(
     int err;
+    if (attrs != nullptr) {
+      err = alloc_from_attrs(kernelName, xclbinPath, attrs, deviceString);
 
-    for (int idx = 0; true; idx++){
+    } else {
       err = xrmCuAllocLeastUsedWithLoad(context_, cu_prop_.get(), xclbinPath, cu_rsrc_.get()); 
       if (err) {
         naive_resource_mgr_on_ = true;
@@ -176,22 +316,10 @@ XrmResource::XrmResource(std::string kernelName, std::string xclbin)
           err = xrmCuAllocLeastUsedWithLoad(context_, cu_prop_.get(), xclbinPath, cu_rsrc_.get());
         }
       }
-      if (0==err){
-        if (!deviceString.empty() && std::string::npos == deviceString.find(','+std::to_string(cu_rsrc_->deviceId)+',')){
-          xrmCuResource *cu_rsrc = new xrmCuResource();;
-          std::memcpy(cu_rsrc, cu_rsrc_.get(), sizeof(xrmCuResource));
-          xrmCuResourceUnWanted.emplace_back(cu_rsrc);
-          continue;
-        }else {
-          break;
-        }
-      }
     }
     if (err) {
-      naive_resource_mgr_cu_idx_--;
       continue; // keep trying other xclbins
     }
-
     LOG_IF(INFO, ENV_PARAM(DEBUG_DEVICE_HANDLE))
       << "Device acuqired : "  //
       << cu_rsrc_->xclbinFileName      //
@@ -252,11 +380,6 @@ XrmResource::XrmResource(std::string kernelName, std::string xclbin)
 	  if (err)
 		  throw(std::runtime_error("Error: XrmResource failed to get xdev"));
 
-    for ( auto item: xrmCuResourceUnWanted){
-      xrmCuRelease(context_, item);
-      delete(item);
-    }
-
     return;
   }
 
@@ -271,13 +394,13 @@ XrmResource::~XrmResource() {
 
 ///////////////////////////////////////////////
 
-DeviceHandle::DeviceHandle(std::string kernelName, std::string xclbin) {
+DeviceHandle::DeviceHandle(std::string kernelName, std::string xclbin, xir::Attrs* attrs) {
   if (std::getenv("RTE_ACQUIRE_DEVICE_UNMANAGED")) {
-    resource_.reset(new DeviceResource(kernelName, xclbin));
+    resource_.reset(new DeviceResource(kernelName, xclbin, attrs));
     return;
   }
 
-  resource_.reset(new XrmResource(kernelName, xclbin));
+  resource_.reset(new XrmResource(kernelName, xclbin, attrs));
 }
 
 /*
@@ -288,8 +411,8 @@ DeviceHandle::DeviceHandle(std::string kernelName, std::string xclbin) {
 std::map<std::pair<xrt_device*,size_t>, size_t> XclDeviceHandle::use_count_;
 std::mutex XclDeviceHandle::use_count_mutex_;
 
-XclDeviceHandle::XclDeviceHandle(std::string kernelName, std::string xclbin)
-    : DeviceHandle(kernelName, xclbin), context_(nullptr), commands_(nullptr),
+XclDeviceHandle::XclDeviceHandle(std::string kernelName, std::string xclbin, xir::Attrs* attrs)
+    : DeviceHandle(kernelName, xclbin, attrs), context_(nullptr), commands_(nullptr),
       program_(nullptr) {
 
   // Wait turn to run OCL Commands
@@ -368,8 +491,8 @@ XclDeviceHandle::~XclDeviceHandle() {
  * XRT device handle
  */
 
-XrtDeviceHandle::XrtDeviceHandle(std::string kernelName, std::string xclbin)
-    : DeviceHandle(kernelName, xclbin) {
+XrtDeviceHandle::XrtDeviceHandle(std::string kernelName, std::string xclbin, xir::Attrs* attrs)
+    : DeviceHandle(kernelName, xclbin, attrs) {
   auto handle = xclOpen(get_device_info().device_index, NULL, XCL_INFO);
   std::string fnm = std::string(get_device_info().xclbin_path);
   xir::XrtBinStream binstream(fnm);

@@ -85,8 +85,8 @@ static uint32_t read32_dpu_reg(xclDeviceHandle dpu_handle, uint64_t offset) {
   return val;
 }
 
-DpuCloudController::DpuCloudController(std::string meta) 
-  : XclDpuController<XrtDeviceHandle, XrtDeviceBuffer, XrtDeviceBuffer>(meta),dump_mode_(false),debug_mode_(false) {
+DpuCloudController::DpuCloudController(std::string meta, xir::Attrs* attrs) 
+  : XclDpuController<XrtDeviceHandle, XrtDeviceBuffer, XrtDeviceBuffer>(meta, attrs),dump_mode_(false),debug_mode_(false) {
   // assign many contexts -- one for each worker thread
   // threads cannot share contexts (or xclExecWait may miss the 'done' signal)
   Engine& engine = Engine::get_instance();
@@ -98,8 +98,8 @@ DpuCloudController::DpuCloudController(std::string meta)
   //init_graph(hbmw, hbmc);
 }
 
-DpuCloudController::DpuCloudController(const xir::Subgraph *subgraph) 
-  : XclDpuController<XrtDeviceHandle, XrtDeviceBuffer, XrtDeviceBuffer>(subgraph),dump_mode_(false),debug_mode_(false) {
+DpuCloudController::DpuCloudController(const xir::Subgraph *subgraph, xir::Attrs* attrs) 
+  : XclDpuController<XrtDeviceHandle, XrtDeviceBuffer, XrtDeviceBuffer>(subgraph, attrs),dump_mode_(false),debug_mode_(false) {
   Engine& engine = Engine::get_instance();
   for (unsigned i=0; i < engine.get_num_workers(); i++)
     contexts_.emplace_back(new XrtContext(*handle_));

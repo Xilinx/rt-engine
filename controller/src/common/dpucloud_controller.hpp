@@ -5,8 +5,8 @@
 class DpuCloudController 
 : public XclDpuController<XrtDeviceHandle, XrtDeviceBuffer, XrtDeviceBuffer> {
  public:
-  DpuCloudController(std::string meta);
-  DpuCloudController(const xir::Subgraph *subgraph);
+  DpuCloudController(std::string meta, xir::Attrs* attrs);
+  DpuCloudController(const xir::Subgraph *subgraph, xir::Attrs* attrs);
   virtual ~DpuCloudController() override;
   virtual void run(
     const std::vector<vart::TensorBuffer*> &inputs, 

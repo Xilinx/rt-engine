@@ -169,8 +169,8 @@ static uint32_t read32_dpu_reg(xclDeviceHandle dpu_handle, uint64_t offset) {
   return val;
 }
 
-DpuV3meController::DpuV3meController(std::string meta)
-  : DpuCloudController(meta) {
+DpuV3meController::DpuV3meController(std::string meta, xir::Attrs* attrs)
+  : DpuCloudController(meta, attrs) {
 
   dpu_hbm_start = ENV_PARAM(DPU_HBM_START)? ENV_PARAM(DPU_HBM_START) : 16;
   for (int i=dpu_hbm_start; i<32;i++)
@@ -178,8 +178,8 @@ DpuV3meController::DpuV3meController(std::string meta)
   init_graph(hbm,hbm);
 }
 
-DpuV3meController::DpuV3meController(const xir::Subgraph *subgraph) 
-  : DpuCloudController(subgraph) {
+DpuV3meController::DpuV3meController(const xir::Subgraph *subgraph, xir::Attrs* attrs) 
+  : DpuCloudController(subgraph, attrs) {
 
   dpu_hbm_start = ENV_PARAM(DPU_HBM_START)? ENV_PARAM(DPU_HBM_START) : 16;
   for (int i=dpu_hbm_start; i<32;i++)

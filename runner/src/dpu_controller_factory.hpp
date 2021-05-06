@@ -24,7 +24,7 @@ class DpuControllerFactory {
      * Note: currently only supports the same subgraph loaded on all CUs (TODO FIXME)
      */
     template <typename T>
-    std::shared_ptr<DpuController> get(std::string kernel, T subgraph);
+    std::shared_ptr<DpuController> get(std::string kernel, T subgraph, xir::Attrs* attrs=nullptr);
 
   private:
     DpuControllerFactory() {}

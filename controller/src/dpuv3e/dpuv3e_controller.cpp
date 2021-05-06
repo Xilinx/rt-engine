@@ -94,8 +94,8 @@ DEF_ENV_PARAM(XLNX_ENABLE_FINGERPRINT_CHECK, "1");
 //  return val;
 //}
 
-DpuV3eController::DpuV3eController(std::string meta) 
-  : DpuCloudController(meta) {
+DpuV3eController::DpuV3eController(std::string meta, xir::Attrs* attrs) 
+  : DpuCloudController(meta, attrs) {
   hbmio.clear();
   hbmw.clear();
   hbmc.clear();
@@ -108,8 +108,8 @@ DpuV3eController::DpuV3eController(std::string meta)
   init_graph(hbmw,hbmc);
 }
 
-DpuV3eController::DpuV3eController(const xir::Subgraph *subgraph) 
-  : DpuCloudController(subgraph) {
+DpuV3eController::DpuV3eController(const xir::Subgraph *subgraph, xir::Attrs* attrs) 
+  : DpuCloudController(subgraph, attrs) {
   hbmio.clear();
   hbmw.clear();
   hbmc.clear();
