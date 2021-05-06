@@ -63,8 +63,8 @@ public:
 
 protected:
   std::shared_ptr<DpuController> dpu_controller_;
-  std::vector<vart::TensorBuffer*> in_bufs;
-  std::vector<vart::TensorBuffer*> out_bufs;
+  //std::vector<vart::TensorBuffer*> in_bufs;
+  //std::vector<vart::TensorBuffer*> out_bufs;
 };
 }
 /*

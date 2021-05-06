@@ -440,34 +440,71 @@ std::vector<vart::TensorBuffer*>  DpuCloudController::create_tensor_buffers_hbm(
 }
 std::vector<vart::TensorBuffer*>  DpuCloudController::create_tensor_buffers_hbm(
   const std::vector<const xir::Tensor*> &tensors, bool isInput, vector<unsigned> hbm, int batch_size) {
-  
-  unsigned cnt=0;
+  std::vector<vart::TensorBuffer*> bufs;
+  //unsigned cnt=0;
   vector<unsigned> hbm_use;
-  vector<unsigned> hbms;
-  std::vector<vart::TensorBuffer*> buf; 
-  if ((int)hbm.size() < batch_size) {
+  std::vector<const xir::Tensor*> ts;
+  //std::vector<vart::TensorBuffer*> buf; 
+//  if ((int)hbm.size() < batch_size) {
+//    throw std::bad_alloc();
+//  }
+  if (batch_size == 1) {  // tensor batch = 1 for make_inputs(1)
+    for (unsigned t=0; t < tensors.size(); t++) {
+      std::vector<vart::TensorBuffer*> buf;
+      buf.clear();
+      if (int(hbm.size()) >= batch_size_) {
+        ts.emplace_back(tensors[t]);
+        hbm_use.emplace_back(hbm[t]);
+        buf = create_tensor_buffers(ts,isInput,hbm_use);
+        hbm_use.clear();
+      }
+      if (!buf.empty()) { 
+        ts.clear();
+        bufs.emplace_back(buf[0]);
+        break;
+      } else {
+        if (int(hbm.size()) > batch_size_) {
+          for (unsigned idx = batch_size_; idx<hbm.size(); idx++){
+            hbm_use.emplace_back(hbm[idx]);
+            buf = create_tensor_buffers(ts,isInput,hbm_use);
+            hbm_use.clear();
+            ts.clear();
+            if (!buf.empty()) { 
+              bufs.emplace_back(buf[0]);
+              break;
+            }
+            if (idx == (hbm.size()-1)) {
+              throw std::bad_alloc();
+            }
+          }
+        }
+      }
+    }
+  } else {
+    //for (unsigned idx = 0; idx<hbm.size(); idx++){
+    //  //auto buf = create_tensor_buffers(tensorIn,isInput,(int)hbm[idx]);
+    //  hbm_use.emplace_back(hbm[idx]);
+    //  cnt++;
+    //  if ((int)cnt != tensors[0]->get_shape()[0]) {
+    //    continue;
+    //  }
+    //  cnt = 0;
+    //  cout << idx << "   " << hbm_use.size()<<"  "<<tensors[0]->get_element_num()/batch_size_ << endl;
+    //  bufs = create_tensor_buffers_auto(tensors,isInput,hbm_use);
+    //  if (!bufs.empty()) { 
+    //    break;
+    //  } else {
+    //    hbm_use.clear();
+    //  }
+    //  if (idx == (hbm.size()-1)) {
+    //    throw std::bad_alloc();
+    //  }
+    //}
+    bufs = create_tensor_buffers_batch(tensors,isInput,hbm);
+  }
+  if(bufs.empty())
     throw std::bad_alloc();
-  }
-  for (unsigned idx = 0; idx<hbm.size(); idx++){
-    //auto buf = create_tensor_buffers(tensorIn,isInput,(int)hbm[idx]);
-    hbm_use.emplace_back(hbm[idx]);
-    cnt++;
-    if ((int)cnt != batch_size) {
-      continue;
-    }
-    cnt = 0;
-
-    buf = create_tensor_buffers(tensors,isInput,hbm_use);
-    if (!buf.empty()) {
-      break;
-    } else {
-      hbm_use.clear();
-    }
-    if (idx == (hbm.size()-1)) {
-      throw std::bad_alloc();
-    }
-  }
-  return buf;
+  return bufs;
   
 }
 std::vector<vart::TensorBuffer*> DpuCloudController::get_outputs(int batchsz) {
@@ -475,18 +512,7 @@ std::vector<vart::TensorBuffer*> DpuCloudController::get_outputs(int batchsz) {
   //hbm.emplace_back(handle_->get_device_info().ddr_bank); 
   return get_outputs_inner(hbmio, false, batchsz);
 }
-//std::vector<vart::TensorBuffer*> DpuCloudController::create_tensor_buffer(void* data, std::vector<const xir::Tensor*> tensor) {
-//        //std::shared_ptr<vart::rt_engine::TensorBuffer> tbuf = std::make_shared<vart::rt_engine::TensorBufferExtImpHostPhy>(data,tensor);
-//  std::vector<vart::TensorBuffer*> rt;
-//  std::unique_ptr<vart::rt_engine::TensorBufferExtImpHostPhy> tbuf(
-//      new vart::rt_engine::TensorBufferExtImpHostPhy(data, tensor[0]));
-//  rt.emplace_back(tbuf.get());
-//        //auto tbuf = std::make_shared<vart::rt_engine::TensorBufferExtImpHostPhy>(data,tensor);
-//        //rtbufs_.push_back(std::move(tbuf)); 
-//
-//return rt;
-//
-//}
+
 std::vector<vart::TensorBuffer*> DpuCloudController::get_outputs_inner(vector<unsigned> hbm, bool isInputs, int batchsz) {
   // TODO if batchsz != 8 or 1, create_tensor_buffers for user-requested batchsz
   // E.g., batchsz=1 for MLperf

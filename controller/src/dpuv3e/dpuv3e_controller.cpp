@@ -169,6 +169,16 @@ DpuV3eController::DpuV3eController(const xir::Subgraph *subgraph)
     hbmio.push_back(19);
     hbmio.push_back(20);
     hbmio.push_back(1);
+    hbmio.push_back(2);
+    hbmio.push_back(3);
+    hbmio.push_back(21);
+    hbmio.push_back(22);
+    hbmio.push_back(4);
+    hbmio.push_back(5);
+    hbmio.push_back(6);
+    hbmio.push_back(23);
+    hbmio.push_back(24);
+    hbmio.push_back(7);
     hbmc.push_back(16);
     hbmw.push_back(10);
     hbmw.push_back(11);
@@ -176,11 +186,20 @@ DpuV3eController::DpuV3eController(const xir::Subgraph *subgraph)
   else if(cu_index == 1) {
 //for (int i=0; i< 24; i++)
 //    hbmio.push_back(i);
+    hbmio.push_back(0);
+    hbmio.push_back(19);
+    hbmio.push_back(20);
+    hbmio.push_back(1);
     hbmio.push_back(2);
     hbmio.push_back(3);
     hbmio.push_back(21);
     hbmio.push_back(22);
     hbmio.push_back(4);
+    hbmio.push_back(5);
+    hbmio.push_back(6);
+    hbmio.push_back(23);
+    hbmio.push_back(24);
+    hbmio.push_back(7);
     hbmc.push_back(17);
     hbmw.push_back(12);
     hbmw.push_back(13);
@@ -188,6 +207,15 @@ DpuV3eController::DpuV3eController(const xir::Subgraph *subgraph)
   else {
 //for (int i=0; i< 24; i++)
 //    hbmio.push_back(i);
+    hbmio.push_back(0);
+    hbmio.push_back(19);
+    hbmio.push_back(20);
+    hbmio.push_back(1);
+    hbmio.push_back(2);
+    hbmio.push_back(3);
+    hbmio.push_back(21);
+    hbmio.push_back(22);
+    hbmio.push_back(4);
     hbmio.push_back(5);
     hbmio.push_back(6);
     hbmio.push_back(23);
