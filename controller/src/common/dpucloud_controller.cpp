@@ -564,7 +564,7 @@ std::vector<vart::TensorBuffer*> DpuCloudController::get_outputs_inner(vector<un
             tbufs.emplace_back(buf.get());
             {
               std::unique_lock<std::mutex> lock(hwbufio2_mtx_);
-              rtbufs2_.push_back(std::move(buf)); 
+              bufsView_.push_back(std::move(buf)); 
             }
           }
           hwbuf.emplace(std::make_pair(iter->first, bufPhy));
@@ -627,8 +627,8 @@ std::vector<vart::TensorBuffer*> DpuCloudController::get_outputs_inner(vector<un
               tbufs.emplace_back(buf.get());
               {
                 std::unique_lock<std::mutex> lock(hwbufio_mtx_);
-                rtbufs_.emplace(buf.get(), bufPhy[db]);
-                rtbufs2_.push_back(std::move(buf));
+                bufsView2Phy_.emplace(buf.get(), bufPhy[db]);
+                bufsView_.push_back(std::move(buf));
               }
             }
           }
@@ -675,16 +675,16 @@ void DpuCloudController::free_buffers(std::vector<vart::TensorBuffer*> &tbufs, b
     std::unique_lock<std::mutex> lock(hwbufio_mtx_);
     for (unsigned ti=0; ti < tbufs.size(); ti++)
     {
-       for (auto it=rtbufs2_.begin(); it != rtbufs2_.end(); it++) {
+       for (auto it=bufsView_.begin(); it != bufsView_.end(); it++) {
          if (it->get() == tbufs[ti])
          {
-            rtbufs2_.erase(it);
+            bufsView_.erase(it);
             break;
          }
        }
        cnt++;
-       auto buf = rtbufs_.find(tbufs[ti]);
-       if (buf != rtbufs_.end()) {
+       auto buf = bufsView2Phy_.find(tbufs[ti]);
+       if (buf != bufsView2Phy_.end()) {
          std::unique_lock<std::mutex> lock(tbuf_mtx_);
          if (cnt==model_->get_output_offset().size()) {  
             tbufs2dbufs_.erase(buf->second);
@@ -696,7 +696,7 @@ void DpuCloudController::free_buffers(std::vector<vart::TensorBuffer*> &tbufs, b
               }
           }
           cnt = 0;
-          rtbufs_.erase(buf);
+          bufsView2Phy_.erase(buf);
         }
       }
       tbuf2hwbufsio_.erase(tbufs[ti]);

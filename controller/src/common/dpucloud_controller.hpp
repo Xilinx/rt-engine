@@ -47,15 +47,15 @@ std::vector<vart::TensorBuffer*> init_tensor_buffer_with_addr(std::vector<uint64
   virtual vector<std::tuple<int, int,uint64_t>>  get_dpu_reg_outside(xclDeviceHandle xcl_handle, bool create_tb_batch, std::vector<uint64_t> &in_addrs, std::vector<uint64_t> &out_addrs, const std::vector<vart::TensorBuffer*> &inputs, const std::vector<vart::TensorBuffer*> &outputs );
   virtual vector<std::tuple<int, int,uint64_t>>  get_dpu_reg_outside_hbm(xclDeviceHandle xcl_handle, bool create_tb_batch, std::vector<uint64_t> &in_addrs, std::vector<uint64_t> &out_addrs, const std::vector<vart::TensorBuffer*> &inputs, const std::vector<vart::TensorBuffer*> &outputs, vector<unsigned> hbm);
   xclBufferHandle get_xrt_bo(void* data, int size, vector<unsigned> hbm);
-  std::unordered_map<vart::TensorBuffer*, std::unordered_map<int,vart::TensorBuffer*>> tbuf2hwbufsio_;
+  std::unordered_map<vart::TensorBuffer*, std::unordered_map<int,vart::TensorBuffer*>> tbuf2hwbufsio_; 
   std::unordered_map<vart::TensorBuffer*, std::unordered_map<int,vector<vart::TensorBuffer*>>> tbuf2hwbufsio2_;
   //std::vector<vart::TensorBuffer*> DpuCloudController::create_tensor_buffer(void* data, std::vector<const xir::Tensor*> tensor);
   std::mutex hwbufio_mtx_;
   std::mutex hwbufio2_mtx_;
   std::list<std::unique_ptr<vart::TensorBuffer>> bufs_;
   //std::list<std::unique_ptr<vart::rt_engine::TensorBufferExtImpHostPhy>> rtbufs3_;
-  std::unordered_map<vart::TensorBuffer*, vart::TensorBuffer*> rtbufs_;
-  std::list<std::unique_ptr<vart::TensorBufferExtImpView>> rtbufs2_;
+  std::unordered_map<vart::TensorBuffer*, vart::TensorBuffer*> bufsView2Phy_;
+  std::list<std::unique_ptr<vart::TensorBufferExtImpView>> bufsView_;
   std::vector<std::unique_ptr<XrtContext>> contexts_;
   uint64_t code_addr_;
   uint64_t preload_code_addr_;
