@@ -209,10 +209,11 @@ void DpuCloudController::init_graph(vector<unsigned> hbmw, vector<unsigned> hbmc
   }
   
   batch_size_ = read32_dpu_reg(handle,  cu_base_addr + DPUREG_ENGINE_NUM);
-  if (!attrs->has_attr("__batch__")) {
-    attrs->set_attr<size_t>("__batch__", batch_size_);
+  if(attrs != nullptr) {
+    if (!attrs->has_attr("__batch__")) {
+      attrs->set_attr<size_t>("__batch__", batch_size_);
+    }
   }
-
   xclBOProperties boProp;
   dump_mode_ = model_->get_dump_mode();
   debug_mode_ = model_->get_debug_mode();
@@ -927,6 +928,7 @@ void DpuCloudController::run(const std::vector<vart::TensorBuffer*> &inputs,
         regVals.clear();
       }
     }
+cout << code_addr_ << endl;
     regVals.push_back(  { XDPU_CONTROL_INSTR_L / 4, code_addr_ & 0xFFFFFFFF });
     regVals.push_back(  { XDPU_CONTROL_INSTR_H / 4, (code_addr_ >> 32) & 0xFFFFFFFF });
     //regVals.push_back(  { XDPU_CONTROL_ADDR_0_L / 4, reg0_addr_ & 0xFFFFFFFF });
