@@ -185,7 +185,7 @@ xclBufferHandle  DpuCloudController::get_xrt_bo(void* data, int size, vector<uns
   return reg0Mem;
 
 }
-void DpuCloudController::init_graph(vector<unsigned> hbmw, vector<unsigned> hbmc ) {
+void DpuCloudController::init_graph(vector<unsigned> hbmw, vector<unsigned> hbmc, xir::Attrs* attrs ) {
 
   auto handle = contexts_[0]->get_dev_handle();
   auto cu_base_addr = handle_->get_device_info().cu_base_addr;
@@ -209,6 +209,10 @@ void DpuCloudController::init_graph(vector<unsigned> hbmw, vector<unsigned> hbmc
   }
   
   batch_size_ = read32_dpu_reg(handle,  cu_base_addr + DPUREG_ENGINE_NUM);
+  if (!attrs->has_attr("__batch__")) {
+    attrs->set_attr<size_t>("__batch__", batch_size_);
+  }
+
   xclBOProperties boProp;
   dump_mode_ = model_->get_dump_mode();
   debug_mode_ = model_->get_debug_mode();

@@ -175,7 +175,7 @@ DpuV3meController::DpuV3meController(std::string meta, xir::Attrs* attrs)
   dpu_hbm_start = ENV_PARAM(DPU_HBM_START)? ENV_PARAM(DPU_HBM_START) : 16;
   for (int i=dpu_hbm_start; i<32;i++)
     hbm.emplace_back(i);
-  init_graph(hbm,hbm);
+  init_graph(hbm,hbm,attrs);
 }
 
 DpuV3meController::DpuV3meController(const xir::Subgraph *subgraph, xir::Attrs* attrs) 
@@ -184,7 +184,7 @@ DpuV3meController::DpuV3meController(const xir::Subgraph *subgraph, xir::Attrs* 
   dpu_hbm_start = ENV_PARAM(DPU_HBM_START)? ENV_PARAM(DPU_HBM_START) : 16;
   for (int i=dpu_hbm_start; i<32;i++)
     hbm.emplace_back(i);
-  init_graph(hbm,hbm);
+  init_graph(hbm,hbm,attrs);
 }
 DpuV3meController::~DpuV3meController() {
 }

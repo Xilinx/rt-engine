@@ -98,7 +98,7 @@ DpuV4eController::DpuV4eController(std::string meta, xir::Attrs* attrs)
   : DpuCloudController(meta, attrs) {
 	  
   auto hbmw = get_hbmw();
-  init_graph(hbmw, hbmw);
+  init_graph(hbmw, hbmw, attrs);
 	  
   //hbm.emplace_back(handle_->get_device_info().ddr_bank);
   //init_graph(hbm,hbm);
@@ -107,7 +107,7 @@ DpuV4eController::DpuV4eController(std::string meta, xir::Attrs* attrs)
 DpuV4eController::DpuV4eController(const xir::Subgraph *subgraph, xir::Attrs* attrs) 
   : DpuCloudController(subgraph, attrs) {
   auto hbmw = get_hbmw();
-  init_graph(hbmw, hbmw);
+  init_graph(hbmw, hbmw, attrs);
   //hbm.emplace_back(handle_->get_device_info().ddr_bank);
   //init_graph(hbm,hbm);
 }

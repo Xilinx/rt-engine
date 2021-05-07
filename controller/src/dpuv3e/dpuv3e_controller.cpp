@@ -105,7 +105,7 @@ DpuV3eController::DpuV3eController(std::string meta, xir::Attrs* attrs)
     hbmc.push_back(idx);
   }
  
-  init_graph(hbmw,hbmc);
+  init_graph(hbmw,hbmc,attrs);
 }
 
 DpuV3eController::DpuV3eController(const xir::Subgraph *subgraph, xir::Attrs* attrs) 
@@ -119,7 +119,7 @@ DpuV3eController::DpuV3eController(const xir::Subgraph *subgraph, xir::Attrs* at
     hbmc.push_back(idx);
   }
   
-  init_graph(hbmw,hbmc);
+  init_graph(hbmw,hbmc,attrs);
 }
 
 DpuV3eController::~DpuV3eController() {
