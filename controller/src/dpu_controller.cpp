@@ -99,7 +99,6 @@ XclDpuController<Dhandle, DbufIn, DbufOut>::XclDpuController(const xir::Subgraph
   if (!attrs->has_attr("__device_id__")) {
     attrs->set_attr<size_t>("__device_id__", handle_->get_device_info().device_index);
   }
-
   LOG_IF(INFO, ENV_PARAM(DEBUG_DPU_CONTROLLER))
     << "alloc cu index: " << handle_->get_device_info().cu_index 
     << " device index: " << handle_->get_device_info().device_index;

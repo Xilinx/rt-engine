@@ -184,7 +184,7 @@ int XrmResource::alloc_with_deviceId(std::string kernelName, char* xclbinPath, x
     throw std::runtime_error("Error: no devices available");
   err = xrmLoadOneDevice(context_, device_index, xclbinPath);
   std::strcpy(cu_prop_->kernelName, std::string(kernelName).c_str());
-  err = xrmCuAllocFromDev(context_, device_index, cu_prop_.get(), cu_rsrc_.get());
+  err = xrmCuAllocLeastUsedFromDev(context_, device_index, cu_prop_.get(), cu_rsrc_.get());
   int try_cnt=0;
   while(err) {
     naive_resource_mgr_on_ = true;
@@ -194,7 +194,7 @@ int XrmResource::alloc_with_deviceId(std::string kernelName, char* xclbinPath, x
     auto realKernelName = find_kernel_name(binstream.get_cu(cuIdx));
     if (realKernelName.find(kernelName) != std::string::npos) {
       std::strcpy(cu_prop_->kernelName, std::string(realKernelName).c_str());
-      err = xrmCuAllocFromDev(context_, device_index, cu_prop_.get(), cu_rsrc_.get());
+      err = xrmCuAllocLeastUsedFromDev(context_, device_index, cu_prop_.get(), cu_rsrc_.get());
     }
     if(err) {
       try_cnt++;
@@ -215,9 +215,7 @@ int XrmResource::alloc_from_attrs(std::string kernelName, char* xclbinPath, xir:
   std::string fnm = std::string(xclbinPath);
   xir::XrtBinStream binstream(fnm);
   auto cu_num = binstream.get_num_of_cu();
-  unsigned cnt=0;
   while(!cu_correct) {
-    int try_cnt=0;
     if (attrs != nullptr) {
       if (attrs->has_attr("__device_id__")) {
         err = alloc_with_deviceId(kernelName, xclbinPath, attrs, devices); 
@@ -233,25 +231,33 @@ int XrmResource::alloc_from_attrs(std::string kernelName, char* xclbinPath, xir:
           cu_rsrc.emplace_back(cu_rsrc_copy);
           continue;
         }
-        //select correct CU
-        if (attrs->has_attr("__device_core_id__")) {
-          auto cu_index = attrs->get_attr<size_t>("__device_core_id__");
-          if (cu_rsrc_->cuId != cu_index) {
-            cu_rsrc.emplace_back(std::move(cu_rsrc_));
-            cu_rsrc_.reset(new xrmCuResource); 
-            std::memset(cu_rsrc_.get(), 0, sizeof(xrmCuResource));
+        //select correct batch
+        if ((kernelName == "DPUCVDX8H")||(kernelName == "DPUCAHX8L")||(kernelName == "DPUCAHX8H")) {
+          if (attrs->has_attr("__batch__")) {
+            auto batch = attrs->get_attr<size_t>("__batch__");
+            uint32_t val;
+            auto base_addr = cu_rsrc_->baseAddr;
+            auto handle = xclOpen(cu_rsrc_->deviceId, NULL, XCL_INFO);
+            xclRead(handle, XCL_ADDR_KERNEL_CTRL, base_addr+0x1ec, (void *)(&val), 4);
+            xclClose(handle);
+            if (val != batch ) {
+            //if (cu_rsrc_->cuId != cu_index) {
+              cu_rsrc.emplace_back(std::move(cu_rsrc_));
+              cu_rsrc_.reset(new xrmCuResource); 
+              std::memset(cu_rsrc_.get(), 0, sizeof(xrmCuResource));
+            } else {
+              cu_correct=true;
+            }
           } else {
             cu_correct=true;
           }
         } else {
           cu_correct=true;
         }
-      }
-      if(cnt >= cu_num) { //for the condtion that etch CU alloc error, need exit.
+      } else {
         for (unsigned sz=0;sz<cu_rsrc.size();sz++) xrmCuRelease(context_, cu_rsrc[sz].get());
         return -1;
       }
-      cnt++;
     }
   }
   for (unsigned sz=0;sz<cu_rsrc.size();sz++)

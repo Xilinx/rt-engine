@@ -928,7 +928,6 @@ void DpuCloudController::run(const std::vector<vart::TensorBuffer*> &inputs,
         regVals.clear();
       }
     }
-cout << code_addr_ << endl;
     regVals.push_back(  { XDPU_CONTROL_INSTR_L / 4, code_addr_ & 0xFFFFFFFF });
     regVals.push_back(  { XDPU_CONTROL_INSTR_H / 4, (code_addr_ >> 32) & 0xFFFFFFFF });
     //regVals.push_back(  { XDPU_CONTROL_ADDR_0_L / 4, reg0_addr_ & 0xFFFFFFFF });
