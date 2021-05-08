@@ -24,8 +24,8 @@ DpuRunner::DpuRunner(const xir::Subgraph* subgraph) {
 
   dpu_controller_ = DpuControllerFactory::get_instance().get(kernel, subgraph);
   
-  //in_bufs = dpu_controller_->get_inputs();
-  //out_bufs = dpu_controller_->get_outputs();
+  in_bufs = dpu_controller_->get_inputs();
+  out_bufs = dpu_controller_->get_outputs();
 }
 
 DpuRunner::DpuRunner(std::string meta) {
@@ -60,12 +60,10 @@ std::vector<const xir::Tensor*> DpuRunner::get_output_tensors() {
 }
 
 std::vector<vart::TensorBuffer*> DpuRunner::get_inputs() {
-  static std::vector<vart::TensorBuffer*> in_bufs = dpu_controller_->get_inputs();
   return in_bufs;
 }
 
 std::vector<vart::TensorBuffer*> DpuRunner::get_outputs() {
-  static std::vector<vart::TensorBuffer*> out_bufs = dpu_controller_->get_outputs();
   return out_bufs;
 }
 
