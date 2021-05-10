@@ -10,7 +10,5 @@ class DpuV4eController
   //virtual void run(
   //  const std::vector<vart::TensorBuffer*> &inputs, 
   //  const std::vector<vart::TensorBuffer*> &outputs) override;
- private:
-  vector<unsigned> hbm;
 };
 

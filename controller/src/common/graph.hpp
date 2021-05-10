@@ -80,7 +80,7 @@ class DpuXmodel  {
   int32_t get_input_regid() {
     return input_regid;
   }
-  uint8_t get_output_regid() {
+  int32_t get_output_regid() {
     return output_regid;
   }
   std::vector<float> get_input_scales() {
@@ -105,8 +105,8 @@ class DpuXmodel  {
   //int batch_size_;
   int32_t xdpu_total_out_size;
   int32_t xdpu_total_in_size;
-  uint8_t input_regid;
-  uint8_t output_regid;
+  int32_t input_regid;
+  int32_t output_regid;
   //std::unordered_map<string,float> input_scales_;
   //std::unordered_map<string,float> output_scales_;
   std::vector<float> input_scales_;

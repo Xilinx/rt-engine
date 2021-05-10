@@ -117,7 +117,7 @@ XrtDeviceBuffer::XrtDeviceBuffer(const XrtDeviceHandle *handle, void *data, size
   : DeviceBuffer(handle, data, size, bank) {
   auto myHandle = dynamic_cast<const XrtDeviceHandle*>(handle_);
   auto devHandle = myHandle->get_context().get_dev_handle();
-  mem_ = xclAllocUserPtrBO(devHandle, data_, size_, bank_);
+  mem_ = xclAllocUserPtrBO(devHandle, data, size, bank);
   if (mem_ == NULLBO)
     throw std::bad_alloc();
 

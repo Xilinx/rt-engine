@@ -452,32 +452,40 @@ std::vector<vart::TensorBuffer*>  DpuCloudController::create_tensor_buffers_hbm(
     for (unsigned t=0; t < tensors.size(); t++) {
       std::vector<vart::TensorBuffer*> buf;
       buf.clear();
+      ts.emplace_back(tensors[t]);
       if (int(hbm.size()) >= batch_size_) {
-        ts.emplace_back(tensors[t]);
         hbm_use.emplace_back(hbm[t]);
         buf = create_tensor_buffers(ts,isInput,hbm_use);
-        hbm_use.clear();
+      } else { //for DPU that only one ddr bank
+        hbm_use.emplace_back(hbm[0]);
+        buf = create_tensor_buffers(ts,isInput,hbm_use);
       }
+      hbm_use.clear();
       if (!buf.empty()) { 
         ts.clear();
         bufs.emplace_back(buf[0]);
-        break;
+        continue;
       } else {
+        unsigned alloc_begin=0;
         if (int(hbm.size()) > batch_size_) {
-          for (unsigned idx = batch_size_; idx<hbm.size(); idx++){
+          alloc_begin=batch_size_;
+        } else {
+          alloc_begin = 1;
+        }
+          for (unsigned idx = alloc_begin; idx<hbm.size(); idx++){
             hbm_use.emplace_back(hbm[idx]);
             buf = create_tensor_buffers(ts,isInput,hbm_use);
             hbm_use.clear();
             ts.clear();
             if (!buf.empty()) { 
               bufs.emplace_back(buf[0]);
-              break;
+              continue;
             }
             if (idx == (hbm.size()-1)) {
               throw std::bad_alloc();
             }
           }
-        }
+        //}
       }
     }
   } else {
@@ -557,14 +565,14 @@ std::vector<vart::TensorBuffer*> DpuCloudController::get_outputs_inner(vector<un
               continue;
             }
           }
-          auto bufPhy = create_tensor_buffers_hbm(get_merged_io_tensors_batch(iter->second),false, hbm,batch_size_);
+          auto bufPhy = create_tensor_buffers_hbm(get_merged_io_tensors(iter->second),false, hbm,1);
           for (unsigned int ts=0;ts< tensors.size(); ts++) {
             std::unique_ptr<vart::TensorBufferExtImpView> buf(
-              new vart::TensorBufferExtImpView(tensors[ts], tensor_offset[ts], bufPhy[0]));
+              new vart::TensorBufferExtImpView(tensors[ts], tensor_offset[ts], bufPhy));
             tbufs.emplace_back(buf.get());
             {
               std::unique_lock<std::mutex> lock(hwbufio2_mtx_);
-              bufsView_.push_back(std::move(buf)); 
+              bufsView_.push_back(std::move(buf));
             }
           }
           hwbuf.emplace(std::make_pair(iter->first, bufPhy));
@@ -621,9 +629,11 @@ std::vector<vart::TensorBuffer*> DpuCloudController::get_outputs_inner(vector<un
             for (unsigned int ts=0;ts< tensors.size(); ts++) {
               auto dims = tensors[ts]->get_shape();
               dims[0] = dims[0]/batch_size_;
+              std::vector<vart::TensorBuffer*> bufPhy_single;
+              bufPhy_single.emplace_back(bufPhy[db]);
               xir::Tensor *tensor = xir::Tensor::create(tensors[ts]->get_name(), dims, tensors[ts]->get_data_type()).release();
               std::unique_ptr<vart::TensorBufferExtImpView> buf(
-                new vart::TensorBufferExtImpView(tensor, tensor_offset[ts], bufPhy[db]));
+                new vart::TensorBufferExtImpView(tensor, tensor_offset[ts], bufPhy_single));
               tbufs.emplace_back(buf.get());
               {
                 std::unique_lock<std::mutex> lock(hwbufio_mtx_);
@@ -887,7 +897,13 @@ vector<std::tuple<int, int,uint64_t>>  DpuCloudController::get_dpu_reg_inside(bo
             auto buf = reg_map->second;
             for (int i=0; i < batch_size_; i++) {
               if ((iter->first == model_->get_output_regid()) &&(model_->get_input_regid() != model_->get_output_regid())) {
-                xdpu_total_dpureg_map2.push_back(std::make_tuple(iter->first, i, buf[0]->data_phy(std::vector<int>{i,0}).first));
+                xdpu_total_dpureg_map2.push_back(std::make_tuple(iter->first, i, buf[i]->data_phy(std::vector<int>{0,0}).first));
+                LOG_IF(INFO, ENV_PARAM(DEBUG_DPU_CONTROLLER))
+                  <<"Engine : " << i<<  " workspace reg_id: " 
+                  << iter->first
+                  << " phy_addr: "
+                  <<std::hex
+                  << buf[i]->data_phy(std::vector<int>{0,0}).first;
               } else {
                 io_bufs[i] = dynamic_cast<XrtDeviceBuffer*>(get_device_buffer(buf[i]));
                 //reg_addrs[iter->first-1][i] = io_bufs[i]->get_phys_addr();
@@ -918,15 +934,15 @@ vector<std::tuple<int, int,uint64_t>>  DpuCloudController::get_dpu_reg_inside(bo
               throw std::runtime_error("Input TensorBuffer not found");
             auto buf = reg_map->second;
             for (int i=0; i < batch_size_; i++) {
-              xdpu_total_dpureg_map2.push_back(std::make_tuple(iter->first, i, buf[0]->data_phy(std::vector<int>{i,0}).first));
+              xdpu_total_dpureg_map2.push_back(std::make_tuple(iter->first, i, buf[i]->data_phy(std::vector<int>{0,0}).first));
               //io_bufs[i] = dynamic_cast<XrtDeviceBuffer*>(get_device_buffer(buf[i]));
               ////reg_addrs[iter->first-1][i] = io_bufs[i]->get_phys_addr();
               //xdpu_total_dpureg_map2.push_back(std::make_tuple(iter->first,i,io_bufs[i]->get_phys_addr()));
               LOG_IF(INFO, ENV_PARAM(DEBUG_DPU_CONTROLLER))
                 <<"Engine : " << i<<  " workspace reg_id: " 
                 << iter->first
-                << " phy_addr: "
-                << buf[0]->data_phy(std::vector<int>{i,0}).first;
+                << " phy_addr: " << std::hex
+                << buf[i]->data_phy(std::vector<int>{0,0}).first;
             }
           } 
           iter++;
@@ -1089,8 +1105,9 @@ void DpuCloudController::run(const std::vector<vart::TensorBuffer*> &inputs,
     inputBs = inputs.size()/model_->get_input_tensors().size();
   else
     inputBs = ibs;
-  if ((ibs < obs) || (inputBs > batch_size_) )
+  if ((ibs < obs) || (inputBs > batch_size_) ) {
     throw std::runtime_error("Error: size of tensorbuffer not supported");
+  }
   //}
   bool create_tb_outside=check_tensorbuffer_outside(outputs);
   bool create_tb_batch=false;

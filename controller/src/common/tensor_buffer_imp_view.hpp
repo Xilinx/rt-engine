@@ -24,7 +24,7 @@ class TensorBufferExtImpView : public vart::TensorBuffer {
  public:
   explicit TensorBufferExtImpView(
       const xir::Tensor* tensor, size_t offset,
-      vart::TensorBuffer* backstore);
+      vector<vart::TensorBuffer*> backstore);
 
   TensorBufferExtImpView(const TensorBufferExtImpView&) = delete;
   TensorBufferExtImpView& operator=(const TensorBufferExtImpView& other) =
@@ -50,6 +50,7 @@ class TensorBufferExtImpView : public vart::TensorBuffer {
  private:
   std::unique_ptr<xir::Tensor> tensor_;
   const size_t offset_;
-  vart::TensorBuffer* backstore_;
+  std::vector<vart::TensorBuffer*> backstore_;
+  bool backstore_batch;
 };
 }  // namespace vart

@@ -78,7 +78,7 @@ std::pair<uint64_t, size_t> TensorBufferExtImpHostPhy::data_phy(
   // single device buffer
   if (dbufs_.size() == 1) {
     if (idx.size() == 0) {
-      return {dbufs_[idx[0]]->get_phys_addr(), tensor_->get_element_num() * size};
+      return {dbufs_[0]->get_phys_addr(), tensor_->get_element_num() * size};
     }
 
     auto offset = 0;
@@ -90,7 +90,7 @@ std::pair<uint64_t, size_t> TensorBufferExtImpHostPhy::data_phy(
       offset += idx[k] * stride;
     }
     auto elem_num = tensor_->get_element_num();
-    return {dbufs_[idx[0]]->get_phys_addr() + offset * size,
+    return {dbufs_[0]->get_phys_addr() + offset * size,
           (elem_num - offset) * size};
   }
 

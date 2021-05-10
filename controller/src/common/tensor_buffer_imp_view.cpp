@@ -25,12 +25,15 @@ DEF_ENV_PARAM(DEBUG_TENSOR_BUFFER_ALLOCATOR, "0")
 namespace vart {
 TensorBufferExtImpView::TensorBufferExtImpView(
     const xir::Tensor* tensor, size_t offset,
-    vart::TensorBuffer* backstore)
+    std::vector<vart::TensorBuffer*> backstore)
     : TensorBuffer(xir::Tensor::clone(tensor).release()),
       tensor_{
           std::unique_ptr<xir::Tensor>(const_cast<xir::Tensor*>(get_tensor()))},
-      offset_{offset},
-      backstore_{backstore} {
+      offset_{offset} {
+  for (unsigned i =0; i< backstore.size();i++) 
+    backstore_.emplace_back(backstore[i]);
+  if (backstore.size() != 1)
+    backstore_batch = true;
   LOG_IF(INFO, ENV_PARAM(DEBUG_TENSOR_BUFFER_ALLOCATOR) >= 3)
       << " TensorBufferExtImpView created: " << to_string();
   ;
@@ -43,7 +46,7 @@ TensorBufferExtImpView::~TensorBufferExtImpView() {
 }
 
 TensorBuffer::location_t TensorBufferExtImpView::get_location() const {
-  return backstore_->get_location();
+  return backstore_[0]->get_location();
 }
 
 std::pair<uint64_t, size_t> TensorBufferExtImpView::data_x(
@@ -62,7 +65,6 @@ std::pair<uint64_t, size_t> TensorBufferExtImpView::data_x(
   const auto batch = dims[0];
   idx[0] = 0;
   dims[0] = 1;
-//cout << idx_orig.size()<< endl;
   //auto calc1 = vitis::ai::DimCalc(dims);
   //auto offset_in_single_batch = (int)calc1.offset(idx);
     auto offset = 0;
@@ -82,15 +84,23 @@ std::pair<uint64_t, size_t> TensorBufferExtImpView::data_x(
 
   uint64_t data_back;
   size_t size_back;
+  if (backstore_batch) {
+    if (phy) {
+      std::tie(data_back, size_back) =
+          backstore_[batch_idx]->data_phy({0, offset_in_single_batch});
+    } else {
+      std::tie(data_back, size_back) =
+          backstore_[batch_idx]->data({0, offset_in_single_batch});
+    }
 
-  if (phy) {
-    std::tie(data_back, size_back) =
-        backstore_->data_phy({batch_idx, offset_in_single_batch});
-        //backstore_->data_phy(idx);
-  } else {
-    std::tie(data_back, size_back) =
-        backstore_->data({batch_idx, offset_in_single_batch});
-        //backstore_->data(idx);
+  } else { 
+    if (phy) {
+      std::tie(data_back, size_back) =
+          backstore_[0]->data_phy({batch_idx, offset_in_single_batch});
+    } else {
+      std::tie(data_back, size_back) =
+          backstore_[0]->data({batch_idx, offset_in_single_batch});
+    }
   }
   //LOG_IF(INFO, ENV_PARAM(DEBUG_TENSOR_BUFFER_ALLOCATOR) >= 3)
   //    << " TensorBufferExtImpView data: " << data_back 
@@ -110,20 +120,38 @@ std::pair<std::uint64_t, std::size_t> TensorBufferExtImpView::data(
 }
 
 void TensorBufferExtImpView::sync_for_read(uint64_t offset, size_t size) {
-  return backstore_->sync_for_read(offset + offset_, size);
+  if (backstore_batch) {
+    for (unsigned i=0;i<backstore_.size(); i++)
+      backstore_[i]->sync_for_read(offset + offset_, size);
+  }
+  else
+    backstore_[0]->sync_for_read(offset + offset_, size);
 }
 
 void TensorBufferExtImpView::sync_for_write(uint64_t offset, size_t size) {
-  return backstore_->sync_for_write(offset + offset_, size);
+  if (backstore_batch) {
+    for (unsigned i=0;i<backstore_.size(); i++)
+      backstore_[i]->sync_for_write(offset + offset_, size);
+  } else {
+    backstore_[0]->sync_for_write(offset + offset_, size);
+  }
 }
 
 void TensorBufferExtImpView::copy_from_host(size_t batch_idx, const void* buf,
                                             size_t size, size_t offset) {
-  return backstore_->copy_from_host(batch_idx, buf, size, offset + offset_);
+  if (backstore_batch) {
+    backstore_[batch_idx]->copy_from_host(0, buf, size, offset + offset_);
+  }  else {
+    backstore_[0]->copy_from_host(batch_idx, buf, size, offset + offset_);
+  }
 }
 void TensorBufferExtImpView::copy_to_host(size_t batch_idx, void* buf,
                                           size_t size, size_t offset) {
-  return backstore_->copy_to_host(batch_idx, buf, size, offset + offset_);
+  if (backstore_batch) {
+    backstore_[batch_idx]->copy_to_host(0, buf, size, offset + offset_);
+  } else  {
+    backstore_[0]->copy_to_host(batch_idx, buf, size, offset + offset_);
+  }
 }
 
 }  // namespace vart
