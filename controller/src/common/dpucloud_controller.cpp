@@ -476,10 +476,10 @@ std::vector<vart::TensorBuffer*>  DpuCloudController::create_tensor_buffers_hbm(
             hbm_use.emplace_back(hbm[idx]);
             buf = create_tensor_buffers(ts,isInput,hbm_use);
             hbm_use.clear();
-            ts.clear();
             if (!buf.empty()) { 
+              ts.clear();
               bufs.emplace_back(buf[0]);
-              continue;
+              break;
             }
             if (idx == (hbm.size()-1)) {
               throw std::bad_alloc();
