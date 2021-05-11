@@ -59,6 +59,28 @@ class ButlerResource : public DeviceResource {
   std::unique_ptr<butler::ButlerClient> client_;
 };
 
+class KernelCntManager {
+  public:
+  KernelCntManager() { 
+    cuCount = 0;
+    totalCu = 0;
+  }
+  ~KernelCntManager() { }
+  bool checkAllCu() {
+    if (totalCu < cuCount)
+      return true;
+    else
+      return false; 
+  };
+  void tryCu(size_t cu_num) {
+    totalCu = cu_num;
+    cuCount++;
+  } 
+  private:
+  size_t cuCount;
+  size_t totalCu;
+};
+
 class XrmResource : public DeviceResource {
  public:
   XrmResource(std::string kernelName, std::string xclbin, xir::Attrs* attrs);
@@ -70,6 +92,7 @@ class XrmResource : public DeviceResource {
   void *context_;
   std::unique_ptr<xrmCuProperty> cu_prop_;
   std::unique_ptr<xrmCuResource> cu_rsrc_;
+  std::unique_ptr<KernelCntManager> kernel_cnt_;
 };
 
 /* 
@@ -125,6 +148,7 @@ class XrtDeviceHandle : public DeviceHandle {
   std::array<unsigned char, sizeof(xuid_t)> uuid_;
 };
 
+
 class XrtContext {
  // must create a separate XrtContext for each hostcode worker thread
  public: 
@@ -142,5 +166,18 @@ class XrtContext {
   xclDeviceHandle dev_handle_;
   xclBufferHandle bo_handle_;
   void *bo_addr_;
+};
+
+class KernelNameManager {
+  public:
+    ~KernelNameManager() { }
+    static KernelNameManager &getInstance() {
+      static KernelNameManager instance;
+      return instance;
+    }
+    std::pair<string,size_t> getRealKernelName(std::string xclbinPath, std::string kernelName);
+  private:
+    KernelNameManager() {};
+    unordered_map<std::string, unsigned > xclbin2usedCuIdx;
 };
 

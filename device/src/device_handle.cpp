@@ -145,76 +145,66 @@ static std::vector<std::string> get_xclbins_in_dir(std::string path) {
   return xclbinPaths;
 }
 
-int XrmResource::alloc_without_deviceId(std::string kernelName, char* xclbinPath, xir::Attrs* attrs) {
-  std::string fnm = std::string(xclbinPath);
-  xir::XrtBinStream binstream(fnm);
+std::pair<string,size_t> KernelNameManager::getRealKernelName(std::string xclbinPath, std::string kernelName) {
+  xir::XrtBinStream binstream(xclbinPath);
   auto cu_num = binstream.get_num_of_cu();
-  std::strcpy(cu_prop_->kernelName, std::string(kernelName).c_str());
-  int err = xrmCuAllocLeastUsedWithLoad(context_, cu_prop_.get(), xclbinPath, cu_rsrc_.get()); 
-  int try_cnt=0;
-  while(err) {
-    naive_resource_mgr_on_ = true;
-    // Try to acquire a new CU from xclbin
-    auto cuIdx = naive_resource_mgr_cu_idx_.fetch_add(1);
-    if (cuIdx > (cu_num-1)) cuIdx =  cuIdx % cu_num;
-    auto realKernelName = find_kernel_name(binstream.get_cu(cuIdx));
-    if (realKernelName.find(kernelName) != std::string::npos) {
-      std::strcpy(cu_prop_->kernelName, std::string(realKernelName).c_str());
-      err = xrmCuAllocLeastUsedWithLoad(context_, cu_prop_.get(), xclbinPath, cu_rsrc_.get());
-    }
-    if(err) {
-      try_cnt++;
-      if (try_cnt >= cu_num)
-        break;
-    } else {
-      break;
-    }
-  }
-  for (int i=0; i<try_cnt; i++)  naive_resource_mgr_cu_idx_--;
-  return err;
+  if (binstream.get_cu(0) == kernelName)
+    return std::make_pair(kernelName, cu_num); // exact match
+  if (find_kernel_name(binstream.get_cu(0)).empty())
+    return std::make_pair(kernelName, cu_num); // exact match
+  if (xclbin2usedCuIdx.find(xclbinPath) == xclbin2usedCuIdx.end())
+    xclbin2usedCuIdx[xclbinPath] = 0;
+  auto cuIdx = (xclbin2usedCuIdx[xclbinPath]++ % cu_num);
+  auto realKernelName = find_kernel_name(binstream.get_cu(cuIdx));
+  if (realKernelName.empty())
+    return std::make_pair(kernelName, cu_num); // exact match
+  // found matching "real kernel name"
+  return std::make_pair(realKernelName, cu_num);
+}
 
+int XrmResource::alloc_without_deviceId(std::string kernelName, char* xclbinPath, xir::Attrs* attrs) {
+  int err=1;
+  KernelNameManager& kernelNameManager = KernelNameManager::getInstance();
+  do {  
+    auto realKernel = kernelNameManager.getRealKernelName(xclbinPath, kernelName);
+    kernel_cnt_->tryCu(realKernel.second); 
+    std::strcpy(cu_prop_->kernelName, std::string(realKernel.first).c_str());
+    err = xrmCuAllocLeastUsedWithLoad(context_, cu_prop_.get(), xclbinPath, cu_rsrc_.get());
+    if (err) {
+      if (kernel_cnt_->checkAllCu())
+        break;
+    }
+  } while(err);
+  return err;
 }
 int XrmResource::alloc_with_deviceId(std::string kernelName, char* xclbinPath, xir::Attrs* attrs, std::string devices) {
   int err;
-  std::string fnm = std::string(xclbinPath);
-  xir::XrtBinStream binstream(fnm);
-  auto cu_num = binstream.get_num_of_cu();
   auto device_index = attrs->get_attr<size_t>("__device_id__");
   if (!devices.empty() && std::string::npos == devices.find(','+std::to_string(device_index)+','))
     throw std::runtime_error("Error: no devices available");
-  err = xrmLoadOneDevice(context_, device_index, xclbinPath);
-  std::strcpy(cu_prop_->kernelName, std::string(kernelName).c_str());
-  err = xrmCuAllocLeastUsedFromDev(context_, device_index, cu_prop_.get(), cu_rsrc_.get());
-  int try_cnt=0;
-  while(err) {
-    naive_resource_mgr_on_ = true;
-    // Try to acquire a new CU from xclbin
-    auto cuIdx = naive_resource_mgr_cu_idx_.fetch_add(1);
-    if (cuIdx > (cu_num-1)) cuIdx =  cuIdx % cu_num;
-    auto realKernelName = find_kernel_name(binstream.get_cu(cuIdx));
-    if (realKernelName.find(kernelName) != std::string::npos) {
-      std::strcpy(cu_prop_->kernelName, std::string(realKernelName).c_str());
-      err = xrmCuAllocLeastUsedFromDev(context_, device_index, cu_prop_.get(), cu_rsrc_.get());
-    }
-    if(err) {
-      try_cnt++;
-      if (try_cnt >= cu_num)
+  xrmLoadOneDevice(context_, device_index, xclbinPath); // if already load, here may fail, so not check status
+  KernelNameManager& kernelNameManager = KernelNameManager::getInstance();
+  do {  
+    auto realKernel = kernelNameManager.getRealKernelName(xclbinPath, kernelName);
+    std::strcpy(cu_prop_->kernelName, std::string(realKernel.first).c_str());
+    kernel_cnt_->tryCu(realKernel.second); 
+    err = xrmCuAllocLeastUsedFromDev(context_, device_index, cu_prop_.get(), cu_rsrc_.get());
+    if (err) {
+      if (kernel_cnt_->checkAllCu())
         break;
-    } else {
-      break;
     }
-  }
-  for (int i=0; i<try_cnt; i++)  naive_resource_mgr_cu_idx_--;
+  } while(err);
   return err;
 }
 
 int XrmResource::alloc_from_attrs(std::string kernelName, char* xclbinPath, xir::Attrs* attrs, std::string devices) {
   int err=-1;
   bool cu_correct=false;
+  kernel_cnt_.reset(new KernelCntManager());
   std::vector<std::unique_ptr<xrmCuResource>> cu_rsrc;
   std::string fnm = std::string(xclbinPath);
   xir::XrtBinStream binstream(fnm);
-  auto cu_num = binstream.get_num_of_cu();
+  //auto cu_num = binstream.get_num_of_cu();
   while(!cu_correct) {
     if (attrs != nullptr) {
       if (attrs->has_attr("__device_id__")) {
@@ -233,7 +223,7 @@ int XrmResource::alloc_from_attrs(std::string kernelName, char* xclbinPath, xir:
         }
         //select correct batch
         if ((kernelName == "DPUCVDX8H")||(kernelName == "DPUCAHX8L")||(kernelName == "DPUCAHX8H")) {
-          if (attrs->has_attr("__batch__")) {
+          if (attrs->has_attr("__batch__")) { // this only used in runtime and can't be set outside
             auto batch = attrs->get_attr<size_t>("__batch__");
             uint32_t val;
             auto base_addr = cu_rsrc_->baseAddr;
@@ -245,24 +235,31 @@ int XrmResource::alloc_from_attrs(std::string kernelName, char* xclbinPath, xir:
               cu_rsrc.emplace_back(std::move(cu_rsrc_));
               cu_rsrc_.reset(new xrmCuResource); 
               std::memset(cu_rsrc_.get(), 0, sizeof(xrmCuResource));
-            } else {
+              if (kernel_cnt_->checkAllCu()) {
+                return -1;
+              }
+            } else { // bath match
               cu_correct=true;
             }
-          } else {
+          } else { // no batch info
             cu_correct=true;
           }
-        } else {
+        } else { // v3int8
           cu_correct=true;
         }
-      } else {
-        for (unsigned sz=0;sz<cu_rsrc.size();sz++) xrmCuRelease(context_, cu_rsrc[sz].get());
+      } else { // alloc with realKernel
+        for (unsigned sz=0;sz<cu_rsrc.size();sz++) {
+          xrmCuRelease(context_, cu_rsrc[sz].get());
+        }
         return -1;
       }
+    } else {
+      break;
     }
-  }
-  for (unsigned sz=0;sz<cu_rsrc.size();sz++)
+  } 
+  for (unsigned sz=0;sz<cu_rsrc.size();sz++) {
     xrmCuRelease(context_, cu_rsrc[sz].get());
-
+  }
   return err;
 
 }
@@ -307,21 +304,10 @@ XrmResource::XrmResource(std::string kernelName, std::string xclbin, xir::Attrs*
       err = alloc_from_attrs(kernelName, xclbinPath, attrs, deviceString);
 
     } else {
+      KernelNameManager& kernelNameManager = KernelNameManager::getInstance();
+      auto realKernel = kernelNameManager.getRealKernelName(xclbinPath, kernelName);
+      std::strcpy(cu_prop_->kernelName, std::string(realKernel.first).c_str());
       err = xrmCuAllocLeastUsedWithLoad(context_, cu_prop_.get(), xclbinPath, cu_rsrc_.get()); 
-      if (err) {
-        naive_resource_mgr_on_ = true;
-        std::string fnm = std::string(xclbinPath);
-        xir::XrtBinStream binstream(fnm);
-        // Try to acquire a new CU from xclbin
-        auto cu_num = binstream.get_num_of_cu();
-        auto cuIdx = naive_resource_mgr_cu_idx_.fetch_add(1);
-        if (cuIdx > (cu_num-1)) cuIdx =  rand() % cu_num;
-        auto realKernelName = find_kernel_name(binstream.get_cu(cuIdx));
-        if (realKernelName.find(kernelName) != std::string::npos) {
-          std::strcpy(cu_prop_->kernelName, std::string(realKernelName).c_str());
-          err = xrmCuAllocLeastUsedWithLoad(context_, cu_prop_.get(), xclbinPath, cu_rsrc_.get());
-        }
-      }
     }
     if (err) {
       continue; // keep trying other xclbins
@@ -393,8 +379,8 @@ XrmResource::XrmResource(std::string kernelName, std::string xclbin, xir::Attrs*
 }
 
 XrmResource::~XrmResource() { 
-  if (naive_resource_mgr_on_)
-    naive_resource_mgr_cu_idx_--;
+  //if (naive_resource_mgr_on_)
+  //  naive_resource_mgr_cu_idx_--;
   xrmCuRelease(context_, cu_rsrc_.get()); 
 }
 
