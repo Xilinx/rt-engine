@@ -185,6 +185,8 @@ XrmResource::XrmResource(std::string kernelName, std::string xclbin)
         }else {
           break;
         }
+      } else {
+        break;
       }
     }
     if (err) {
