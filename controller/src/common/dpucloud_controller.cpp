@@ -293,7 +293,7 @@ void DpuCloudController::init_graph(vector<unsigned> hbmw, vector<unsigned> hbmc
     for(auto workspace : model_->get_xdpu_workspace_reg_map()) {
        //auto wkBo = get_xrt_bo(workspace.second,) 
 
-       auto buf = create_tensor_buffers_hbm(get_merged_io_tensors(workspace.second),false, get_hbmio(),1);
+       auto buf = create_tensor_buffers_hbm(get_merged_io_tensors(workspace.second),false, get_hbmio());
        if (!buf.empty()) {
          xdpu_workspace_dpu.emplace(workspace.first,buf);
        }
@@ -864,6 +864,7 @@ vector<std::tuple<int, int,uint64_t>>  DpuCloudController::get_dpu_reg_inside(bo
               } else {
                 io_bufs[i] = dynamic_cast<XrtDeviceBuffer*>(get_device_buffer(buf[i]));
                 //reg_addrs[iter->first-1][i] = io_bufs[i]->get_phys_addr();
+                xdpu_total_dpureg_map2.push_back(std::make_tuple(iter->first,i,io_bufs[i]->get_phys_addr()));
                 xdpu_total_dpureg_map2.push_back(std::make_tuple(iter->first,i,io_bufs[i]->get_phys_addr()));
                 LOG_IF(INFO, ENV_PARAM(DEBUG_DPU_CONTROLLER))
                   <<"Engine : " << i<<  " workspace reg_id: " 
