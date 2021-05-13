@@ -232,7 +232,7 @@ void DpuXmodel::init_graph(const xir::Subgraph* subgraph) {
         int reg_id = reg_id_str[reg_id_str.length()-1]- '0';
         xdpu_total_reg_map.emplace(std::make_pair(reg_id,  reg_id_to_size.at(r.first)));
         LOG_IF(INFO, ENV_PARAM(DEBUG_DPU_CONTROLLER))
-          << "io reg_id: "  //
+          << "version <=1.3 io reg_id: "  //
           << reg_id 
           << "  size: " 
           <<reg_id_to_size.at(r.first)      //

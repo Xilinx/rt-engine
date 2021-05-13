@@ -52,5 +52,6 @@ class TensorBufferExtImpView : public vart::TensorBuffer {
   const size_t offset_;
   std::vector<vart::TensorBuffer*> backstore_;
   bool backstore_batch;
+  size_t tensor_batch;
 };
 }  // namespace vart

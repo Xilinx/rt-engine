@@ -18,7 +18,7 @@
 
 #include <sstream>
 #include <xir/tensor/tensor.hpp>
-
+#include <math.h>
 //#include "vitis/ai/dim_calc.hpp"
 #include "vitis/ai/env_config.hpp"
 DEF_ENV_PARAM(DEBUG_TENSOR_BUFFER_ALLOCATOR, "0")
@@ -34,6 +34,9 @@ TensorBufferExtImpView::TensorBufferExtImpView(
     backstore_.emplace_back(backstore[i]);
   if (backstore.size() != 1)
     backstore_batch = true;
+  // when dims[0] from xir is bigger than 1, need to handle data in tensor_batch in etch tensorbuffer
+  tensor_batch = tensor->get_shape()[0]/backstore_.size();
+  CHECK_EQ(tensor->get_shape()[0], tensor_batch*backstore_.size()); 
   LOG_IF(INFO, ENV_PARAM(DEBUG_TENSOR_BUFFER_ALLOCATOR) >= 3)
       << " TensorBufferExtImpView created: " << to_string();
   ;
@@ -84,22 +87,23 @@ std::pair<uint64_t, size_t> TensorBufferExtImpView::data_x(
 
   uint64_t data_back;
   size_t size_back;
+  int buf_idx = floor(batch_idx/tensor_batch);
   if (backstore_batch) {
     if (phy) {
       std::tie(data_back, size_back) =
-          backstore_[batch_idx]->data_phy({0, offset_in_single_batch});
+          backstore_[buf_idx]->data_phy({0, offset_in_single_batch});
     } else {
       std::tie(data_back, size_back) =
-          backstore_[batch_idx]->data({0, offset_in_single_batch});
+          backstore_[buf_idx]->data({0, offset_in_single_batch});
     }
 
   } else { 
     if (phy) {
       std::tie(data_back, size_back) =
-          backstore_[0]->data_phy({batch_idx, offset_in_single_batch});
+          backstore_[0]->data_phy({buf_idx, offset_in_single_batch});
     } else {
       std::tie(data_back, size_back) =
-          backstore_[0]->data({batch_idx, offset_in_single_batch});
+          backstore_[0]->data({buf_idx, offset_in_single_batch});
     }
   }
   //LOG_IF(INFO, ENV_PARAM(DEBUG_TENSOR_BUFFER_ALLOCATOR) >= 3)
@@ -139,18 +143,20 @@ void TensorBufferExtImpView::sync_for_write(uint64_t offset, size_t size) {
 
 void TensorBufferExtImpView::copy_from_host(size_t batch_idx, const void* buf,
                                             size_t size, size_t offset) {
+  int idx = floor(batch_idx/tensor_batch);
   if (backstore_batch) {
-    backstore_[batch_idx]->copy_from_host(0, buf, size, offset + offset_);
+    backstore_[idx]->copy_from_host(0, buf, size, offset + offset_);
   }  else {
-    backstore_[0]->copy_from_host(batch_idx, buf, size, offset + offset_);
+    backstore_[0]->copy_from_host(idx, buf, size, offset + offset_);
   }
 }
 void TensorBufferExtImpView::copy_to_host(size_t batch_idx, void* buf,
                                           size_t size, size_t offset) {
+  int idx = floor(batch_idx/tensor_batch);
   if (backstore_batch) {
-    backstore_[batch_idx]->copy_to_host(0, buf, size, offset + offset_);
+    backstore_[idx]->copy_to_host(0, buf, size, offset + offset_);
   } else  {
-    backstore_[0]->copy_to_host(batch_idx, buf, size, offset + offset_);
+    backstore_[0]->copy_to_host(idx, buf, size, offset + offset_);
   }
 }
 
