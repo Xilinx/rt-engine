@@ -204,7 +204,7 @@ int XrmResource::alloc_from_attrs(std::string kernelName, char* xclbinPath, xir:
   std::vector<std::unique_ptr<xrmCuResource>> cu_rsrc;
   std::string fnm = std::string(xclbinPath);
   xir::XrtBinStream binstream(fnm);
-  //auto cu_num = binstream.get_num_of_cu();
+  std::vector<pair<size_t, size_t>> allocedCus;
   while(!cu_correct) {
     if (attrs != nullptr) {
       if (attrs->has_attr("__device_id__")) {
@@ -230,14 +230,20 @@ int XrmResource::alloc_from_attrs(std::string kernelName, char* xclbinPath, xir:
             auto handle = xclOpen(cu_rsrc_->deviceId, NULL, XCL_INFO);
             xclRead(handle, XCL_ADDR_KERNEL_CTRL, base_addr+0x1ec, (void *)(&val), 4);
             xclClose(handle);
-            if (val != batch ) {
-            //if (cu_rsrc_->cuId != cu_index) {
+            if (val != 6 ) {
+              for (auto cu : allocedCus) {
+                if ((cu_rsrc_->deviceId == cu.second)&&(cu_rsrc_->cuId == cu.first)) {
+                  for (unsigned sz=0;sz<cu_rsrc.size();sz++) {
+                    xrmCuRelease(context_, cu_rsrc[sz].get());
+                  }
+                  xrmCuRelease(context_, cu_rsrc_.get());
+                  return -1;
+                }
+              }
+              allocedCus.emplace_back(std::make_pair(cu_rsrc_->cuId,cu_rsrc_->deviceId));
               cu_rsrc.emplace_back(std::move(cu_rsrc_));
               cu_rsrc_.reset(new xrmCuResource); 
               std::memset(cu_rsrc_.get(), 0, sizeof(xrmCuResource));
-              if (kernel_cnt_->checkAllCu()) {
-                return -1;
-              }
             } else { // bath match
               cu_correct=true;
             }
@@ -247,7 +253,7 @@ int XrmResource::alloc_from_attrs(std::string kernelName, char* xclbinPath, xir:
         } else { // v3int8
           cu_correct=true;
         }
-      } else { // alloc with realKernel
+      } else { 
         for (unsigned sz=0;sz<cu_rsrc.size();sz++) {
           xrmCuRelease(context_, cu_rsrc[sz].get());
         }
