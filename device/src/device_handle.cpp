@@ -34,29 +34,24 @@ DeviceResource::DeviceResource(std::string kernelName, std::string xclbin, xir::
   // simulate assigning a new cuIdx each time Controller creates DeviceResource 
   // TODO support multiple devices
   //const int deviceIdx = 0;
-  //naive_resource_mgr_on_ = true;
-  //auto cuIdx = naive_resource_mgr_cu_idx_.fetch_add(1);
   size_t deviceIdx=0;
   size_t cuIdx=0;
   xir::XrtBinStream binstream(xclbin);
-  if (attrs != nullptr) {
-    if (attrs->has_attr("__device_id__")) { 
-      auto device_index = attrs->get_attr<size_t>("__device_id__");
-      if (device_index > (num_devices-1))
-        throw std::runtime_error("Error: no devices available");
-      deviceIdx = device_index;
-    }
-    if (attrs->has_attr("__device_core_id__")) {
-      auto cu_index = attrs->get_attr<size_t>("__device_core_id__");
-      if (cu_index > (binstream.get_num_of_cu()-1))
-        throw std::runtime_error("Error: no CU available");
-      cuIdx = cu_index;
-    }
-  } else {
-    naive_resource_mgr_on_ = true;
-    cuIdx = naive_resource_mgr_cu_idx_.fetch_add(1);
-    if (cuIdx > (binstream.get_num_of_cu()-1)) cuIdx = rand()%binstream.get_num_of_cu(); 
+  naive_resource_mgr_on_ = true;
+  cuIdx = naive_resource_mgr_cu_idx_.fetch_add(1);
+  if (cuIdx > (binstream.get_num_of_cu()-1)) cuIdx = rand()%binstream.get_num_of_cu(); 
+  if (attrs->has_attr("__device_id__")) { 
+    auto device_index = attrs->get_attr<size_t>("__device_id__");
+    if (device_index > (num_devices-1))
+      throw std::runtime_error("Error: no devices available");
+    deviceIdx = device_index;
   }
+  if (attrs->has_attr("__device_core_id__")) {
+    auto cu_index = attrs->get_attr<size_t>("__device_core_id__");
+    if (cu_index > (binstream.get_num_of_cu()-1))
+      throw std::runtime_error("Error: no CU available");
+    cuIdx = cu_index;
+  } 
 
   if (cuIdx >= binstream.get_num_of_cu())
     throw std::runtime_error("Error: no CUs available");
@@ -189,61 +184,57 @@ int XrmResource::alloc_from_attrs(std::string kernelName, char* xclbinPath, xir:
   xir::XrtBinStream binstream(fnm);
   std::vector<pair<int, int>> allocedCus;
   while(!cu_correct) {
-    if (attrs != nullptr) {
-      if (attrs->has_attr("__device_id__")) {
-        err = alloc_with_deviceId(kernelName, xclbinPath, attrs, devices); 
-      } else {
-        err = alloc_without_deviceId(kernelName, xclbinPath, attrs); 
-      } 
-      if (0==err) {   
-        //TODO for XLNX_ENABLE_DEVICES, need to make sure XLNX_ENABLE_DEVICES config a correct value
-        //TODO for the condtion of "ALL"
-        if (!devices.empty() &&std::string::npos == devices.find(','+std::to_string(cu_rsrc_->deviceId)+',')){
-          xrmCuResource *cu_rsrc_copy = new xrmCuResource();;
-          std::memcpy(cu_rsrc_copy, cu_rsrc_.get(), sizeof(xrmCuResource));
-          cu_rsrc.emplace_back(cu_rsrc_copy);
-          continue;
-        }
-        //select correct batch
-        if ((kernelName == "DPUCVDX8H")||(kernelName == "DPUCAHX8L")||(kernelName == "DPUCAHX8H")) {
-          if (attrs->has_attr("__batch__")) { // this only used in runtime and can't be set outside
-            auto batch = attrs->get_attr<size_t>("__batch__");
-            uint32_t val;
-            auto base_addr = cu_rsrc_->baseAddr;
-            auto handle = xclOpen(cu_rsrc_->deviceId, NULL, XCL_INFO);
-            xclRead(handle, XCL_ADDR_KERNEL_CTRL, base_addr+0x1ec, (void *)(&val), 4);
-            xclClose(handle);
-            if (val != batch ) {
-              for (auto cu : allocedCus) {
-                if ((cu_rsrc_->deviceId == cu.second)&&(cu_rsrc_->cuId == cu.first)) {
-                  for (unsigned sz=0;sz<cu_rsrc.size();sz++) {
-                    xrmCuRelease(context_, cu_rsrc[sz].get());
-                  }
-                  xrmCuRelease(context_, cu_rsrc_.get());
-                  return -1;
+    if (attrs->has_attr("__device_id__")) {
+      err = alloc_with_deviceId(kernelName, xclbinPath, attrs, devices); 
+    } else {
+      err = alloc_without_deviceId(kernelName, xclbinPath, attrs); 
+    } 
+    if (0==err) {   
+      //TODO for XLNX_ENABLE_DEVICES, need to make sure XLNX_ENABLE_DEVICES config a correct value
+      //TODO for the condtion of "ALL"
+      if (!devices.empty() &&std::string::npos == devices.find(','+std::to_string(cu_rsrc_->deviceId)+',')){
+        xrmCuResource *cu_rsrc_copy = new xrmCuResource();;
+        std::memcpy(cu_rsrc_copy, cu_rsrc_.get(), sizeof(xrmCuResource));
+        cu_rsrc.emplace_back(cu_rsrc_copy);
+        continue;
+      }
+      //select correct batch
+      if ((kernelName == "DPUCVDX8H")||(kernelName == "DPUCAHX8L")||(kernelName == "DPUCAHX8H")) {
+        if (attrs->has_attr("__batch__")) { // this only used in runtime and can't be set outside
+          auto batch = attrs->get_attr<size_t>("__batch__");
+          uint32_t val;
+          auto base_addr = cu_rsrc_->baseAddr;
+          auto handle = xclOpen(cu_rsrc_->deviceId, NULL, XCL_INFO);
+          xclRead(handle, XCL_ADDR_KERNEL_CTRL, base_addr+0x1ec, (void *)(&val), 4);
+          xclClose(handle);
+          if (val != batch ) {
+            for (auto cu : allocedCus) {
+              if ((cu_rsrc_->deviceId == cu.second)&&(cu_rsrc_->cuId == cu.first)) {
+                for (unsigned sz=0;sz<cu_rsrc.size();sz++) {
+                  xrmCuRelease(context_, cu_rsrc[sz].get());
                 }
+                xrmCuRelease(context_, cu_rsrc_.get());
+                return -1;
               }
-              allocedCus.emplace_back(std::make_pair(cu_rsrc_->cuId,cu_rsrc_->deviceId));
-              cu_rsrc.emplace_back(std::move(cu_rsrc_));
-              cu_rsrc_.reset(new xrmCuResource); 
-              std::memset(cu_rsrc_.get(), 0, sizeof(xrmCuResource));
-            } else { // bath match
-              cu_correct=true;
             }
-          } else { // no batch info
+            allocedCus.emplace_back(std::make_pair(cu_rsrc_->cuId,cu_rsrc_->deviceId));
+            cu_rsrc.emplace_back(std::move(cu_rsrc_));
+            cu_rsrc_.reset(new xrmCuResource); 
+            std::memset(cu_rsrc_.get(), 0, sizeof(xrmCuResource));
+          } else { // bath match
             cu_correct=true;
           }
-        } else { // v3int8
+        } else { // no batch info
           cu_correct=true;
         }
-      } else { 
-        for (unsigned sz=0;sz<cu_rsrc.size();sz++) {
-          xrmCuRelease(context_, cu_rsrc[sz].get());
-        }
-        return -1;
+      } else { // v3int8
+        cu_correct=true;
       }
-    } else {
-      break;
+    } else { 
+      for (unsigned sz=0;sz<cu_rsrc.size();sz++) {
+        xrmCuRelease(context_, cu_rsrc[sz].get());
+      }
+      return -1;
     }
   } 
   for (unsigned sz=0;sz<cu_rsrc.size();sz++) {
@@ -288,16 +279,8 @@ XrmResource::XrmResource(std::string kernelName, std::string xclbin, xir::Attrs*
     // try to load xclbin
     char xclbinPath[XRM_MAX_PATH_NAME_LEN];
     std::strcpy(xclbinPath, xclbins[i].c_str()); // XRM does not take const char* :(
-    int err;
-    if (attrs != nullptr) {
-      err = alloc_from_attrs(kernelName, xclbinPath, attrs, deviceString);
+    int err = alloc_from_attrs(kernelName, xclbinPath, attrs, deviceString);
 
-    } else {
-      KernelNameManager& kernelNameManager = KernelNameManager::getInstance();
-      auto realKernel = kernelNameManager.getRealKernelName(xclbinPath, kernelName);
-      std::strcpy(cu_prop_->kernelName, std::string(realKernel).c_str());
-      err = xrmCuAllocLeastUsedWithLoad(context_, cu_prop_.get(), xclbinPath, cu_rsrc_.get()); 
-    }
     if (err) {
       continue; // keep trying other xclbins
     }
