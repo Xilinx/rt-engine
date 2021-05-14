@@ -99,16 +99,11 @@ DpuV3eController::DpuV3eController(std::string meta, xir::Attrs* attrs)
   hbmio.clear();
   hbmw.clear();
   hbmc.clear();
-  //for (int idx=16; idx<32; idx++) {
-    hbmio.push_back(0);
-    hbmio.push_back(1);
-    hbmio.push_back(2);
-    hbmio.push_back(8);
-    hbmio.push_back(9);
-    hbmw.push_back(12);
-    hbmw.push_back(13);
-    hbmc.push_back(6);
-  //}
+  for (int idx=0; idx<32; idx++) {
+    hbmio.push_back(idx);
+    hbmw.push_back(idx);
+    hbmc.push_back(idx);
+  }
  
   init_graph(hbmw,hbmc,attrs);
 }
@@ -118,73 +113,11 @@ DpuV3eController::DpuV3eController(const xir::Subgraph *subgraph, xir::Attrs* at
   hbmio.clear();
   hbmw.clear();
   hbmc.clear();
-    //hbmio.push_back(0);
-    //hbmio.push_back(1);
-    //hbmio.push_back(2);
-    //hbmio.push_back(8);
-    //hbmio.push_back(9);
-    //hbmw.push_back(12);
-    //hbmw.push_back(13);
-    //hbmc.push_back(6);
-     auto cu_index = handle_->get_device_info().cu_index;
-    if(cu_index == 0) {
-for (int i=0; i< 32; i++) {
+  for (int i=0; i< 32; i++) {
     hbmio.push_back(i);
     hbmc.push_back(i);
     hbmw.push_back(i);
-}
-    //hbmio.push_back(0);
-    //hbmio.push_back(19);
-    //hbmio.push_back(20);
-    //hbmio.push_back(1);
-    //hbmc.push_back(16);
-    //hbmw.push_back(10);
-    //hbmw.push_back(11);
   }
-  else if(cu_index == 1) {
-for (int i=0; i< 32; i++) {
-    hbmio.push_back(i);
-    hbmc.push_back(i);
-    hbmw.push_back(i);
-}
-    //hbmio.push_back(2);
-    //hbmio.push_back(3);
-    //hbmio.push_back(21);
-    //hbmio.push_back(22);
-    //hbmio.push_back(4);
-    //hbmc.push_back(17);
-    //hbmw.push_back(12);
-    //hbmw.push_back(13);
-  }
-  else {
-for (int i=0; i< 32; i++) {
-    hbmio.push_back(i);
-    hbmc.push_back(i);
-    hbmw.push_back(i);
-}
-    //hbmio.push_back(5);
-    //hbmio.push_back(6);
-    //hbmio.push_back(23);
-    //hbmio.push_back(24);
-    //hbmio.push_back(7);
-    //hbmc.push_back(18);
-    //hbmw.push_back(14);
-    //hbmw.push_back(15);
-  }
-  
-//    hbmio.push_back(0);
-//    hbmio.push_back(1);
-//    hbmio.push_back(2);
-//    hbmio.push_back(3);
-//    hbmio.push_back(4);
-//    hbmw.push_back(5);
-//    hbmw.push_back(6);
-//    hbmc.push_back(1);
-  //for (int idx=16; idx<32; idx++) {
-  //  hbmio.push_back(idx);
-  //  hbmw.push_back(idx);
-  //  hbmc.push_back(idx);
-  //}
   
   init_graph(hbmw,hbmc,attrs);
 }

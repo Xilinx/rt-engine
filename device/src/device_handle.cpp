@@ -230,7 +230,7 @@ int XrmResource::alloc_from_attrs(std::string kernelName, char* xclbinPath, xir:
             auto handle = xclOpen(cu_rsrc_->deviceId, NULL, XCL_INFO);
             xclRead(handle, XCL_ADDR_KERNEL_CTRL, base_addr+0x1ec, (void *)(&val), 4);
             xclClose(handle);
-            if (val != 6 ) {
+            if (val != batch ) {
               for (auto cu : allocedCus) {
                 if ((cu_rsrc_->deviceId == cu.second)&&(cu_rsrc_->cuId == cu.first)) {
                   for (unsigned sz=0;sz<cu_rsrc.size();sz++) {
