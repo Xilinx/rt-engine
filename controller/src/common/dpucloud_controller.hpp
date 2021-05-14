@@ -28,15 +28,12 @@ class DpuCloudController
   virtual std::vector<unsigned> get_hbmc();
   virtual std::vector<unsigned> get_hbmio();
   virtual std::vector<vart::TensorBuffer*> create_tensor_buffers_hbm(
-    const std::vector<const xir::Tensor*> &tensors, bool isInput, vector<unsigned> ddrBank);
-  virtual std::vector<vart::TensorBuffer*> create_tensor_buffers_hbm(
     const std::vector<const xir::Tensor*> &tensors, bool isInput, vector<unsigned> ddrBank,int batch_size);
 
   //virtual void init(const std::string &meta);
   //virtual void init(const xir::Subgraph* subgraph);
   virtual void init_graph(vector<unsigned> hbmw, vector<unsigned> hbmc);
   virtual std::vector<const xir::Tensor*> get_merged_io_tensors(int size) const;
-  virtual std::vector<const xir::Tensor*> get_merged_io_tensors_batch(int size) const;
   virtual std::vector<vart::TensorBuffer*> init_tensor_buffer(std::vector<const xir::Tensor*> tensors, int batchSupport, unsigned runEngone=1);
   virtual std::vector<const xir::Tensor*> init_tensor(std::vector<const xir::Tensor*> tensors, int batchSupport, unsigned runEngone=1);
   virtual bool check_tensorbuffer_outside(const std::vector<vart::TensorBuffer*> &outputs);
