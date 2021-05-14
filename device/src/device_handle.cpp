@@ -145,66 +145,49 @@ static std::vector<std::string> get_xclbins_in_dir(std::string path) {
   return xclbinPaths;
 }
 
-std::pair<string,size_t> KernelNameManager::getRealKernelName(std::string xclbinPath, std::string kernelName) {
+std::string KernelNameManager::getRealKernelName(std::string xclbinPath, std::string kernelName) {
   xir::XrtBinStream binstream(xclbinPath);
   auto cu_num = binstream.get_num_of_cu();
   if (binstream.get_cu(0) == kernelName)
-    return std::make_pair(kernelName, cu_num); // exact match
+    return kernelName; // exact match
   if (find_kernel_name(binstream.get_cu(0)).empty())
-    return std::make_pair(kernelName, cu_num); // exact match
+    return kernelName; // exact match
   if (xclbin2usedCuIdx.find(xclbinPath) == xclbin2usedCuIdx.end())
     xclbin2usedCuIdx[xclbinPath] = 0;
   auto cuIdx = (xclbin2usedCuIdx[xclbinPath]++ % cu_num);
   auto realKernelName = find_kernel_name(binstream.get_cu(cuIdx));
   if (realKernelName.empty())
-    return std::make_pair(kernelName, cu_num); // exact match
+    return kernelName; // exact match
   // found matching "real kernel name"
-  return std::make_pair(realKernelName, cu_num);
+  return realKernelName;
 }
 
 int XrmResource::alloc_without_deviceId(std::string kernelName, char* xclbinPath, xir::Attrs* attrs) {
-  int err=1;
   KernelNameManager& kernelNameManager = KernelNameManager::getInstance();
-  do {  
-    auto realKernel = kernelNameManager.getRealKernelName(xclbinPath, kernelName);
-    kernel_cnt_->tryCu(realKernel.second); 
-    std::strcpy(cu_prop_->kernelName, std::string(realKernel.first).c_str());
-    err = xrmCuAllocLeastUsedWithLoad(context_, cu_prop_.get(), xclbinPath, cu_rsrc_.get());
-    if (err) {
-      if (kernel_cnt_->checkAllCu())
-        break;
-    }
-  } while(err);
+  auto realKernel = kernelNameManager.getRealKernelName(xclbinPath, kernelName);
+  std::strcpy(cu_prop_->kernelName, std::string(realKernel).c_str());
+  auto err = xrmCuAllocLeastUsedWithLoad(context_, cu_prop_.get(), xclbinPath, cu_rsrc_.get());
   return err;
 }
 int XrmResource::alloc_with_deviceId(std::string kernelName, char* xclbinPath, xir::Attrs* attrs, std::string devices) {
-  int err;
   auto device_index = attrs->get_attr<size_t>("__device_id__");
   if (!devices.empty() && std::string::npos == devices.find(','+std::to_string(device_index)+','))
     throw std::runtime_error("Error: no devices available");
   xrmLoadOneDevice(context_, device_index, xclbinPath); // if already load, here may fail, so not check status
   KernelNameManager& kernelNameManager = KernelNameManager::getInstance();
-  do {  
-    auto realKernel = kernelNameManager.getRealKernelName(xclbinPath, kernelName);
-    std::strcpy(cu_prop_->kernelName, std::string(realKernel.first).c_str());
-    kernel_cnt_->tryCu(realKernel.second); 
-    err = xrmCuAllocLeastUsedFromDev(context_, device_index, cu_prop_.get(), cu_rsrc_.get());
-    if (err) {
-      if (kernel_cnt_->checkAllCu())
-        break;
-    }
-  } while(err);
+  auto realKernel = kernelNameManager.getRealKernelName(xclbinPath, kernelName);
+  std::strcpy(cu_prop_->kernelName, std::string(realKernel).c_str());
+  auto err = xrmCuAllocLeastUsedFromDev(context_, device_index, cu_prop_.get(), cu_rsrc_.get());
   return err;
 }
 
 int XrmResource::alloc_from_attrs(std::string kernelName, char* xclbinPath, xir::Attrs* attrs, std::string devices) {
   int err=-1;
   bool cu_correct=false;
-  kernel_cnt_.reset(new KernelCntManager());
   std::vector<std::unique_ptr<xrmCuResource>> cu_rsrc;
   std::string fnm = std::string(xclbinPath);
   xir::XrtBinStream binstream(fnm);
-  std::vector<pair<size_t, size_t>> allocedCus;
+  std::vector<pair<int, int>> allocedCus;
   while(!cu_correct) {
     if (attrs != nullptr) {
       if (attrs->has_attr("__device_id__")) {
@@ -286,7 +269,7 @@ XrmResource::XrmResource(std::string kernelName, std::string xclbin, xir::Attrs*
   std::strcpy(cu_prop_->kernelAlias, "");
   cu_prop_->devExcl = false;
 
-  cu_prop_->requestLoad = 1;
+  cu_prop_->requestLoad = 0x100;
 
   cu_prop_->poolId = 0; // Allocate CUs from the system pool
 
@@ -312,7 +295,7 @@ XrmResource::XrmResource(std::string kernelName, std::string xclbin, xir::Attrs*
     } else {
       KernelNameManager& kernelNameManager = KernelNameManager::getInstance();
       auto realKernel = kernelNameManager.getRealKernelName(xclbinPath, kernelName);
-      std::strcpy(cu_prop_->kernelName, std::string(realKernel.first).c_str());
+      std::strcpy(cu_prop_->kernelName, std::string(realKernel).c_str());
       err = xrmCuAllocLeastUsedWithLoad(context_, cu_prop_.get(), xclbinPath, cu_rsrc_.get()); 
     }
     if (err) {
