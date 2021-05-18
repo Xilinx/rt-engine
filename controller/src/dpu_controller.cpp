@@ -21,8 +21,12 @@
 DEF_ENV_PARAM(DEBUG_DPU_CONTROLLER, "0")
 
 template <class Dhandle, class DbufIn, class DbufOut>
-XclDpuController<Dhandle, DbufIn, DbufOut>::XclDpuController(std::string meta) 
-: DpuController(meta) {
+XclDpuController<Dhandle, DbufIn, DbufOut>::XclDpuController(std::string meta, xir::Attrs* attrs) 
+: DpuController(meta, attrs),  default_attrs_{xir::Attrs::create()}  {
+
+  if (attrs == nullptr) {
+    attrs = default_attrs_.get();
+  } 
   // load meta file
   std::ifstream f(meta);
   std::stringstream metabuf;
@@ -45,16 +49,32 @@ XclDpuController<Dhandle, DbufIn, DbufOut>::XclDpuController(std::string meta)
     << xclbinPath      //
     ;
 
-  handle_.reset(new Dhandle(kernelName, xclbinPath));
+  //handle_.reset(new Dhandle(kernelName, xclbinPath));
+  handle_.reset(new Dhandle(kernelName, xclbinPath, attrs));
+  if (!attrs->has_attr("__device_core_id__")) {
+    attrs->set_attr<size_t>("__device_core_id__", handle_->get_device_info().cu_index);
+  }
+  if (!attrs->has_attr("__device_id__")) {
+    attrs->set_attr<size_t>("__device_id__", handle_->get_device_info().device_index);
+  }
+
+  
+  LOG_IF(INFO, ENV_PARAM(DEBUG_DPU_CONTROLLER))
+    << "alloc cu index: " << handle_->get_device_info().cu_index 
+    << " device index: " << handle_->get_device_info().device_index;
+
   LOG_IF(INFO, ENV_PARAM(DEBUG_DPU_CONTROLLER))
     << "done loading xclbin"  //
     ;
 }
 
 template <class Dhandle, class DbufIn, class DbufOut>
-XclDpuController<Dhandle, DbufIn, DbufOut>::XclDpuController(const xir::Subgraph *subgraph) 
-: DpuController(subgraph) {
+XclDpuController<Dhandle, DbufIn, DbufOut>::XclDpuController(const xir::Subgraph *subgraph, xir::Attrs* attrs)
+: DpuController(subgraph, attrs),  default_attrs_{xir::Attrs::create()} {
 
+  if (attrs == nullptr) {
+    attrs = default_attrs_.get();
+  } 
   std::string kernelName;
   if (subgraph->has_attr("dpu_fingerprint")) {
     const uint64_t fingerprint = subgraph->get_attr<std::uint64_t>("dpu_fingerprint");
@@ -72,7 +92,16 @@ XclDpuController<Dhandle, DbufIn, DbufOut>::XclDpuController(const xir::Subgraph
     << "loading xclbin: "  //
     << xclbinPath      //
     ;
-  handle_.reset(new Dhandle(kernelName, xclbinPath));
+  handle_.reset(new Dhandle(kernelName, xclbinPath, attrs));
+  if (!attrs->has_attr("__device_core_id__")) {
+    attrs->set_attr<size_t>("__device_core_id__", handle_->get_device_info().cu_index);
+  }
+  if (!attrs->has_attr("__device_id__")) {
+    attrs->set_attr<size_t>("__device_id__", handle_->get_device_info().device_index);
+  }
+  LOG_IF(INFO, ENV_PARAM(DEBUG_DPU_CONTROLLER))
+    << "alloc cu index: " << handle_->get_device_info().cu_index 
+    << " device index: " << handle_->get_device_info().device_index;
   LOG_IF(INFO, ENV_PARAM(DEBUG_DPU_CONTROLLER))
     << "done loading xclbin"  //
     ;
@@ -219,12 +248,12 @@ XclDpuController<Dhandle, DbufIn, DbufOut>::free_tensor_buffers(std::vector<vart
  * Sample Dpu Controller
  */
 
-SampleDpuController::SampleDpuController(std::string meta) 
-: XclDpuController<XclDeviceHandle, XclDeviceBuffer, XclDeviceBuffer>(meta) {
+SampleDpuController::SampleDpuController(std::string meta, xir::Attrs* attrs) 
+: XclDpuController<XclDeviceHandle, XclDeviceBuffer, XclDeviceBuffer>(meta, attrs) {
 }
 
-SampleDpuController::SampleDpuController(const xir::Subgraph *subgraph) 
-: XclDpuController<XclDeviceHandle, XclDeviceBuffer, XclDeviceBuffer>(subgraph) {
+SampleDpuController::SampleDpuController(const xir::Subgraph *subgraph, xir::Attrs* attrs) 
+: XclDpuController<XclDeviceHandle, XclDeviceBuffer, XclDeviceBuffer>(subgraph, attrs) {
 }
 
 
@@ -250,9 +279,9 @@ void SampleDpuController::execute(XclDeviceBuffer *in, XclDeviceBuffer *out) con
 /*
  * template instantiations
  */
-template XclDpuController<XclDeviceHandle, XclDeviceBuffer, XclDeviceBuffer>::XclDpuController(std::string meta);
-template XclDpuController<XrtDeviceHandle, XrtDeviceBuffer, XrtDeviceBuffer>::XclDpuController(std::string meta);
-template XclDpuController<XclDeviceHandle, XclDeviceBuffer, XclDeviceBuffer>::XclDpuController(const xir::Subgraph *subgraph);
-template XclDpuController<XrtDeviceHandle, XrtDeviceBuffer, XrtDeviceBuffer>::XclDpuController(const xir::Subgraph *subgraph);
+template XclDpuController<XclDeviceHandle, XclDeviceBuffer, XclDeviceBuffer>::XclDpuController(std::string meta, xir::Attrs* attrs);
+template XclDpuController<XrtDeviceHandle, XrtDeviceBuffer, XrtDeviceBuffer>::XclDpuController(std::string meta, xir::Attrs* attrs);
+template XclDpuController<XclDeviceHandle, XclDeviceBuffer, XclDeviceBuffer>::XclDpuController(const xir::Subgraph *subgraph, xir::Attrs* attrs);
+template XclDpuController<XrtDeviceHandle, XrtDeviceBuffer, XrtDeviceBuffer>::XclDpuController(const xir::Subgraph *subgraph, xir::Attrs* attrs);
 template DeviceBuffer* XclDpuController<XclDeviceHandle, XclDeviceBuffer, XclDeviceBuffer>::get_device_buffer(vart::TensorBuffer *tb);
 template DeviceBuffer* XclDpuController<XrtDeviceHandle, XrtDeviceBuffer, XrtDeviceBuffer>::get_device_buffer(vart::TensorBuffer *tb);
