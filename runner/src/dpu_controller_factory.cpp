@@ -3,7 +3,7 @@
 template <typename T>
 std::shared_ptr<DpuController> DpuControllerFactory::get(std::string kernel, T subgraph, xir::Attrs* attrs) {
 
-  if (kernel == "dpdpuv3_wrapper")
+  if ( kernel == "DPUCADF8H" || kernel == "dpdpuv3_wrapper")
     // TODO/FIXME replace kernel name with standard name for dpuv3int8
     // e.g., DPUABC123XYZ
   {

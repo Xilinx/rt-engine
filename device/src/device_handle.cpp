@@ -280,7 +280,6 @@ XrmResource::XrmResource(std::string kernelName, std::string xclbin, xir::Attrs*
     char xclbinPath[XRM_MAX_PATH_NAME_LEN];
     std::strcpy(xclbinPath, xclbins[i].c_str()); // XRM does not take const char* :(
     int err = alloc_from_attrs(kernelName, xclbinPath, attrs, deviceString);
-
     if (err) {
       continue; // keep trying other xclbins
     }

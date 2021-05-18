@@ -17,39 +17,23 @@ XirKeys::XirKeys(std::string xmodel) {
 
   //auto attrs = subgraph->get_attrs();
   //auto keys = attrs->get_keys();
-
-  auto tensorInfo = subgraph->get_attr<std::string>("tensor_info");
-  const char *c = tensorInfo.c_str();
-  json_object *jobj = json_tokener_parse(c);
-  json_object_object_foreach(jobj, key, val) {
-    std::string keyString(key);
-    if (keyString == "inputs") {
-      json_object_object_foreach(val, inputkey, inputval) {
-        assert(inputkey);
-        json_object *obj = json_object_object_get(inputval, "shape");
-        json_object *shapeVal;
-        shapeVal = json_object_array_get_idx(obj, 1);
-        inH_ = json_object_get_int(shapeVal);
-        shapeVal = json_object_array_get_idx(obj, 2);
-        inW_ = json_object_get_int(shapeVal);
-        shapeVal = json_object_array_get_idx(obj, 3);
-        inCh_ = json_object_get_int(shapeVal);
-      }
-    }
-    if (keyString == "outputs") {
-      json_object_object_foreach(val, outputkey, outputval) {
-        assert(outputkey);
-        json_object *obj = json_object_object_get(outputval, "shape");
-        json_object *shapeVal;
-        shapeVal = json_object_array_get_idx(obj, 1);
-        outH_ = json_object_get_int(shapeVal);
-        shapeVal = json_object_array_get_idx(obj, 2);
-        outW_ = json_object_get_int(shapeVal);
-        shapeVal = json_object_array_get_idx(obj, 3);
-        outCh_ = json_object_get_int(shapeVal);
-      }
-    }
+  //TO-DO: Extend this to mulit input, multi output
+  auto input_tensors = subgraph->get_input_tensors();
+  auto output_tensors = subgraph->get_output_tensors();
+  for (auto it : input_tensors)
+  {
+    inH_ = it->get_shape().at(1);
+    inW_ = it->get_shape().at(2);
+    inCh_ = it->get_shape().at(3);
   }
+
+  for (auto it : output_tensors)
+  {
+    outH_ = it->get_shape().at(1);
+    outW_ = it->get_shape().at(2);
+    outCh_ = it->get_shape().at(3);
+  }
+
   // if any still zero throw
   if (!(inW_ && inH_ && inCh_ && outW_ && outH_ && outCh_))
     throw std::runtime_error("Error reading shapes from model.");
