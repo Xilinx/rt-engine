@@ -164,10 +164,8 @@ int XrmResource::alloc_without_deviceId(std::string kernelName, char* xclbinPath
   auto err = xrmCuAllocLeastUsedWithLoad(context_, cu_prop_.get(), xclbinPath, cu_rsrc_.get());
   return err;
 }
-int XrmResource::alloc_with_deviceId(std::string kernelName, char* xclbinPath, xir::Attrs* attrs, std::string devices) {
+int XrmResource::alloc_with_deviceId(std::string kernelName, char* xclbinPath, xir::Attrs* attrs) {
   auto device_index = attrs->get_attr<size_t>("__device_id__");
-  if (!devices.empty() && std::string::npos == devices.find(','+std::to_string(device_index)+','))
-    throw std::runtime_error("Error: no devices available");
   xrmLoadOneDevice(context_, device_index, xclbinPath); // if already load, here may fail, so not check status
   KernelNameManager& kernelNameManager = KernelNameManager::getInstance();
   auto realKernel = kernelNameManager.getRealKernelName(xclbinPath, kernelName);
@@ -176,7 +174,7 @@ int XrmResource::alloc_with_deviceId(std::string kernelName, char* xclbinPath, x
   return err;
 }
 
-int XrmResource::alloc_from_attrs(std::string kernelName, char* xclbinPath, xir::Attrs* attrs, std::string devices) {
+int XrmResource::alloc_from_attrs(std::string kernelName, char* xclbinPath, xir::Attrs* attrs) {
   int err=-1;
   bool cu_correct=false;
   std::vector<std::unique_ptr<xrmCuResource>> cu_rsrc;
@@ -185,19 +183,11 @@ int XrmResource::alloc_from_attrs(std::string kernelName, char* xclbinPath, xir:
   std::vector<pair<int, int>> allocedCus;
   while(!cu_correct) {
     if (attrs->has_attr("__device_id__")) {
-      err = alloc_with_deviceId(kernelName, xclbinPath, attrs, devices); 
+      err = alloc_with_deviceId(kernelName, xclbinPath, attrs);
     } else {
-      err = alloc_without_deviceId(kernelName, xclbinPath, attrs); 
+      err = alloc_without_deviceId(kernelName, xclbinPath, attrs);
     } 
     if (0==err) {   
-      //TODO for XLNX_ENABLE_DEVICES, need to make sure XLNX_ENABLE_DEVICES config a correct value
-      //TODO for the condtion of "ALL"
-      if (!devices.empty() &&std::string::npos == devices.find(','+std::to_string(cu_rsrc_->deviceId)+',')){
-        xrmCuResource *cu_rsrc_copy = new xrmCuResource();;
-        std::memcpy(cu_rsrc_copy, cu_rsrc_.get(), sizeof(xrmCuResource));
-        cu_rsrc.emplace_back(cu_rsrc_copy);
-        continue;
-      }
       //select correct batch
       if ((kernelName == "DPUCVDX8H")||(kernelName == "DPUCAHX8L")||(kernelName == "DPUCAHX8H")) {
         if (attrs->has_attr("__batch__")) { // this only used in runtime and can't be set outside
@@ -267,11 +257,22 @@ XrmResource::XrmResource(std::string kernelName, std::string xclbin, xir::Attrs*
   // get available xclbins
   auto xclbins = get_xclbins_in_dir(xclbin);
 
-  std::string deviceString;
-  std::vector<xrmCuResource*> xrmCuResourceUnWanted;
   if (std::getenv("XLNX_ENABLE_DEVICES")){
-    std::string str(std::getenv("XLNX_ENABLE_DEVICES"));
-    deviceString = ',' + str + ',';
+    int maxDeviceId = xclProbe();
+    for (int idx = 0; idx <= maxDeviceId; idx++ ) {
+      xrmDisableOneDevice(context_, idx);
+    }
+
+    string token;
+    istringstream tokenStream(std::getenv("XLNX_ENABLE_DEVICES"));
+    while (getline(tokenStream, token, ',')) {
+        xrmEnableOneDevice(context_, stoi(token));
+    }
+  } else {
+    int maxDeviceId = xclProbe();
+    for (int idx = 0; idx <= maxDeviceId; idx++ ) {
+      xrmEnableOneDevice(context_, idx);
+    }
   }
 
   for (unsigned i = 0; i < xclbins.size(); i++) 
@@ -279,7 +280,7 @@ XrmResource::XrmResource(std::string kernelName, std::string xclbin, xir::Attrs*
     // try to load xclbin
     char xclbinPath[XRM_MAX_PATH_NAME_LEN];
     std::strcpy(xclbinPath, xclbins[i].c_str()); // XRM does not take const char* :(
-    int err = alloc_from_attrs(kernelName, xclbinPath, attrs, deviceString);
+    int err = alloc_from_attrs(kernelName, xclbinPath, attrs);
     if (err) {
       continue; // keep trying other xclbins
     }
