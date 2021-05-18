@@ -9,7 +9,7 @@
 
 EngineThreadPool::EngineThreadPool() : terminate_(false) {
   const unsigned maxConcurrentTasks = 10000;
-  const unsigned numWorkerThreads = 4;
+  const unsigned numWorkerThreads = 64;
 
   // init task ids and task status
   task_status_.resize(maxConcurrentTasks, EngineThreadPool::DONE);
