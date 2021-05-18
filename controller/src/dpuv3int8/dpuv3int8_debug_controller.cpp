@@ -207,7 +207,7 @@ void Dpuv3Int8DebugController::each_output_reorg(void* std_data, void *result_da
 
 }
 
-void Dpuv3Int8DebugController::initRunBufs(uint64_t *buf_addr, XclDeviceBuffer* swap_buf, XclDeviceBuffer* druSrc_buf, XclDeviceBuffer* druDst_buf)
+void Dpuv3Int8DebugController::initRunBufs(uint64_t *buf_addr, XrtDeviceBuffer* swap_buf, XrtDeviceBuffer* druSrc_buf, XrtDeviceBuffer* druDst_buf)
 {
     buf_addr[BUF_IDX_INSTR] = instr_buf_->get_phys_addr();
     
@@ -230,56 +230,77 @@ void Dpuv3Int8DebugController::initRunBufs(uint64_t *buf_addr, XclDeviceBuffer* 
 
 }
 
-
-void Dpuv3Int8DebugController::runKernel(xrtcpp::exec::exec_write_command cmd, uint64_t* buf_addr, uint32_t* reg_val)
+void Dpuv3Int8DebugController::runKernel(ert_start_kernel_cmd* ecmd, uint64_t* buf_addr, uint32_t* reg_val, xclDeviceHandle xcl_handle, xclBufferHandle bo_handle)
 {
 
-    cmd.add(CONTROL_ADDR_BLOCK_INSTR ,(buf_addr[BUF_IDX_INSTR]) & 0xFFFFFFFF);
-    cmd.add(CONTROL_ADDR_BLOCK_INSTR + 0x4 ,((buf_addr[BUF_IDX_INSTR]) >> 32) & 0xFFFFFFFF);
-    
-    if(not xmodel_->getSinglePoolDebug())
-    {
-      cmd.add(CONTROL_ADDR_BLOCK_PARAMS ,(buf_addr[BUF_IDX_PARAMS]) & 0xFFFFFFFF);
-      cmd.add(CONTROL_ADDR_BLOCK_PARAMS + 0x4 ,((buf_addr[BUF_IDX_PARAMS]) >> 32) & 0xFFFFFFFF);
-    }
-    
-    cmd.add(CONTROL_ADDR_BLOCK_SWAP ,(buf_addr[BUF_IDX_SWAP]) & 0xFFFFFFFF);
-    cmd.add(CONTROL_ADDR_BLOCK_SWAP + 0x4 ,((buf_addr[BUF_IDX_SWAP]) >> 32) & 0xFFFFFFFF);
-    cmd.add(CONTROL_ADDR_BLOCK_RSLT ,(buf_addr[BUF_IDX_RESULT]) & 0xFFFFFFFF);
-    cmd.add(CONTROL_ADDR_BLOCK_RSLT + 0x4 ,((buf_addr[BUF_IDX_RESULT]) >> 32) & 0xFFFFFFFF);
-    cmd.add(CONTROL_ADDR_BLOCK_SRC ,(buf_addr[BUF_IDX_SRC]) & 0xFFFFFFFF);
-    cmd.add(CONTROL_ADDR_BLOCK_SRC + 0x4 ,((buf_addr[BUF_IDX_SRC]) >> 32) & 0xFFFFFFFF);
-    cmd.add(CONTROL_ADDR_BLOCK_DST ,(buf_addr[BUF_IDX_DST]) & 0xFFFFFFFF);
-    cmd.add(CONTROL_ADDR_BLOCK_DST + 0x4 ,((buf_addr[BUF_IDX_DST]) >> 32) & 0xFFFFFFFF);
+  ecmd->cu_mask = handle_->get_device_info().cu_mask;
+  ecmd->extra_cu_masks = 0;
+  ecmd->stat_enabled = 1;
+  ecmd->state = ERT_CMD_STATE_NEW;
+  ecmd->opcode = ERT_EXEC_WRITE;
+  ecmd->type = ERT_CTRL;
 
-    cmd.add(CONTROL_ADDR_TASK_DRU_ADDR_STRD ,reg_val[REG_IDX_TASK_DRU_ADDR_STRD]);
-    cmd.add(CONTROL_ADDR_TASK_DRU_KW ,reg_val[REG_IDX_TASK_DRU_KW]);
-    cmd.add(CONTROL_ADDR_TASK_DRU_SW ,reg_val[REG_IDX_TASK_DRU_SW]);
-    cmd.add(CONTROL_ADDR_TASK_DRU_IC ,reg_val[REG_IDX_TASK_DRU_IC]);
-    cmd.add(CONTROL_ADDR_TASK_DRU_OW ,reg_val[REG_IDX_TASK_DRU_OW]);
-    cmd.add(CONTROL_ADDR_TASK_DRU_OH ,reg_val[REG_IDX_TASK_DRU_OH]);
-    cmd.add(CONTROL_ADDR_TASK_DRU_SRC_NTRANS ,reg_val[REG_IDX_TASK_DRU_SRC_NTRANS]);
-    cmd.add(CONTROL_ADDR_TASK_DRU_DST_NTRANS ,reg_val[REG_IDX_TASK_DRU_DST_NTRANS]);
-    cmd.add(CONTROL_ADDR_TASK_DRU_PL_CORR	,reg_val[REG_IDX_TASK_DRU_PL_CORR]);
-    cmd.add(CONTROL_ADDR_TASK_DRU_PR_CORR	,reg_val[REG_IDX_TASK_DRU_PR_CORR]);
-    cmd.add(CONTROL_ADDR_TASK_DRU_IW_CORR	,reg_val[REG_IDX_TASK_DRU_IW_CORR]);
-    cmd.add(CONTROL_ADDR_TASK_DRU_SW_CORR	,reg_val[REG_IDX_TASK_DRU_SW_CORR]);
-    cmd.add(CONTROL_ADDR_TASK_DRU_WCG_CORR ,reg_val[REG_IDX_TASK_DRU_WCG_CORR]);
-    cmd.add(CONTROL_ADDR_TASK_DRU_READ_MODE ,reg_val[REG_IDX_TASK_DRU_READ_MODE]);
-    cmd.add(CONTROL_ADDR_TASK_MODE ,reg_val[REG_IDX_TASK_MODE]);
-    cmd.add(CONTROL_ADDR_REG_AXCACHE_AXOS	,reg_val[REG_IDX_REG_AXCACHE_AXOS]);
-   
-    cmd.add(CONTROL_ADDR_REG_DPU_PROF_ENABLE ,reg_val[REG_IDX_REG_DPU_PROF_ENABLE]);
-    debugDumpRegVals(buf_addr, reg_val);
+  std::vector<std::pair<int, int> > regVals;
+  regVals.push_back({CONTROL_ADDR_BLOCK_INSTR ,(buf_addr[BUF_IDX_INSTR]) & 0xFFFFFFFF});
+  regVals.push_back({CONTROL_ADDR_BLOCK_INSTR + 0x4 ,((buf_addr[BUF_IDX_INSTR]) >> 32) & 0xFFFFFFFF});
+  
+  if(not xmodel_->getSinglePoolDebug())
+  {
+    regVals.push_back({CONTROL_ADDR_BLOCK_PARAMS ,(buf_addr[BUF_IDX_PARAMS]) & 0xFFFFFFFF});
+    regVals.push_back({CONTROL_ADDR_BLOCK_PARAMS + 0x4 ,((buf_addr[BUF_IDX_PARAMS]) >> 32) & 0xFFFFFFFF});
+   }
+  
+  regVals.push_back({CONTROL_ADDR_BLOCK_SWAP ,(buf_addr[BUF_IDX_SWAP]) & 0xFFFFFFFF});
+  regVals.push_back({CONTROL_ADDR_BLOCK_SWAP + 0x4 ,((buf_addr[BUF_IDX_SWAP]) >> 32) & 0xFFFFFFFF});
+  regVals.push_back({CONTROL_ADDR_BLOCK_RSLT ,(buf_addr[BUF_IDX_RESULT]) & 0xFFFFFFFF});
+  regVals.push_back({CONTROL_ADDR_BLOCK_RSLT + 0x4 ,((buf_addr[BUF_IDX_RESULT]) >> 32) & 0xFFFFFFFF});
+  regVals.push_back({CONTROL_ADDR_BLOCK_SRC ,(buf_addr[BUF_IDX_SRC]) & 0xFFFFFFFF});
+  regVals.push_back({CONTROL_ADDR_BLOCK_SRC + 0x4 ,((buf_addr[BUF_IDX_SRC]) >> 32) & 0xFFFFFFFF});
+  regVals.push_back({CONTROL_ADDR_BLOCK_DST ,(buf_addr[BUF_IDX_DST]) & 0xFFFFFFFF});
+  regVals.push_back({CONTROL_ADDR_BLOCK_DST + 0x4 ,((buf_addr[BUF_IDX_DST]) >> 32) & 0xFFFFFFFF});
 
-    auto t1 = std::chrono::high_resolution_clock::now();
-    cmd.execute();
-    cmd.wait();
-    auto t2 = std::chrono::high_resolution_clock::now();
-    std::chrono::duration<double> elapsed = t2-t1;
-    std::cout << "KernelTime(millisec): " << elapsed.count()*1000 << std::endl;
+  regVals.push_back({CONTROL_ADDR_TASK_DRU_ADDR_STRD ,reg_val[REG_IDX_TASK_DRU_ADDR_STRD]});
+  regVals.push_back({CONTROL_ADDR_TASK_DRU_KW ,reg_val[REG_IDX_TASK_DRU_KW]});
+  regVals.push_back({CONTROL_ADDR_TASK_DRU_SW ,reg_val[REG_IDX_TASK_DRU_SW]});
+  regVals.push_back({CONTROL_ADDR_TASK_DRU_IC ,reg_val[REG_IDX_TASK_DRU_IC]});
+  regVals.push_back({CONTROL_ADDR_TASK_DRU_OW ,reg_val[REG_IDX_TASK_DRU_OW]});
+  regVals.push_back({CONTROL_ADDR_TASK_DRU_OH ,reg_val[REG_IDX_TASK_DRU_OH]});
+  regVals.push_back({CONTROL_ADDR_TASK_DRU_SRC_NTRANS ,reg_val[REG_IDX_TASK_DRU_SRC_NTRANS]});
+  regVals.push_back({CONTROL_ADDR_TASK_DRU_DST_NTRANS ,reg_val[REG_IDX_TASK_DRU_DST_NTRANS]});
+  regVals.push_back({CONTROL_ADDR_TASK_DRU_PL_CORR	,reg_val[REG_IDX_TASK_DRU_PL_CORR]});
+  regVals.push_back({CONTROL_ADDR_TASK_DRU_PR_CORR	,reg_val[REG_IDX_TASK_DRU_PR_CORR]});
+  regVals.push_back({CONTROL_ADDR_TASK_DRU_IW_CORR	,reg_val[REG_IDX_TASK_DRU_IW_CORR]});
+  regVals.push_back({CONTROL_ADDR_TASK_DRU_SW_CORR	,reg_val[REG_IDX_TASK_DRU_SW_CORR]});
+  regVals.push_back({CONTROL_ADDR_TASK_DRU_WCG_CORR ,reg_val[REG_IDX_TASK_DRU_WCG_CORR]});
+  regVals.push_back({CONTROL_ADDR_TASK_DRU_READ_MODE ,reg_val[REG_IDX_TASK_DRU_READ_MODE]});
+  regVals.push_back({CONTROL_ADDR_TASK_MODE ,reg_val[REG_IDX_TASK_MODE]});
+  regVals.push_back({CONTROL_ADDR_REG_AXCACHE_AXOS	,reg_val[REG_IDX_REG_AXCACHE_AXOS]});
+   regVals.push_back({CONTROL_ADDR_REG_DPU_PROF_ENABLE ,reg_val[REG_IDX_REG_DPU_PROF_ENABLE]});
+   debugDumpRegVals(buf_addr, reg_val);
 
+  int p = 6;
+  for (unsigned i=0; i < regVals.size(); i++) {
+    ecmd->data[p++] = (regVals[i].first);
+    ecmd->data[p++] = (regVals[i].second);
+  }
+  ecmd->count = 1 + p; 
+  
+  auto t1 = std::chrono::high_resolution_clock::now();
 
+    // exec kernel
+  auto exec_buf_result = xclExecBuf(xcl_handle, bo_handle);
+  if (exec_buf_result)
+    throw std::runtime_error("Error: xclExecBuf failed");
+
+  // wait for kernel
+  for (int wait_count=0; wait_count < 15 && xclExecWait(xcl_handle, 1000) == 0 
+          && ecmd->state != ERT_CMD_STATE_COMPLETED; wait_count++);
+          
+  if (ecmd->state != ERT_CMD_STATE_COMPLETED)
+    std::cout << "Error: CU timeout " << std::endl;
+  auto t2 = std::chrono::high_resolution_clock::now();
+  std::chrono::duration<double> elapsed = t2-t1;
+  std::cout << "KernelTime(millisec): " << elapsed.count()*1000 << std::endl;
 
 }
 
