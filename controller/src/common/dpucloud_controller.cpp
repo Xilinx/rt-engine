@@ -202,7 +202,7 @@ xclBufferHandle  DpuCloudController::get_xrt_bo(void* data, int size, vector<uns
   return reg0Mem;
 
 }
-void DpuCloudController::init_graph(vector<unsigned> hbmw, vector<unsigned> hbmc ) {
+void DpuCloudController::init_graph(vector<unsigned> hbmw, vector<unsigned> hbmc) {
 
   auto handle = contexts_[0]->get_dev_handle();
   auto cu_base_addr = handle_->get_device_info().cu_base_addr;
@@ -925,16 +925,17 @@ void DpuCloudController::run(const std::vector<vart::TensorBuffer*> &inputs,
   std::vector<vart::TensorBuffer*> input_tensor_buffers;
   std::vector<vart::TensorBuffer*> output_tensor_buffers;
   int inputBs = batch_size_;
-  if(inputs.size()%model_->get_input_tensors().size())
+  auto input_tensors_size = model_->get_input_tensors().size();
+  if(inputs.size()%input_tensors_size)
     throw std::runtime_error("Error: input tensorbuffers error");
   int ibs = inputs[0]->get_tensor()->get_shape()[0]*batch_size_/model_->get_input_tensors()[0]->get_shape()[0];
-  int obs = outputs[0]->get_tensor()->get_shape()[0]*batch_size_/model_->get_output_tensors()[0]->get_shape()[0];
+  //int obs = outputs[0]->get_tensor()->get_shape()[0]*batch_size_/model_->get_output_tensors()[0]->get_shape()[0];
   // check if tensorbuffer store batch inputs/outputs
-  if ((inputs.size()/model_->get_input_tensors().size())>1)
-    inputBs = inputs.size()/model_->get_input_tensors().size();
+  if ((inputs.size()/input_tensors_size)>1)
+    inputBs = inputs.size()/input_tensors_size;
   else
     inputBs = ibs;
-  if ((ibs < obs) || (inputBs > batch_size_) ) {
+  if (inputBs > batch_size_) {
     throw std::runtime_error("Error: size of tensorbuffer not supported");
   }
   //}
@@ -979,24 +980,23 @@ void DpuCloudController::run(const std::vector<vart::TensorBuffer*> &inputs,
   std::vector<uint64_t> in_addrs(batch_size_);
   std::vector<uint64_t> out_addrs(batch_size_);
   xdpu_total_dpureg_map2 = get_dpu_reg_inside(create_tb_batch, in_addrs, out_addrs, output_tensor_buffers, input_tensor_buffers);
-  __TIC__(INPUT_H2D)
   if (!tensorbuffer_phy) {
+  __TIC__(INPUT_H2D)
     for (int i=0; i < inputBs; i++)
     {
       for (unsigned j=0; j < model_->get_input_offset().size(); j++) {
         uint8_t* dataPtr;
-        const auto inSize = get_input_tensors()[j]->get_element_num()/batch_size_;
+        auto tensor = get_input_tensors()[j];
+        const auto inSize = tensor->get_element_num()/batch_size_;
         if (create_tb_batch) {
-          auto dims = input_tensor_buffers[j]->get_tensor()->get_shape();
+          auto dims_size = (tensor->get_shape()).size();
+          auto dims = std::vector<int32_t>(dims_size, 0);
           dims[0] = i;
-          for (unsigned int ds=1;ds<dims.size();ds++)
-            dims[ds]=0;
           dataPtr = ((uint8_t*)input_tensor_buffers[j]->data(dims).first);
         } else {
           auto dims = input_tensor_buffers[i*model_->get_input_offset().size()+j]->get_tensor()->get_shape();
-          for (unsigned int ds=0;ds<dims.size(); ds++)
-            dims[ds] =0;
-          dataPtr =(uint8_t*)input_tensor_buffers[i*model_->get_input_offset().size()+j]->data(dims).first;
+          auto idx = std::vector<int32_t>(dims.size(), 0);
+          dataPtr =(uint8_t*)input_tensor_buffers[i*model_->get_input_offset().size()+j]->data(idx).first;
         }
         if (xclUnmgdPwrite(xcl_handle, 0, (void *)dataPtr, inSize,
           in_addrs[i] + model_->get_input_offset()[j]))
@@ -1004,13 +1004,14 @@ void DpuCloudController::run(const std::vector<vart::TensorBuffer*> &inputs,
       }
 
     }
-  }
   __TOC__(INPUT_H2D)
+  }
   int p;
   int exec_buf_result;
-  auto cu_base_addr = handle_->get_device_info().cu_base_addr;
+  auto dev_info = handle_->get_device_info();
+  auto cu_base_addr = dev_info.cu_base_addr;
   auto ecmd = reinterpret_cast<ert_start_kernel_cmd*>(bo_addr);
-  ecmd->cu_mask = handle_->get_device_info().cu_mask;
+  ecmd->cu_mask = dev_info.cu_mask;
   ecmd->extra_cu_masks = 0;
   ecmd->stat_enabled = 1;
   ecmd->state = ERT_CMD_STATE_NEW;
@@ -1243,28 +1244,31 @@ void DpuCloudController::run(const std::vector<vart::TensorBuffer*> &inputs,
     }
   }
 
-  __TIC__(OUTPUT_D2H)
   if (!tensorbuffer_phy) {
+  __TIC__(OUTPUT_D2H)
     for (int i=0; i < inputBs; i++)
     {
       // instead of downloading all {output, input, intermediate},
       // just download output region
       // io_bufs[i]->download();
-      for (unsigned j=0; j< model_->get_output_offset().size(); j++) {
-        const auto outSize = get_output_tensors()[j]->get_element_num()/batch_size_;
+      auto output_size = model_->get_output_offset().size();
+      for (unsigned j=0; j< output_size; j++) {
+        auto tensor = get_output_tensors()[j];
+        const auto outSize = tensor->get_element_num()/batch_size_;
         int8_t* dataPtr;
         if (create_tb_batch) {
-          auto dims = output_tensor_buffers[j]->get_tensor()->get_shape();
+          auto dims_size = (tensor->get_shape()).size();
+          auto dims = std::vector<int32_t>(dims_size, 0u);
           dims[0] = i;
-          for (unsigned int ds=1;ds<dims.size();ds++)
-            dims[ds]=0;
+          //for (unsigned int ds=1;ds<dims.size();ds++)
+          //  dims[ds]=0;
           //dataPtr = ((uint8_t *)output_tensor_buffers[j]->data({i,0}).first)+outSize*i;
           dataPtr = ((int8_t *)output_tensor_buffers[j]->data(dims).first);
         } else {
-          auto dims = output_tensor_buffers[i*model_->get_output_offset().size()+j]->get_tensor()->get_shape();
-          for (unsigned int ds=0;ds<dims.size();ds++)
-            dims[ds]=0;
-          dataPtr = (int8_t *)output_tensor_buffers[i*model_->get_output_offset().size()+j]->data(dims).first;
+          auto dims = output_tensor_buffers[i*output_size+j]->get_tensor()->get_shape();
+          auto idx = std::vector<int32_t>(dims.size(), 0u);
+
+          dataPtr = (int8_t *)output_tensor_buffers[i*model_->get_output_offset().size()+j]->data(idx).first;
         }
         //__TIC_PROFILING__(OUTPUT)
         if (xclUnmgdPread(xcl_handle, 0, (void*)dataPtr,
@@ -1274,12 +1278,11 @@ void DpuCloudController::run(const std::vector<vart::TensorBuffer*> &inputs,
         //__TOC_PROFILING__(OUTPUT)
       }
     }
-  }
   __TOC__(OUTPUT_D2H)
+  }
   if((!tensorbuffer_phy) &&create_tb_outside) {
     tensorbuffer_trans(input_tensor_buffers, output_tensor_buffers,inputs,outputs, false);
   }
-
 
 }
 

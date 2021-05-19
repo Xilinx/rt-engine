@@ -55,32 +55,39 @@ TensorBuffer::location_t TensorBufferExtImpView::get_location() const {
 std::pair<uint64_t, size_t> TensorBufferExtImpView::data_x(
     const std::vector<std::int32_t> idx_orig, int phy) {
   std::vector<int32_t> idx;//= std::vector<int32_t>(idx_orig);
-  auto dims_orig = get_tensor()->get_shape();
-  if (idx_orig.size() == 0) {
-    for (size_t i = 0; i < dims_orig.size(); i++)
-      dims_orig[i] = 0;
-    idx = std::vector<int32_t>(dims_orig);
+  //auto dims_orig = get_tensor()->get_shape();
+  //if (idx_orig.size() == 0) {
+  //  for (size_t i = 0; i < dims_orig.size(); i++)
+  //    dims_orig[i] = 0;
+  //  idx = std::vector<int32_t>(dims_orig);
+  //} else {
+  //  idx = std::vector<int32_t>(idx_orig);
+  //}
+  //auto tensor = get_tensor();
+  auto dims = tensor_->get_shape();
+  auto offset = 0;
+
+  if (idx_orig.size()) {
+    CHECK_EQ(dims.size(), idx_orig.size());
+    idx = std::vector<int32_t>(idx_orig);    
   } else {
-    idx = std::vector<int32_t>(idx_orig);
+    idx = std::vector<int32_t>(dims.size(), 0);
   }
-  auto dims = get_tensor()->get_shape();
-  CHECK_EQ(dims.size(), idx.size()); 
   auto batch_idx = idx[0];
   const auto batch = dims[0];
   idx[0] = 0;
   dims[0] = 1;
   //auto calc1 = vitis::ai::DimCalc(dims);
   //auto offset_in_single_batch = (int)calc1.offset(idx);
-    auto offset = 0;
-    for (std::size_t k = 0; k < get_tensor()->get_shape().size(); k++) {
+    for (std::size_t k = 0; k < dims.size(); k++) {
       auto stride = 1;
-      for (std::size_t m = k + 1; m < get_tensor()->get_shape().size(); m++) {
+      for (std::size_t m = k + 1; m < dims.size(); m++) {
         stride *= dims[m];
       }
       offset += idx[k] * stride;
     }
   auto offset_in_single_batch = offset;
-  auto size_in_single_batch = get_tensor()->get_data_size() / batch;
+  auto size_in_single_batch = tensor_->get_data_size() / batch;
   CHECK_LE(offset_in_single_batch, size_in_single_batch);
   auto size_left_in_single_batch =
       size_in_single_batch - offset_in_single_batch;

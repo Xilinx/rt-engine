@@ -49,7 +49,7 @@ class TensorBufferExtImpHostPhy : public vart::TensorBuffer {
   const location_t location_;
   const xir::Tensor* tensor_;
   std::vector<std::unique_ptr<DeviceBuffer>> dbufs_;
-
+  int elem_num_;
  private:
   std::vector<std::tuple<int, uint64_t, int>> host_to_dev_range(
                                 size_t batch_idx, size_t offset, size_t size);

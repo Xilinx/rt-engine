@@ -27,7 +27,7 @@ namespace rt_engine {
 
 TensorBufferExtImpHostPhy::TensorBufferExtImpHostPhy(void* data, const xir::Tensor* tensor)
     : TensorBuffer{tensor}, data_{data}, location_{location_t::HOST_PHY}, tensor_{tensor} {
-
+  elem_num_ = tensor_->get_element_num();
   LOG_IF(INFO, ENV_PARAM(DEBUG_TENSOR_BUFFER_ALLOCATOR))
       << "TensorBufferExtImpHostPhy "
       << "@" << (void*)this << " created";
@@ -54,49 +54,49 @@ std::pair<uint64_t, size_t> TensorBufferExtImpHostPhy::data(
     uint32_t size = tensor_->get_data_type().bit_width / 8;
     if (idx.size() == 0) {
       return {reinterpret_cast<uint64_t>(data_),
-              tensor_->get_element_num() * size};
+              elem_num_ * size};
     }
     auto dims = tensor_->get_shape();
     auto offset = 0;
-    for (std::size_t k = 0; k < tensor_->get_shape().size(); k++) {
+    for (std::size_t k = 0; k < dims.size(); k++) {
       auto stride = 1;
-      for (std::size_t m = k + 1; m < tensor_->get_shape().size(); m++) {
+      for (std::size_t m = k + 1; m < dims.size(); m++) {
         stride *= dims[m];
       }
       offset += idx[k] * stride;
     }
-    auto elem_num = tensor_->get_element_num();
+    //auto elem_num = tensor_->get_element_num();
     return {reinterpret_cast<uint64_t>(data_) + offset * size,
-            (elem_num - offset) * size};
+            (elem_num_ - offset) * size};
 }
 
 std::pair<uint64_t, size_t> TensorBufferExtImpHostPhy::data_phy(
   const std::vector<std::int32_t> idx) {
   uint32_t size = tensor_->get_data_type().bit_width / 8;
-  auto dims = get_tensor()->get_shape();
+  auto dims = tensor_->get_shape();
 
   // single device buffer
   if (dbufs_.size() == 1) {
     if (idx.size() == 0) {
-      return {dbufs_[0]->get_phys_addr(), tensor_->get_element_num() * size};
+      return {dbufs_[0]->get_phys_addr(), elem_num_ * size};
     }
 
     auto offset = 0;
-    for (std::size_t k = 0; k < tensor_->get_shape().size(); k++) {
+    for (std::size_t k = 0; k < dims.size(); k++) {
       auto stride = 1;
-      for (std::size_t m = k + 1; m < tensor_->get_shape().size(); m++) {
+      for (std::size_t m = k + 1; m < dims.size(); m++) {
         stride *= dims[m];
       }
       offset += idx[k] * stride;
     }
-    auto elem_num = tensor_->get_element_num();
+    //auto elem_num = tensor_->get_element_num();
     return {dbufs_[0]->get_phys_addr() + offset * size,
-          (elem_num - offset) * size};
+          (elem_num_ - offset) * size};
   }
 
   // multi device buffers
   auto batch_len = 1;
-  for (std::size_t m = 1; m < tensor_->get_shape().size(); m++) {
+  for (std::size_t m = 1; m < dims.size(); m++) {
     batch_len *= dims[m];
   }
   if (idx.size() == 0) {
@@ -104,9 +104,9 @@ std::pair<uint64_t, size_t> TensorBufferExtImpHostPhy::data_phy(
   }
 
   auto offset = 0;
-  for (std::size_t k = 1; k < tensor_->get_shape().size(); k++) {
+  for (std::size_t k = 1; k < dims.size(); k++) {
     auto stride = 1;
-    for (std::size_t m = k + 1; m < tensor_->get_shape().size(); m++) {
+    for (std::size_t m = k + 1; m < dims.size(); m++) {
       stride *= dims[m];
     }
     offset += idx[k] * stride;
@@ -120,13 +120,13 @@ std::vector<std::tuple<int, uint64_t, int>> TensorBufferExtImpHostPhy::host_to_d
     size_t offset,
     size_t size) {
   CHECK_NE(dbufs_.size(), 0);
-  auto dims = get_tensor()->get_shape();
+  auto dims = tensor_->get_shape();
   auto batch = dims[0];
   CHECK_LT(batch_idx, batch);
 
   std::vector<std::tuple<int, uint64_t, int>> dev_buffers;
   if (dbufs_.size() == 1) {
-    CHECK_LE(offset + size, get_tensor()->get_data_size());
+    CHECK_LE(offset + size, elem_num_);
     dev_buffers.push_back(std::make_tuple(0, offset, size));
   } else {
     CHECK_EQ(dbufs_.size(), batch);
@@ -171,7 +171,7 @@ void TensorBufferExtImpHostPhy::copy_to_host(size_t batch_idx, void* buf,
 }
 
 void TensorBufferExtImpHostPhy::set_device_buffer(std::unique_ptr<DeviceBuffer> dbuf) {
-  auto dims = get_tensor()->get_shape();
+  auto dims = tensor_->get_shape();
   auto batch = dims[0];
   CHECK_LT(dbufs_.size(), batch);
 
