@@ -171,49 +171,13 @@ template <class Dhandle, class DbufIn, class DbufOut>
 std::vector<vart::TensorBuffer*> 
 XclDpuController<Dhandle, DbufIn, DbufOut>::create_tensor_buffers(
   const std::vector<const xir::Tensor*> &tensors, bool isInput, int ddrBank) {
-  std::vector<vart::TensorBuffer*> tbufs;
-  for (unsigned ti=0; ti < tensors.size(); ti++)
-  {
-    // allocate aligned host memory
-    const size_t dataSize = std::ceil(tensors[ti]->get_data_type().bit_width / 8.f);
-    size_t size = tensors[ti]->get_element_num() * dataSize;
-    void *data;
-    if (posix_memalign(&data, getpagesize(), size))
-      throw std::bad_alloc();
-    std::memset(data, 0, size);
-    // make TensorBuffer to hold host memory
-    std::unique_ptr<vart::CpuFlatTensorBuffer> tbuf(
-      new vart::CpuFlatTensorBuffer(data, tensors[ti]));
-    tbufs.emplace_back(tbuf.get());
-
-    // make corresponding DeviceBuffer for the TensorBuffer
-    std::unique_ptr<DeviceBuffer> dbuf;
-    try {
-      if (isInput)
-        dbuf.reset(
-          new DbufIn(handle_.get(), tbuf.get(), ddrBank < 0? handle_->get_device_info().ddr_bank : ddrBank));
-      else
-        dbuf.reset(
-          new DbufOut(handle_.get(), tbuf.get(), ddrBank < 0? handle_->get_device_info().ddr_bank : ddrBank));
-    } catch(...) {
-      tbufs.clear();
-      break;
-    }
-
-    // register this TensorBuffer->DeviceBuffer pair
-    {
-      std::unique_lock<std::mutex> lock(tbuf_mtx_);
-      tbuf2dbuf_.emplace(tbuf.get(), std::move(dbuf));
-      tbufs_.emplace_back(std::move(tbuf));
-    }
-  }
-  return tbufs;
+  return create_tensor_buffers(tensors, isInput, std::vector<int>(1,ddrBank));
 }
 
 template <class Dhandle, class DbufIn, class DbufOut>
 std::vector<vart::TensorBuffer*>
 XclDpuController<Dhandle, DbufIn, DbufOut>::create_tensor_buffers(
-  const std::vector<const xir::Tensor*> &tensors, bool isInput, std::vector<unsigned int> ddrBanks) {
+  const std::vector<const xir::Tensor*> &tensors, bool isInput, std::vector<int> ddrBanks) {
   std::vector<vart::TensorBuffer*> tbufs;
   for (unsigned ti=0; ti < tensors.size(); ti++)
   {
@@ -247,115 +211,7 @@ XclDpuController<Dhandle, DbufIn, DbufOut>::create_tensor_buffers(
       tbuf->set_device_buffer(std::move(dbuf));
       dbufs.emplace_back(dbuf.get());
     } else {
-      auto dims = tensors[ti]->get_shape();
-      auto batch = dims[0];
-      CHECK_EQ(ddrBanks.size(), batch);
-      auto batch_len = size / batch;
-
-      for (int dbuf_idx = 0; dbuf_idx < dims[0]; dbuf_idx++) {
-        size_t batch_addr = reinterpret_cast<size_t>(data) + (batch_len * dbuf_idx);
-        int ddrBank = ddrBanks[dbuf_idx];
-        if (ddrBank < 0) ddrBank = handle_->get_device_info().ddr_bank;
-        std::unique_ptr<DeviceBuffer> dbuf;
-        try {
-          if (isInput) {
-            dbuf.reset(new DbufIn(handle_.get(), reinterpret_cast<void *>(batch_addr), batch_len, ddrBank));
-          }
-          else
-            dbuf.reset(new DbufOut(handle_.get(), reinterpret_cast<void *>(batch_addr), batch_len, ddrBank));
-        } catch(...) {
-          tbufs.clear();
-          return tbufs;
-        }
-        tbuf->set_device_buffer(std::move(dbuf));
-        dbufs.emplace_back(dbuf.get());
-      }
-    }
-
-    // register this TensorBuffer->DeviceBuffer pair
-    {
-      std::unique_lock<std::mutex> lock(tbuf_mtx_);
-      tbufs2dbufs_.emplace(tbuf.get(), std::move(dbufs));
-      tbufs_.emplace_back(std::move(tbuf));
-    }
-  }
-
-  return tbufs;
-}
-template <class Dhandle, class DbufIn, class DbufOut>
-std::vector<vart::TensorBuffer*>
-XclDpuController<Dhandle, DbufIn, DbufOut>::create_tensor_buffers_batch(
-  const std::vector<const xir::Tensor*> &tensors, bool isInput, std::vector<unsigned int> ddrBanks) {
-  std::vector<vart::TensorBuffer*> tbufs;
-  for (unsigned ti=0; ti < tensors.size(); ti++)
-  {
-    // allocate aligned host memory
-    const size_t dataSize = std::ceil(tensors[ti]->get_data_type().bit_width / 8.f);
-    size_t size = tensors[ti]->get_element_num() * dataSize;
-    void *data;
-    if (posix_memalign(&data, getpagesize(), size))
-      throw std::bad_alloc();
-    std::memset(data, 0, size);
-    // make TensorBuffer to hold host memory
-    std::unique_ptr<vart::rt_engine::TensorBufferExtImpHostPhy> tbuf(
-      new vart::rt_engine::TensorBufferExtImpHostPhy(data, tensors[ti]));
-    tbufs.emplace_back(tbuf.get());
-
-    // make corresponding DeviceBuffer for the TensorBuffer
-    std::vector<DeviceBuffer *> dbufs;
-    if (ddrBanks.size() == 1) {
-      int ddrBank = ddrBanks[0];
-      if (ddrBank < 0) ddrBank = handle_->get_device_info().ddr_bank;
-      std::unique_ptr<DeviceBuffer> dbuf;
-      try {
-        if (isInput)
-          dbuf.reset(new DbufIn(handle_.get(), data, size, ddrBank));
-        else
-          dbuf.reset(new DbufOut(handle_.get(), data, size, ddrBank));
-      } catch(...) {
-        tbufs.clear();
-        return tbufs;
-      }
-      tbuf->set_device_buffer(std::move(dbuf));
-      dbufs.emplace_back(dbuf.get());
-    } else {
-      auto dims = tensors[ti]->get_shape();
-      auto batch = dims[0];
-      //CHECK_EQ(ddrBanks.size(), batch);
-      auto batch_len = size / batch;
-      //int flag=0;
-      for (int index = 0; index < batch; index++) {
-          size_t batch_addr = reinterpret_cast<size_t>(data) + (batch_len * index);
-          int ddrBank = ddrBanks[index]; // first trying batch bouding hbm
-          std::unique_ptr<DeviceBuffer> dbuf;
-          try {
-            if (isInput) {
-              dbuf.reset(new DbufIn(handle_.get(), reinterpret_cast<void *>(batch_addr), batch_len, ddrBank));
-            }
-            else
-              dbuf.reset(new DbufOut(handle_.get(), reinterpret_cast<void *>(batch_addr), batch_len, ddrBank));
-          } catch(...) {  // if bouding fail, try other hbm one by one
-            for (unsigned int dbuf_idx = 0; dbuf_idx < ddrBanks.size(); dbuf_idx++) {
-              ddrBank = ddrBanks[dbuf_idx]; // first trying batch bouding hbm
-              try {
-                if (isInput) {
-                  dbuf.reset(new DbufIn(handle_.get(), reinterpret_cast<void *>(batch_addr), batch_len, ddrBank));
-                }
-                else
-                  dbuf.reset(new DbufOut(handle_.get(), reinterpret_cast<void *>(batch_addr), batch_len, ddrBank));
-              } catch(...) {  // if bouding fail, try other hbm one by one
-                  if (dbuf_idx == (ddrBanks.size()-1)) {
-                    tbufs.clear();
-                    return tbufs;
-                  }
-                  continue;
-              }
-              break;
-          }
-        }
-        tbuf->set_device_buffer(std::move(dbuf));
-        dbufs.emplace_back(dbuf.get());
-      }
+      throw std::runtime_error("Error: ddrBanks not support");
     }
 
     // register this TensorBuffer->DeviceBuffer pair

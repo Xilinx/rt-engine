@@ -372,16 +372,14 @@ void DpuV3meController::run(const std::vector<vart::TensorBuffer*> &inputs,
         uint8_t* dataPtr;
         const auto inSize = get_input_tensors()[j]->get_element_num()/batch_size_;
         if (create_tb_batch) {
-          auto dims = input_tensor_buffers[j]->get_tensor()->get_shape();
+          auto idx = input_tensor_buffers[j]->get_tensor()->get_shape();
+          auto dims = vector<int>(idx.size(),0);
           dims[0] = i;
-          for (unsigned int ds=1;ds<dims.size();ds++)
-            dims[ds]=0;
           dataPtr = ((uint8_t*)input_tensor_buffers[j]->data(dims).first)+inSize*i;
         }
         else {
-          auto dims = input_tensor_buffers[i*model_->get_input_offset().size()+j]->get_tensor()->get_shape();
-          for (unsigned int ds=0;ds<dims.size(); ds++)
-            dims[ds] =0;
+          auto idx = input_tensor_buffers[i*model_->get_input_offset().size()+j]->get_tensor()->get_shape();
+          auto dims = vector<int>(idx.size(),0);
           dataPtr =(uint8_t*)input_tensor_buffers[i*model_->get_input_offset().size()+j]->data(dims).first;
         }
         if (xclUnmgdPwrite(xcl_handle, 0, (void *)dataPtr, inSize,
@@ -678,16 +676,14 @@ auto trigger_dpu_func = [&](){
         const auto outSize = get_output_tensors()[j]->get_element_num();
         uint8_t* dataPtr;
         if (create_tb_batch) {
-          auto dims = output_tensor_buffers[j]->get_tensor()->get_shape();
+          auto idx = output_tensor_buffers[j]->get_tensor()->get_shape();
+          auto dims = vector<int>(idx.size(),0);
           dims[0] = i;
-          for (unsigned int ds=1;ds<dims.size();ds++)
-            dims[ds]=0;
           dataPtr = ((uint8_t *)output_tensor_buffers[j]->data(dims).first)+outSize*i;
         }
         else {
-          auto dims = output_tensor_buffers[i*model_->get_output_offset().size()+j]->get_tensor()->get_shape();
-          for (unsigned int ds=0;ds<dims.size();ds++)
-            dims[ds]=0;
+          auto idx = output_tensor_buffers[i*model_->get_output_offset().size()+j]->get_tensor()->get_shape();
+          auto dims = vector<int>(idx.size(),0);
           dataPtr = (uint8_t *)output_tensor_buffers[i*model_->get_output_offset().size()+j]->data(dims).first;
         }
         //__TIC_PROFILING__(OUTPUT)
