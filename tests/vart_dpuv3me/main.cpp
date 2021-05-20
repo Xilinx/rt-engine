@@ -32,21 +32,121 @@
 #include <vector>
 #include <chrono>
 
+#include <opencv2/opencv.hpp>
 #include <vart/runner.hpp>
 //#include <vart/dpu/dpu_runner_ext.hpp>
 #include <vart/runner_ext.hpp>
 #include <xir/graph/graph.hpp>
 #include <xir/tensor/tensor.hpp>
 #include "common.h"
+#include <dpu_runner.hpp>
 /* header file OpenCV for image processing */
 using namespace std;
-static long getFileSize(std::string filename)
-{
-    struct stat stat_buf;
-    int rc = stat(filename.c_str(), &stat_buf);
-    return rc == 0 ? stat_buf.st_size : -1;
+using namespace cv;
+//static long getFileSize(std::string filename)
+//{
+//    struct stat stat_buf;
+//    int rc = stat(filename.c_str(), &stat_buf);
+//    return rc == 0 ? stat_buf.st_size : -1;
+//}
+
+void CPUCalcSoftmax(const float* data, size_t size, float* result) {
+  assert(data && result);
+  double sum = 0.0f;
+
+  for (size_t i = 0; i < size; i++) {
+    result[i] = exp(data[i]);
+    sum += result[i];
+  }
+  for (size_t i = 0; i < size; i++) {
+    result[i] /= sum;
+  }
 }
 
+void TopK(const float* d, int size, int k, vector<string>& vkinds) {
+  assert(d && size > 0 && k > 0);
+  priority_queue<pair<float, int>> q;
+
+  for (auto i = 0; i < size; ++i) {
+    q.push(pair<float, int>(d[i], i));
+  }
+
+  for (auto i = 0; i < k; ++i) {
+    pair<float, int> ki = q.top();
+    printf("top[%d] prob = %-8f  name = %s\n", i, d[ki.second],
+           vkinds[ki.second].c_str());
+    q.pop();
+  }
+}
+
+void preprocess(std::string filename, int8_t* dataPtr) {
+  std::string inputbin0 = "./input_int8.bin";
+  std::string inputbin = "./input_float.bin";
+  auto infile0 = ofstream(inputbin0, ios::out | ios::binary);
+  auto infile = ofstream(inputbin, ios::out | ios::binary);
+
+  const float mean[3] = {123.68, 116.78, 103.94};
+
+  int outHeight = 224;
+  int outWidth  = 224;
+
+  /* pre-process */
+  cv::Mat orig = imread(filename);
+  cv::cvtColor(orig, orig, cv::COLOR_BGR2RGB);
+  float scale = 0.0;
+  if (orig.rows > orig.cols)
+    scale = 256.0/orig.cols;
+  else
+    scale = 256.0/orig.rows;
+  int new_h = round(orig.rows*scale);
+  int new_w = round(orig.cols*scale);
+
+  cv::Mat resizedImage = cv::Mat(new_h, new_w, CV_8SC3);
+  cv::resize(orig, resizedImage, cv::Size(new_w, new_h),0,0, cv::INTER_AREA);
+  
+  /// Center Crop Image
+  const int offsetW = (new_w - outWidth) / 2;
+  const int offsetH = (new_h - outHeight) / 2;
+
+  const cv::Rect roi(offsetW, offsetH, outWidth, outHeight);
+  resizedImage = resizedImage(roi).clone();
+  float* dataTmp = new float[224*224*3]; 
+  /// Pre-Processing loop
+  for (int c = 0; c < 3; c++)
+    for (int h = 0; h < outHeight; h++)
+      for (int w = 0; w < outWidth; w++) {
+        
+        
+        dataPtr[0
+          + (3*h*outWidth)
+          + (3*w) + c]
+          = (resizedImage.at<cv::Vec3b>(h,w)[c]-mean[c])*0.5;
+        dataTmp[0
+          + (3*h*outWidth)
+          + (3*w) + c]
+          =  (resizedImage.at<cv::Vec3b>(h,w)[c]-mean[c]);
+  }
+  infile0.write((char*)dataPtr, 224*224*3);
+  infile.write((char*)dataTmp, 224*224*3*4);
+
+
+}
+
+
+void LoadWords(string const& path, vector<string>& kinds) {
+  kinds.clear();
+  ifstream fkinds(path);
+  if (fkinds.fail()) {
+    fprintf(stderr, "Error : Open %s failed.\n", path.c_str());
+    exit(1);
+  }
+  string kind;
+  while (getline(fkinds, kind)) {
+    kinds.push_back(kind);
+  }
+
+  fkinds.close();
+}
 /**
  * @brief Entry for runing ResNet50 neural network
  *
@@ -57,48 +157,85 @@ static long getFileSize(std::string filename)
 int main(int argc, char* argv[]) {
   // Check args
   if (argc != 4) {
-    cout << "Usage of demo: ./app [xmodel_file] [meta.json] [imageDir]" << endl;
+    cout << "Usage of resnet50 demo: ./resnet50 [xmodel_file] [img] [imageDir]" << endl;
     return -1;
   }
 
   string xmodel_filename = argv[1];
   int numImgs = 4;
-  int batchSz = 1; 
-  string meta = argv[2];
+  int batchSz = 4; 
+  string filename = argv[2];
   string img_dir = argv[3];
   assert((numImgs%batchSz)==0);
-  const unsigned num_queries_ = 1;//numImgs/batchSz;
-
+  const unsigned num_queries_ = numImgs/batchSz;
+    vector<string> kinds, images;
+    //ListImages("./", images); 
+  LoadWords("./words.txt", kinds);
   std::unique_ptr<xir::Graph> graph0 = xir::Graph::deserialize(xmodel_filename);
-  auto subgraph0 = graph0->get_root_subgraph();
-  std::map<std::string, std::string> runset;
-  runset.emplace("run","librt-engine.so");
-  subgraph0->children_topological_sort()[1]->set_attr<std::string>("kernel", "DPUCAHX8L");
-  subgraph0->children_topological_sort()[1]->set_attr("runner", runset);
-  graph0->serialize("./dpu.xmodel");
 
-  std::unique_ptr<xir::Graph> graph = xir::Graph::deserialize("./dpu.xmodel");
-  auto subgraph = get_dpu_subgraph(graph.get());
- 
+  auto subgraph = get_dpu_subgraph(graph0.get());
+
   auto r = vart::Runner::create_runner(subgraph[0], "run");
   auto runner = r.get();
   auto inputs = dynamic_cast<vart::RunnerExt*>(runner)->get_inputs();
   auto outputs = dynamic_cast<vart::RunnerExt*>(runner)->get_outputs();
+  //std::unique_ptr<vart::DpuRunner> runner;
+  //runner.reset(new vart::DpuRunner(subgraph[0]));
+  //auto inputs = runner->make_inputs(1);
+  //auto outputs = runner->make_outputs(1);
  
+  auto output_tensors = runner->get_output_tensors(); 
+  std::vector<vart::TensorBuffer*> inTensors;    
+  unsigned int size = 224*224*3*4;
+  int8_t* codePtr= NULL;
+  float *codePtrF = new float[size/4];
+  if (posix_memalign((void**)&codePtr, getpagesize(), size*8/4))
+    throw std::bad_alloc();
+  std::vector<std::unique_ptr<vart::TensorBuffer> > tbufs;
+
+
+  for (unsigned int b=0; b < size/4; b++)
+    codePtr[b] = (int8_t)((float)codePtrF[b] * 0.5);
+  preprocess(filename,codePtr);
+cout << inputs.size()<<endl;
+  for (int bi=0; bi < 1; bi++)
+  {
+    memcpy((int8_t*)inputs[0]->data(std::vector<int>{0,0,0,0}).first+(bi*size/4), codePtr,size/4);
+  }
+   for (auto& input : inputs) {
+      input->sync_for_write(0, input->get_tensor()->get_data_size() /
+                                   input->get_tensor()->get_shape()[0]);
+    }
+
+  auto tensorr = inputs[0]->get_tensor()->get_shape()[0];
+  
   std::cout << std::endl << "Testing single thread..." << std::endl;
   auto t1 = std::chrono::high_resolution_clock::now();
-  //std::cout<<"Loading "<<num_queries_*4<<" Images ..."<<std::endl;
   for (unsigned i=0; i < num_queries_; i++)
   {
-    	auto ret = (runner)->execute_async(inputs, outputs);
-       	(runner)->wait(uint32_t(ret.first), -1);
+    auto ret = (runner)->execute_async(inputs, outputs);
+    (runner)->wait(uint32_t(ret.first), -1);
+   for (auto& output : outputs) {
+      output->sync_for_read(0, output->get_tensor()->get_data_size() /
+                                   output->get_tensor()->get_shape()[0]);
+    }
+    float* out = new float[1000];
+    float* softnax = new float[1000];
+    const auto mode = std::ios_base::out | std::ios_base::binary | std::ios_base::trunc;
+    for (int bi=0; bi < 1; bi++) {
+      for (int t=0;t<1;t++) { 
+        auto output_file = "./output0" +to_string(t)+ to_string( bi) + ".bin";
+        for (int n=0;n<1000;n++)
+          out[n] = ((char*)outputs[t]->data(std::vector<int>{0,0}).first)[n] * 0.25;
+        CPUCalcSoftmax(out,1000,softnax);
+        TopK(softnax, 1000, 5, kinds);
+        std::ofstream(output_file, mode).write((char*)outputs[t]->data({0,0}).first+bi*output_tensors[t]->get_element_num(), output_tensors[t]->get_element_num());
+      }
+    }
   }
   auto t2 = std::chrono::high_resolution_clock::now();
   std::chrono::duration<double> elapsed = t2-t1;
-  std::chrono::duration<double, std::micro> elapsed_micro = t2 - t1;
-
-  std::cout << "Elapsed: " << elapsed.count() << std::endl;
-  std::cout << "Elapsed-micro: " << elapsed_micro.count() << std::endl;
-  std::cout << "QPS: " << num_queries_/elapsed.count() << std::endl;
+  //std::cout << "Elapsed: " << elapsed.count() << std::endl;
+  //std::cout << "QPS: " << num_queries_/elapsed.count() << std::endl;
   return 0;
 }

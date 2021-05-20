@@ -88,12 +88,6 @@ DEF_ENV_PARAM(XLNX_ENABLE_FINGERPRINT_CHECK, "1");
 #define VERSION_CODE_L 0x1f0
 #define VERSION_CODE_H 0x1f4
 
-//static uint32_t read32_dpu_reg(xclDeviceHandle dpu_handle, uint64_t offset) {
-//  uint32_t val;
-//  xclRead(dpu_handle, XCL_ADDR_KERNEL_CTRL, offset, (void *)(&val), 4);
-//  return val;
-//}
-
 DpuV3eController::DpuV3eController(std::string meta, xir::Attrs* attrs) 
   : DpuCloudController(meta, attrs) {
   hbmio.clear();

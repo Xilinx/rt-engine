@@ -103,22 +103,33 @@ int main(int argc, char* argv[]) {
       
       for (int bi=0; bi < core_batch; bi++)
       {
-         memcpy((void*)inputs[0]->data().first+bi*size, codePtr,size);
+         memcpy((void*)inputs[0]->data(std::vector<int>{bi,0,0,0}).first, codePtr,size);
       }
 
-      //auto t1 = std::chrono::high_resolution_clock::now();
+      for (auto& input : inputs) {
+        input->sync_for_write(0, input->get_tensor()->get_element_num() /
+                                   input->get_tensor()->get_shape()[0]);
+      }
+      auto t1 = std::chrono::high_resolution_clock::now();
       
       for (unsigned i=0; i < num_queries_; i++)
       {
          auto ret = (runner)->execute_async(inputs, outputs);
         	(runner)->wait(uint32_t(ret.first), -1);
-         
+         for (auto& output : outputs) {
+           output->sync_for_read(0, output->get_tensor()->get_element_num() /
+                                      output->get_tensor()->get_shape()[0]);
+          }
          const auto mode = std::ios_base::out | std::ios_base::binary | std::ios_base::trunc;
 	 //std::cout << "thread: " << th << std::endl;
          for (int bi=0; bi < core_batch; bi++) {
+          auto dims = outputs[0]->get_tensor()->get_shape();
+          dims[0] = bi;
+          for (int j=1;j<dims.size();j++)
+            dims[j]=0; 
            for (int t=0;t<1;t++) {
              auto output_file = "./output" + to_string(th) +  to_string(t) + to_string(bi) + ".bin";
-             std::ofstream(output_file, mode).write((char*)outputs[t]->data().first + bi*output_tensors[t]->get_element_num(), output_tensors[t]->get_element_num());
+             std::ofstream(output_file, mode).write((char*)outputs[t]->data(dims).first, output_tensors[t]->get_element_num()/output_tensors[t]->get_shape()[0]);
            }
          }
       }

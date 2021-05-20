@@ -301,8 +301,8 @@ void DpuV3meController::run(const std::vector<vart::TensorBuffer*> &inputs,
   std::vector<vart::TensorBuffer*> output_tensor_buffers;
   if(inputs.size()%model_->get_input_tensors().size())
     throw std::runtime_error("Error: input tensorbuffers error");
-  unsigned ibs = inputs[0]->get_tensor()->get_shape()[0]/model_->get_input_tensors()[0]->get_shape()[0];
-  unsigned obs = outputs[0]->get_tensor()->get_shape()[0]/model_->get_output_tensors()[0]->get_shape()[0];
+  unsigned ibs = inputs[0]->get_tensor()->get_shape()[0]*batch_size_/model_->get_input_tensors()[0]->get_shape()[0];
+  unsigned obs = outputs[0]->get_tensor()->get_shape()[0]*batch_size_/model_->get_output_tensors()[0]->get_shape()[0];
 
   unsigned inputBs;
   if ((inputs.size()/model_->get_input_tensors().size())>1)
@@ -313,7 +313,7 @@ void DpuV3meController::run(const std::vector<vart::TensorBuffer*> &inputs,
     throw std::runtime_error("Error: size of tensorbuffer not supported");
   bool create_tb_outside=check_tensorbuffer_outside(outputs);
   bool create_tb_batch=false;
-  bool tensorbuffer_phy=false;
+  bool tensorbuffer_phy=true;
   if (!create_tb_outside) {
 
     if (((ibs == inputBs)&&(ibs > 1) && (batch_size_ > 1)) || (batch_size_==1))
@@ -322,7 +322,8 @@ void DpuV3meController::run(const std::vector<vart::TensorBuffer*> &inputs,
     }
 
   }
-
+  if (outputs[0]->get_location() == vart::TensorBuffer::location_t::HOST_VIRT)
+    tensorbuffer_phy=false;
   if(create_tb_outside) {
     LOG_IF(INFO, ENV_PARAM(DEBUG_DPU_CONTROLLER))
       << "create tensorbuffer by user side";
@@ -338,9 +339,9 @@ void DpuV3meController::run(const std::vector<vart::TensorBuffer*> &inputs,
   const unsigned worker_id = engine.get_my_worker_id();
   if (worker_id >= contexts_.size())
     throw std::runtime_error("Error: worker_id too large; update controller code");
-
   auto &context = *(contexts_[worker_id]);
   auto xcl_handle = context.get_dev_handle();
+  //auto xcl_handle_tmp = handle_->get_context().get_dev_handle();
   auto bo_handle = context.get_bo_handle();
   auto bo_addr = context.get_bo_addr();
 
@@ -348,18 +349,18 @@ void DpuV3meController::run(const std::vector<vart::TensorBuffer*> &inputs,
 
   std::vector<uint64_t> in_addrs(batch_size_);
   std::vector<uint64_t> out_addrs(batch_size_);
-  if (!tensorbuffer_phy) {
-    xdpu_total_dpureg_map2 = get_dpu_reg_inside(create_tb_batch, in_addrs, out_addrs, output_tensor_buffers);
-  } else {
-    xdpu_total_dpureg_map2 = get_dpu_reg_outside(xcl_handle, create_tb_batch, in_addrs, out_addrs, inputs, outputs);
-  }
+  //if (!tensorbuffer_phy) {
+    xdpu_total_dpureg_map2 = get_dpu_reg_inside(create_tb_batch, in_addrs, out_addrs, output_tensor_buffers, input_tensor_buffers);
+  //} else {
+  //  xdpu_total_dpureg_map2 = get_dpu_reg_outside(xcl_handle, create_tb_batch, in_addrs, out_addrs, inputs, outputs);
+  //}
 
 
   // upload batch of inputs
   //const auto inSize = get_input_tensors()[0]->get_element_num();
   __TIC__(INPUT_H2D)
   if (!tensorbuffer_phy) {
-    for (int i=0; i < inputBs; i++)
+    for (unsigned i=0; i < inputBs; i++)
     {
       // instead of uploading all {output, input, intermediate},
       // just upload input region
@@ -369,11 +370,18 @@ void DpuV3meController::run(const std::vector<vart::TensorBuffer*> &inputs,
      //  std::ofstream(input_file, mode).write((char*)inputs[i]->data().first,inSize);
       for (unsigned j=0; j < model_->get_input_offset().size(); j++) {
         uint8_t* dataPtr;
-        const auto inSize = get_input_tensors()[j]->get_element_num();
-        if (create_tb_batch)
-          dataPtr = ((uint8_t*)input_tensor_buffers[j]->data().first)+inSize*i;
-        else
-          dataPtr =(uint8_t*)input_tensor_buffers[i*model_->get_input_offset().size()+j]->data().first;
+        const auto inSize = get_input_tensors()[j]->get_element_num()/batch_size_;
+        if (create_tb_batch) {
+          auto idx = input_tensor_buffers[j]->get_tensor()->get_shape();
+          auto dims = vector<int>(idx.size(),0);
+          dims[0] = i;
+          dataPtr = ((uint8_t*)input_tensor_buffers[j]->data(dims).first)+inSize*i;
+        }
+        else {
+          auto idx = input_tensor_buffers[i*model_->get_input_offset().size()+j]->get_tensor()->get_shape();
+          auto dims = vector<int>(idx.size(),0);
+          dataPtr =(uint8_t*)input_tensor_buffers[i*model_->get_input_offset().size()+j]->data(dims).first;
+        }
         if (xclUnmgdPwrite(xcl_handle, 0, (void *)dataPtr, inSize,
           in_addrs[i] + model_->get_input_offset()[j]))
           throw std::runtime_error("Error: upload failed");
@@ -473,6 +481,8 @@ auto trigger_dpu_func = [&](){
       regVals.push_back(  { (XDPU_CONTROL_ADDR_0_H + 8*std::get<0>(iter2) + std::get<1>(iter2)*0x100) / 4, (std::get<2>(iter2) >> 32) & 0xFFFFFFFF });
    LOG_IF(INFO, ENV_PARAM(DEBUG_DPU_CONTROLLER))
           << "io: "  //
+          << std::get<0>(iter2)
+          << std::hex << " "
           << std::get<2>(iter2)      //
           ;
     }
@@ -592,7 +602,6 @@ auto trigger_dpu_func = [&](){
     // dump first layer's inputs
     if(dump_mode_ && (dbg_layers.size() > 0)) {
       auto& inputs = dbg_layers[0].inputs;
-      int tensor_idx = 0;
       for(auto& input: inputs) {
         auto offset = std::get<0>(input);
         auto size = std::get<1>(input);
@@ -666,10 +675,17 @@ auto trigger_dpu_func = [&](){
       for (unsigned j=0; j< model_->get_output_offset().size(); j++) {
         const auto outSize = get_output_tensors()[j]->get_element_num();
         uint8_t* dataPtr;
-        if (create_tb_batch)
-          dataPtr = ((uint8_t *)output_tensor_buffers[j]->data().first)+outSize*i;
-        else
-          dataPtr = (uint8_t *)output_tensor_buffers[i*model_->get_output_offset().size()+j]->data().first;
+        if (create_tb_batch) {
+          auto idx = output_tensor_buffers[j]->get_tensor()->get_shape();
+          auto dims = vector<int>(idx.size(),0);
+          dims[0] = i;
+          dataPtr = ((uint8_t *)output_tensor_buffers[j]->data(dims).first)+outSize*i;
+        }
+        else {
+          auto idx = output_tensor_buffers[i*model_->get_output_offset().size()+j]->get_tensor()->get_shape();
+          auto dims = vector<int>(idx.size(),0);
+          dataPtr = (uint8_t *)output_tensor_buffers[i*model_->get_output_offset().size()+j]->data(dims).first;
+        }
         //__TIC_PROFILING__(OUTPUT)
         if (xclUnmgdPread(xcl_handle, 0, (void*)dataPtr,
           outSize,

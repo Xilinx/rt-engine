@@ -63,8 +63,8 @@ DpuRunner::DpuRunner(std::string meta) {
 
   dpu_controller_ = DpuControllerFactory::get_instance().get(kernel, meta);
 
-  in_bufs = dpu_controller_->get_inputs();
-  out_bufs = dpu_controller_->get_outputs();
+  //in_bufs = dpu_controller_->get_inputs();
+  //out_bufs = dpu_controller_->get_outputs();
 }
 
 

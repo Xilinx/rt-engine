@@ -1,6 +1,10 @@
 #pragma once
 #include "dpu_controller.hpp"
 #include "graph.hpp"
+#include "tensor_buffer_imp_host.hpp"
+#include "tensor_buffer_imp_view.hpp"
+#include "tensor_buffer_imp_host_phy.hpp"
+//
 //DEF_ENV_PARAM(DEBUG_DPU_CONTROLLER, "0")
 class DpuCloudController 
 : public XclDpuController<XrtDeviceHandle, XrtDeviceBuffer, XrtDeviceBuffer> {
@@ -15,38 +19,42 @@ class DpuCloudController
   virtual std::vector<const xir::Tensor*> get_output_tensors() const override; 
   virtual std::vector<vart::TensorBuffer*> get_inputs(int batchsz=-1) override; 
   virtual std::vector<vart::TensorBuffer*> get_outputs(int batchsz=-1) override; 
-  virtual std::vector<vart::TensorBuffer*> get_outputs_inner(vector<unsigned> hbm,int batchsz=-1) ; 
-  virtual std::vector<float> get_input_scale() override; 
-  virtual std::vector<float> get_output_scale() override; 
+  virtual std::vector<vart::TensorBuffer*> get_outputs_inner(vector<unsigned> hbm,bool isInputs, int batchsz=-1) ; 
+  vector<float> get_input_scale() override; 
+  vector<float> get_output_scale() override; 
+  //float get_input_scale(xir::Tensor* tensor); 
+  float get_output_scale(xir::Tensor* tensor); 
   virtual std::vector<unsigned> get_hbmw();
   virtual std::vector<unsigned> get_hbmc();
   virtual std::vector<unsigned> get_hbmio();
   virtual std::vector<vart::TensorBuffer*> create_tensor_buffers_hbm(
-    const std::vector<const xir::Tensor*> &tensors, bool isInput, vector<unsigned> ddrBank);
+    const std::vector<const xir::Tensor*> &tensors, bool isInput, vector<unsigned> ddrBank,int batch_size);
 
   //virtual void init(const std::string &meta);
   //virtual void init(const xir::Subgraph* subgraph);
   virtual void init_graph(vector<unsigned> hbmw, vector<unsigned> hbmc, xir::Attrs* attrs);
   virtual std::vector<const xir::Tensor*> get_merged_io_tensors(int size) const;
-  virtual std::vector<vart::TensorBuffer*> init_tensor_buffer(std::vector<const xir::Tensor*> tensors, int batchSupport, unsigned runEngone=1);
+  virtual std::vector<vart::TensorBuffer*> init_tensor_buffer(std::vector<const xir::Tensor*> tensors, int batchSupport, unsigned runEngine=1);
+  virtual std::vector<const xir::Tensor*> init_tensor(std::vector<const xir::Tensor*> tensors, int batchSupport, unsigned runEngine=1);
   virtual bool check_tensorbuffer_outside(const std::vector<vart::TensorBuffer*> &outputs);
-  virtual void free_buffers(std::vector<vart::TensorBuffer*> &tbufs, bool isInput);
+  virtual void free_buffers(std::vector<vart::TensorBuffer*> &tbufs);
   virtual void tensorbuffer_trans(std::vector<vart::TensorBuffer*> &input_tensor_buffers, std::vector<vart::TensorBuffer*> &output_tensor_buffers, const std::vector<vart::TensorBuffer*> &inputs, const std::vector<vart::TensorBuffer*> &outputs, bool is_input);
-  virtual vector<std::tuple<int, int,uint64_t>>  get_dpu_reg_inside(bool create_tb_batch, std::vector<uint64_t> &in_addrs, std::vector<uint64_t> &out_addrs, std::vector<vart::TensorBuffer*> &output_tensor_buffers );
-  virtual vector<std::tuple<int, int,uint64_t>>  get_dpu_reg_outside(xclDeviceHandle xcl_handle, bool create_tb_batch, std::vector<uint64_t> &in_addrs, std::vector<uint64_t> &out_addrs, const std::vector<vart::TensorBuffer*> &inputs, const std::vector<vart::TensorBuffer*> &outputs );
-  virtual vector<std::tuple<int, int,uint64_t>>  get_dpu_reg_outside_hbm(xclDeviceHandle xcl_handle, bool create_tb_batch, std::vector<uint64_t> &in_addrs, std::vector<uint64_t> &out_addrs, const std::vector<vart::TensorBuffer*> &inputs, const std::vector<vart::TensorBuffer*> &outputs, vector<unsigned> hbm);
+  virtual vector<std::tuple<int, int,uint64_t>>  get_dpu_reg_inside(bool create_tb_batch, std::vector<uint64_t> &in_addrs, std::vector<uint64_t> &out_addrs, std::vector<vart::TensorBuffer*> &output_tensor_buffers, std::vector<vart::TensorBuffer*> &input_tensor_buffers );
+  std::vector<vart::TensorBuffer*> create_tensorbuffer_for_batch(vector<unsigned> hbm, bool isInputs, std::vector<const xir::Tensor*> tensors, std::vector<int> tensor_offset, int output_bz, bool isTensorsBatch);
+  void dpu_trigger_run(ert_start_kernel_cmd* ecmd, xclDeviceHandle xcl_handle, xclBufferHandle bo_handle, vector<std::tuple<int, int,uint64_t>> xdpu_total_dpureg_map2);
   xclBufferHandle get_xrt_bo(void* data, int size, vector<unsigned> hbm);
-  std::unordered_map<vart::TensorBuffer*, std::unordered_map<int,vart::TensorBuffer*>> tbuf2hwbufsio_;
-  std::unordered_map<vart::TensorBuffer*, std::unordered_map<int,vector<vart::TensorBuffer*>>> tbuf2hwbufsio2_;
+  std::unordered_map<vart::TensorBuffer*, std::unordered_map<int,vector<vart::TensorBuffer*>>> tbuf2hwbufsio_;
   std::mutex hwbufio_mtx_;
-  std::mutex hwbufio2_mtx_;
   std::list<std::unique_ptr<vart::TensorBuffer>> bufs_;
+  std::unordered_map<vart::TensorBuffer*, vart::TensorBuffer*> bufsView2Phy_;
+  std::list<std::unique_ptr<vart::TensorBufferExtImpView>> bufsView_;
   std::vector<std::unique_ptr<XrtContext>> contexts_;
   uint64_t code_addr_;
   uint64_t preload_code_addr_;
   uint64_t reg0_addr_;
   int program_once_complete;
-
+  //bool in_split;
+  //bool out_split;
   std::vector<const xir::Tensor*> input_tensors_;
   std::vector<const xir::Tensor*> output_tensors_;
   int32_t xdpu_total_reg_size[3];
@@ -75,5 +83,6 @@ class DpuCloudController
   std::shared_ptr<DpuXmodel> model_;
  private:
   int flag;
+ 
 };
 

@@ -18,6 +18,8 @@
 #include "json-c/json.h"
 #include "vitis/ai/target_factory.hpp"
 #include "vitis/ai/env_config.hpp"
+#include "tensor_buffer_imp_host_phy.hpp"
+
 DEF_ENV_PARAM(DEBUG_DPU_CONTROLLER, "0")
 
 template <class Dhandle, class DbufIn, class DbufOut>
@@ -130,6 +132,17 @@ DeviceBuffer* XclDpuController<Dhandle, DbufIn, DbufOut>::get_device_buffer(vart
 }
 
 template <class Dhandle, class DbufIn, class DbufOut>
+std::vector<DeviceBuffer *>XclDpuController<Dhandle, DbufIn, DbufOut>::get_device_buffers(vart::TensorBuffer *tbuf) {
+  std::unique_lock<std::mutex> lock(tbuf_mtx_);
+  auto it = tbufs2dbufs_.find(tbuf);
+  if (it == tbufs2dbufs_.end()) {
+    std::vector<DeviceBuffer *> null_dbuf;
+    return null_dbuf;
+  }
+  return it->second;
+}
+
+template <class Dhandle, class DbufIn, class DbufOut>
 std::vector<float> 
 XclDpuController<Dhandle, DbufIn, DbufOut>::get_input_scale() {
   // TODO 
@@ -187,6 +200,13 @@ template <class Dhandle, class DbufIn, class DbufOut>
 std::vector<vart::TensorBuffer*> 
 XclDpuController<Dhandle, DbufIn, DbufOut>::create_tensor_buffers(
   const std::vector<const xir::Tensor*> &tensors, bool isInput, int ddrBank) {
+  return create_tensor_buffers(tensors, isInput, std::vector<int>(1,ddrBank));
+}
+
+template <class Dhandle, class DbufIn, class DbufOut>
+std::vector<vart::TensorBuffer*>
+XclDpuController<Dhandle, DbufIn, DbufOut>::create_tensor_buffers(
+  const std::vector<const xir::Tensor*> &tensors, bool isInput, std::vector<int> ddrBanks) {
   std::vector<vart::TensorBuffer*> tbufs;
   for (unsigned ti=0; ti < tensors.size(); ti++)
   {
@@ -198,31 +218,39 @@ XclDpuController<Dhandle, DbufIn, DbufOut>::create_tensor_buffers(
       throw std::bad_alloc();
     std::memset(data, 0, size);
     // make TensorBuffer to hold host memory
-    std::unique_ptr<vart::CpuFlatTensorBuffer> tbuf(
-      new vart::CpuFlatTensorBuffer(data, tensors[ti]));
+    std::unique_ptr<vart::rt_engine::TensorBufferExtImpHostPhy> tbuf(
+      new vart::rt_engine::TensorBufferExtImpHostPhy(data, tensors[ti]));
     tbufs.emplace_back(tbuf.get());
 
     // make corresponding DeviceBuffer for the TensorBuffer
-    std::unique_ptr<DeviceBuffer> dbuf;
-    try {
-      if (isInput)
-        dbuf.reset(
-          new DbufIn(handle_.get(), tbuf.get(), ddrBank < 0? handle_->get_device_info().ddr_bank : ddrBank));
-      else
-        dbuf.reset(
-          new DbufOut(handle_.get(), tbuf.get(), ddrBank < 0? handle_->get_device_info().ddr_bank : ddrBank));
-    } catch(...) {
-      tbufs.clear();
-      break;
+    std::vector<DeviceBuffer *> dbufs;
+    if (ddrBanks.size() == 1) {
+      int ddrBank = ddrBanks[0];
+      if (ddrBank < 0) ddrBank = handle_->get_device_info().ddr_bank;
+      std::unique_ptr<DeviceBuffer> dbuf;
+      try {
+        if (isInput)
+          dbuf.reset(new DbufIn(handle_.get(), data, size, ddrBank));
+        else
+          dbuf.reset(new DbufOut(handle_.get(), data, size, ddrBank));
+      } catch(...) {
+        tbufs.clear();
+        return tbufs;
+      }
+      tbuf->set_device_buffer(std::move(dbuf));
+      dbufs.emplace_back(dbuf.get());
+    } else {
+      throw std::runtime_error("Error: ddrBanks not support");
     }
 
     // register this TensorBuffer->DeviceBuffer pair
     {
       std::unique_lock<std::mutex> lock(tbuf_mtx_);
-      tbuf2dbuf_.emplace(tbuf.get(), std::move(dbuf));
+      tbufs2dbufs_.emplace(tbuf.get(), std::move(dbufs));
       tbufs_.emplace_back(std::move(tbuf));
     }
   }
+
   return tbufs;
 }
 
