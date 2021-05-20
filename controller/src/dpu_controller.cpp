@@ -124,11 +124,10 @@ void XclDpuController<Dhandle, DbufIn, DbufOut>::run(
 
 template <class Dhandle, class DbufIn, class DbufOut>
 DeviceBuffer* XclDpuController<Dhandle, DbufIn, DbufOut>::get_device_buffer(vart::TensorBuffer *tbuf) {
-  std::unique_lock<std::mutex> lock(tbuf_mtx_);
-  auto it = tbuf2dbuf_.find(tbuf);
-  if (it == tbuf2dbuf_.end())
+  auto dbufs = get_device_buffers(tbuf);
+  if(dbufs.empty())
     return NULL;
-  return it->second.get();
+  return dbufs[0];
 }
 
 template <class Dhandle, class DbufIn, class DbufOut>
@@ -237,8 +236,9 @@ XclDpuController<Dhandle, DbufIn, DbufOut>::create_tensor_buffers(
         tbufs.clear();
         return tbufs;
       }
-      tbuf->set_device_buffer(std::move(dbuf));
       dbufs.emplace_back(dbuf.get());
+      tbuf->set_device_buffer(std::move(dbuf));
+
     } else {
       throw std::runtime_error("Error: ddrBanks not support");
     }
@@ -260,7 +260,7 @@ XclDpuController<Dhandle, DbufIn, DbufOut>::free_tensor_buffers(std::vector<vart
   std::unique_lock<std::mutex> lock(tbuf_mtx_);
   for (unsigned ti=0; ti < tbufs.size(); ti++)
   {
-    tbuf2dbuf_.erase(tbufs[ti]);
+    tbufs2dbufs_.erase(tbufs[ti]);
 
     for (auto it=tbufs_.begin(); it != tbufs_.end(); it++)
       if (it->get() == tbufs[ti])

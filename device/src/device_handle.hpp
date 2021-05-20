@@ -4,6 +4,7 @@
  * Reference: vart/xrt-device-handle/src/xrt_device_handle_butler.hpp
  */
 #include <map>
+#include <unordered_map>
 #include <mutex>
 #include <memory>
 #include <string>

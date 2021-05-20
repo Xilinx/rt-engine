@@ -21,6 +21,12 @@ DeviceBuffer::DeviceBuffer(const DeviceHandle *handle, void *data, size_t size, 
 
 XclDeviceBuffer::XclDeviceBuffer(const XclDeviceHandle *handle, vart::TensorBuffer *tbuf, unsigned bank) 
  : DeviceBuffer(handle, tbuf, bank) {
+
+  XclDeviceBuffer(handle, (void*)tbuf->data().first, size_, bank);
+}
+
+XclDeviceBuffer::XclDeviceBuffer(const XclDeviceHandle *handle, void *data, size_t size, unsigned bank)
+  : DeviceBuffer(handle, data, size, bank) {
   static const std::vector<unsigned> ddrBankMap = {
     XCL_MEM_DDR_BANK0,
     XCL_MEM_DDR_BANK1,
@@ -29,7 +35,7 @@ XclDeviceBuffer::XclDeviceBuffer(const XclDeviceHandle *handle, vart::TensorBuff
   };
   cl_mem_ext_ptr_t cfg;
   cfg.flags = ddrBankMap[bank_];
-  cfg.obj = (void*)tbuf->data().first;
+  cfg.obj = data;
   cfg.param = 0;
 
   cl_mem_flags flags = CL_MEM_READ_WRITE | CL_MEM_EXT_PTR_XILINX | CL_MEM_USE_HOST_PTR;
@@ -51,10 +57,9 @@ XclDeviceBuffer::XclDeviceBuffer(const XclDeviceHandle *handle, vart::TensorBuff
 
   xclGetMemObjDeviceAddress(
     mem_, handle->get_device_info().device_id, sizeof(phys_addr_), &phys_addr_);
-}
 
-XclDeviceBuffer::XclDeviceBuffer(const XclDeviceHandle *handle, void *data, size_t size, unsigned bank)
-  : DeviceBuffer(handle, data, size, bank) {
+
+
 }
 
 void XclDeviceBuffer::upload() const {

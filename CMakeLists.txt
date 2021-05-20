@@ -3,7 +3,7 @@ cmake_minimum_required(VERSION 3.9)
 if(DEFINED ENV{BUILD_VER})
   project(rt-engine VERSION $ENV{BUILD_VER} LANGUAGES C CXX)
 else()
-  project(rt-engine VERSION 1.3.0 LANGUAGES C CXX)
+  project(rt-engine VERSION 1.4.0 LANGUAGES C CXX)
 endif()
 
 set(CMAKE_CXX_STANDARD 17)
