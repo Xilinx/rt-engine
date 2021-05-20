@@ -29,6 +29,7 @@ class DpuRunner : public vart::RunnerExt
 {
 public:
   DpuRunner(const xir::Subgraph* subgraph);
+  DpuRunner(const xir::Subgraph* subgraph, xir::Attrs* attrs);
 
   DpuRunner(std::string meta);
 

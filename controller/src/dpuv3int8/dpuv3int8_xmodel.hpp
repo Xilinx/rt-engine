@@ -15,7 +15,7 @@ class inputLayerParams
       uint32_t inDdrSize_;
       bool dru_mode_;
       bool channel_augmentationmode_;
-  
+      std::string inName_;  
 };
 
 class outputLayerParams
@@ -29,7 +29,7 @@ class outputLayerParams
       uint32_t outDdrSize_;
       uint32_t outAddress_;
       std::string debug_golden_filename_;
-
+      std::string outName_;
 };
 
 
@@ -56,6 +56,8 @@ class Xmodel {
     uint32_t getOutputNum();
 
     std::vector<std::vector<std::int32_t>> getOutTensorsDims();
+    std::vector<std::string> getOutTensorsNames();
+    std::vector<std::string> getInTensorsNames();
 
     bool getSinglePoolDebug();
     std::string getDebugDumpdir();

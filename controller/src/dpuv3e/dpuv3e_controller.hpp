@@ -4,8 +4,8 @@
 class DpuV3eController 
 : public DpuCloudController {
  public:
-  DpuV3eController(std::string meta);
-  DpuV3eController(const xir::Subgraph *subgraph);
+  DpuV3eController(std::string meta, xir::Attrs* attrs);
+  DpuV3eController(const xir::Subgraph *subgraph, xir::Attrs* attrs);
   virtual ~DpuV3eController() override;
   virtual std::vector<unsigned> get_hbmw() override;
   virtual std::vector<unsigned> get_hbmc() override;

@@ -4,8 +4,8 @@
 class DpuV4eController 
 : public DpuCloudController {
  public:
-  DpuV4eController(std::string meta);
-  DpuV4eController(const xir::Subgraph *subgraph);
+  DpuV4eController(std::string meta, xir::Attrs* attrs);
+  DpuV4eController(const xir::Subgraph *subgraph, xir::Attrs* attrs);
   virtual ~DpuV4eController() override;
   //virtual void run(
   //  const std::vector<vart::TensorBuffer*> &inputs, 

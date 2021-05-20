@@ -61,7 +61,7 @@ inputLayerParams::inputLayerParams(json_object* jobj, bool isDebugMode, bool mul
   inStrdW_ = getValue("inStrdW", jobj);
   druSrcBufSize_ = getValue("druSrcBufSize", jobj);
   druDstBufSize_ = getValue("druDstBufSize", jobj);
-
+  inName_ = getFileNameIfExists("name", jobj); 
 }
 
 outputLayerParams::outputLayerParams(json_object* jobj, bool isDebugMode, bool multiFormat)
@@ -80,6 +80,7 @@ outputLayerParams::outputLayerParams(json_object* jobj, bool isDebugMode, bool m
     outAddress_ = getValue("address", jobj);
     outDdrSize_ = getValue("outDDRSize", jobj);
     debug_golden_filename_ = isDebugMode ? getFileNameIfExists("debugGoldenFile", jobj):"";
+    outName_ = getFileNameIfExists("name", jobj);
   }
   else
   {
@@ -89,6 +90,7 @@ outputLayerParams::outputLayerParams(json_object* jobj, bool isDebugMode, bool m
     outAddress_ = 0;
     outDdrSize_ = getValue("outDDRSize", jobj);
     debug_golden_filename_ = "";
+    outName_ = "output";
   }
 }
 
@@ -123,6 +125,26 @@ outputLayerParams::outputLayerParams(const xir::Subgraph *subgraph, bool isDebug
   debug_golden_filename_ = "";
 }
 
+std::vector<std::string> Xmodel::getInTensorsNames()
+{
+   std::vector<std::string> inTensorsNames;
+   for(uint32_t i=0; i<inputParams_.size(); i++)
+   {
+     inTensorsNames.push_back(inputParams_[i].inName_);
+   }
+   return inTensorsNames;
+}
+
+
+std::vector<std::string> Xmodel::getOutTensorsNames()
+{
+   std::vector<std::string> outTensorsNames;
+   for(uint32_t i=0; i<outputParams_.size(); i++)
+   {
+     outTensorsNames.push_back(outputParams_[i].outName_);
+   }
+   return outTensorsNames;
+}
 
 std::vector<std::vector<std::int32_t>> Xmodel::getOutTensorsDims()
 {

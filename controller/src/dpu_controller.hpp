@@ -15,8 +15,8 @@
 
 class DpuController {
  public:
-  DpuController(std::string meta) {}
-  DpuController(const xir::Subgraph *subgraph) {}
+  DpuController(std::string meta, xir::Attrs* attrs) {}
+  DpuController(const xir::Subgraph *subgraph, xir::Attrs* attrs) {}
   virtual ~DpuController() {}
   virtual void run(
     const std::vector<vart::TensorBuffer*> &inputs, 
@@ -35,8 +35,8 @@ class DpuController {
 template <class Dhandle, class DbufIn, class DbufOut>
 class XclDpuController : public DpuController {
  public:
-  XclDpuController(std::string meta);
-  XclDpuController(const xir::Subgraph *subgraph);
+  XclDpuController(std::string meta, xir::Attrs* attrs=nullptr);
+  XclDpuController(const xir::Subgraph *subgraph, xir::Attrs* attrs=nullptr);
   virtual ~XclDpuController() override;
   virtual void run(
     const std::vector<vart::TensorBuffer*> &inputs, 
@@ -63,13 +63,15 @@ class XclDpuController : public DpuController {
   std::unordered_map<vart::TensorBuffer*,
     std::vector<DeviceBuffer *>> tbufs2dbufs_;
   std::mutex tbuf_mtx_;
+private:
+  std::unique_ptr<xir::Attrs> default_attrs_;
 };
 
 class SampleDpuController 
  : public XclDpuController<XclDeviceHandle, XclDeviceBuffer, XclDeviceBuffer> {
  public:
-  SampleDpuController(std::string meta);
-  SampleDpuController(const xir::Subgraph *subgraph);
+  SampleDpuController(std::string meta, xir::Attrs* attrs=nullptr);
+  SampleDpuController(const xir::Subgraph *subgraph, xir::Attrs* attrs=nullptr);
   virtual ~SampleDpuController() override;
   virtual void run(
     const std::vector<vart::TensorBuffer*> &inputs, 

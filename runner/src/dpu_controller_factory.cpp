@@ -1,9 +1,9 @@
 #include "dpu_controller_factory.hpp"
 
 template <typename T>
-std::shared_ptr<DpuController> DpuControllerFactory::get(std::string kernel, T subgraph) {
+std::shared_ptr<DpuController> DpuControllerFactory::get(std::string kernel, T subgraph, xir::Attrs* attrs) {
 
-  if (kernel == "dpdpuv3_wrapper")
+  if ( kernel == "DPUCADF8H" || kernel == "dpdpuv3_wrapper")
     // TODO/FIXME replace kernel name with standard name for dpuv3int8
     // e.g., DPUABC123XYZ
   {
@@ -17,11 +17,11 @@ std::shared_ptr<DpuController> DpuControllerFactory::get(std::string kernel, T s
   }
   else if (kernel == "DPUCVDX8H")
   {
-    return std::make_shared<DpuV4eController>(subgraph);
+    return std::make_shared<DpuV4eController>(subgraph, attrs);
   }
   else if (kernel == "DPUCAHX8L")
   {
-    return std::make_shared<DpuV3meController>(subgraph);
+    return std::make_shared<DpuV3meController>(subgraph,attrs);
   }
   else if (kernel == "kernelSxdnn_0")
   {
@@ -29,7 +29,7 @@ std::shared_ptr<DpuController> DpuControllerFactory::get(std::string kernel, T s
   }
   else if (kernel == "DPUCAHX8H")
   {
-    return std::make_shared<DpuV3eController>(subgraph);
+    return std::make_shared<DpuV3eController>(subgraph, attrs);
   }
   else
     throw std::runtime_error("Error: no DpuController found for " + kernel);
@@ -38,6 +38,6 @@ std::shared_ptr<DpuController> DpuControllerFactory::get(std::string kernel, T s
 //template std::shared_ptr<DpuController>
 //DpuControllerFactory::get<const xir::Subgraph*>(std::string kernel, const xir::Subgraph* subgraph);
 template std::shared_ptr<DpuController>
-DpuControllerFactory::get<const xir::Subgraph*>(std::string kernel, const xir::Subgraph* subgraph);
+DpuControllerFactory::get<const xir::Subgraph*>(std::string kernel, const xir::Subgraph* subgraph, xir::Attrs* attrs);
 template std::shared_ptr<DpuController> 
-DpuControllerFactory::get<std::string>(std::string kernel, std::string);
+DpuControllerFactory::get<std::string>(std::string kernel, std::string, xir::Attrs* attrs);

@@ -28,6 +28,25 @@ DpuRunner::DpuRunner(const xir::Subgraph* subgraph) {
   out_bufs = dpu_controller_->get_outputs();
 }
 
+DpuRunner::DpuRunner(const xir::Subgraph* subgraph, xir::Attrs* attrs) {
+  // default: each DpuController controls one core,
+  //          each DpuRunner has one DpuController
+  // (keep it simple)
+
+  std::string kernel;
+  if (subgraph->has_attr("dpu_fingerprint")) {
+    const uint64_t fingerprint = subgraph->get_attr<std::uint64_t>("dpu_fingerprint");
+    kernel = vitis::ai::target_factory()->create(fingerprint).type();
+  } else {
+    kernel = subgraph->get_attr<std::string>("kernel");
+  }
+
+  dpu_controller_ = DpuControllerFactory::get_instance().get(kernel, subgraph, attrs);
+  
+  in_bufs = dpu_controller_->get_inputs();
+  out_bufs = dpu_controller_->get_outputs();
+}
+
 DpuRunner::DpuRunner(std::string meta) {
   // default: each DpuController controls one core,
   //          each DpuRunner has one DpuController
@@ -106,7 +125,7 @@ vart::Runner* create_runner(const xir::Subgraph* subgraph) {
 /** @brief create dpu runner with attrs
 */
 vart::Runner* create_runner_with_attrs(const xir::Subgraph* subgraph, xir::Attrs* attrs) {
-     auto ret = std::make_unique<vart::DpuRunner>(subgraph);
+     auto ret = std::make_unique<vart::DpuRunner>(subgraph, attrs);
      return ret.release();
 }
 

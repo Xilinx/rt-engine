@@ -88,8 +88,8 @@ static uint32_t read32_dpu_reg(xclDeviceHandle dpu_handle, uint64_t offset) {
   return val;
 }
 
-DpuCloudController::DpuCloudController(std::string meta) 
-  : XclDpuController<XrtDeviceHandle, XrtDeviceBuffer, XrtDeviceBuffer>(meta),dump_mode_(false),debug_mode_(false) {
+DpuCloudController::DpuCloudController(std::string meta, xir::Attrs* attrs) 
+  : XclDpuController<XrtDeviceHandle, XrtDeviceBuffer, XrtDeviceBuffer>(meta, attrs),dump_mode_(false),debug_mode_(false) {
   // assign many contexts -- one for each worker thread
   // threads cannot share contexts (or xclExecWait may miss the 'done' signal)
   Engine& engine = Engine::get_instance();
@@ -98,8 +98,8 @@ DpuCloudController::DpuCloudController(std::string meta)
   model_ =std::make_shared<DpuXmodel>(meta);
 }
 
-DpuCloudController::DpuCloudController(const xir::Subgraph *subgraph) 
-  : XclDpuController<XrtDeviceHandle, XrtDeviceBuffer, XrtDeviceBuffer>(subgraph),dump_mode_(false),debug_mode_(false) {
+DpuCloudController::DpuCloudController(const xir::Subgraph *subgraph, xir::Attrs* attrs) 
+  : XclDpuController<XrtDeviceHandle, XrtDeviceBuffer, XrtDeviceBuffer>(subgraph, attrs),dump_mode_(false),debug_mode_(false) {
   Engine& engine = Engine::get_instance();
   for (unsigned i=0; i < engine.get_num_workers(); i++)
     contexts_.emplace_back(new XrtContext(*handle_));
@@ -194,7 +194,7 @@ xclBufferHandle  DpuCloudController::get_xrt_bo(void* data, int size, vector<uns
   return reg0Mem;
 
 }
-void DpuCloudController::init_graph(vector<unsigned> hbmw, vector<unsigned> hbmc) {
+void DpuCloudController::init_graph(vector<unsigned> hbmw, vector<unsigned> hbmc, xir::Attrs* attrs ) {
 
   auto handle = contexts_[0]->get_dev_handle();
   auto cu_base_addr = handle_->get_device_info().cu_base_addr;
@@ -218,6 +218,11 @@ void DpuCloudController::init_graph(vector<unsigned> hbmw, vector<unsigned> hbmc
   }
   
   batch_size_ = read32_dpu_reg(handle,  cu_base_addr + DPUREG_ENGINE_NUM);
+  if(attrs != nullptr) {
+    if (!attrs->has_attr("__batch__")) {
+      attrs->set_attr<size_t>("__batch__", batch_size_);
+    }
+  }
   xclBOProperties boProp;
   dump_mode_ = model_->get_dump_mode();
   debug_mode_ = model_->get_debug_mode();

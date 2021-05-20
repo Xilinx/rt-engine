@@ -39,7 +39,7 @@ struct aligned_allocator
 };
 
 
-class Dpuv3Int8Controller : public XclDpuController<XclDeviceHandle, XclDeviceBuffer, XclDeviceBuffer> {
+class Dpuv3Int8Controller : public XclDpuController<XrtDeviceHandle, XrtDeviceBuffer, XrtDeviceBuffer> {
  public:
   Dpuv3Int8Controller(std::string meta);
   Dpuv3Int8Controller(const xir::Subgraph *subgraph);
@@ -56,11 +56,14 @@ class Dpuv3Int8Controller : public XclDpuController<XclDeviceHandle, XclDeviceBu
  protected:    
   virtual void preprocess(vart::TensorBuffer*, vart::TensorBuffer*); 
   virtual void each_output_reorg(void* std_data, void *result_data, int ddr_size, int startVal, int std_size, int stdOutCh, int outputNumber);
-  virtual void runKernel(xrtcpp::exec::exec_write_command cmd, uint64_t* buf_addr, uint32_t* reg_val);
-  virtual void initRunBufs(uint64_t *buf_addr, XclDeviceBuffer* swap_buf, XclDeviceBuffer* druSrc_buf, XclDeviceBuffer* druDst_buf);
+  virtual void runKernel(ert_start_kernel_cmd* ecmd, uint64_t* buf_addr, uint32_t* reg_val, xclDeviceHandle xcl_handle, xclBufferHandle bo_handle);
+//  virtual void runKernel(xrtcpp::exec::exec_write_command cmd, uint64_t* buf_addr, uint32_t* reg_val);
+  virtual void initRunBufs(uint64_t *buf_addr, XrtDeviceBuffer* swap_buf, XrtDeviceBuffer* druSrc_buf, XrtDeviceBuffer* druDst_buf);
+  void readRegs(xclDeviceHandle xcl_handle);
+  static uint32_t read32_dpu_reg(xclDeviceHandle dpu_handle, uint64_t offset); 
   std::unique_ptr<Xmodel> xmodel_;
-  std::unique_ptr<XclDeviceBuffer> instr_buf_;
-  std::unique_ptr<XclDeviceBuffer> params_buf_;
+  std::unique_ptr<XrtDeviceBuffer> instr_buf_;
+  std::unique_ptr<XrtDeviceBuffer> params_buf_;
   std::vector<int,aligned_allocator<int>> params_;
 
  private:
@@ -76,7 +79,6 @@ class Dpuv3Int8Controller : public XclDpuController<XclDeviceHandle, XclDeviceBu
   void postprocess(std::vector<vart::TensorBuffer*>, vart::TensorBuffer*);
   std::vector<vart::TensorBuffer*> create_hw_buffers(std::vector<vart::TensorBuffer*> stdBuf, bool isInput);
   vart::TensorBuffer* get_hw_buffer(vart::TensorBuffer *tb);
-  void execute(uint64_t *buf_addr);
   
   std::unique_ptr<xir::Tensor> in_tensor_;
   std::vector<std::unique_ptr<xir::Tensor>> out_tensors_; 
@@ -89,6 +91,7 @@ class Dpuv3Int8Controller : public XclDpuController<XclDeviceHandle, XclDeviceBu
   std::unique_ptr<xir::Tensor> druDst_tensor_;
 
   std::vector<int,aligned_allocator<int>> instr_;
+  std::vector<std::unique_ptr<XrtContext>> contexts_;
 
   std::unordered_map<vart::TensorBuffer*, vart::TensorBuffer*> stdbuf2hwbuf_;
   std::unordered_map<vart::TensorBuffer*, vart::TensorBuffer*> stdbuf2swapbuf_;
@@ -118,8 +121,9 @@ class Dpuv3Int8DebugController : public Dpuv3Int8Controller {
 
   private:
     virtual void preprocess(vart::TensorBuffer*, vart::TensorBuffer*);
-    virtual void runKernel(xrtcpp::exec::exec_write_command cmd, uint64_t* buf_addr, uint32_t* reg_val);
-    virtual void initRunBufs(uint64_t *buf_addr, XclDeviceBuffer* swap_buf, XclDeviceBuffer* druSrc_buf, XclDeviceBuffer* druDst_buf);
+    virtual void runKernel(ert_start_kernel_cmd* ecmd, uint64_t* buf_addr, uint32_t* reg_val, xclDeviceHandle xcl_handle, xclBufferHandle bo_handle);
+//   virtual void runKernel(xrtcpp::exec::exec_write_command cmd, uint64_t* buf_addr, uint32_t* reg_val);
+    virtual void initRunBufs(uint64_t *buf_addr, XrtDeviceBuffer* swap_buf, XrtDeviceBuffer* druSrc_buf, XrtDeviceBuffer* druDst_buf);
     virtual void each_output_reorg(void* std_data, void *result_data, int ddr_size, int startVal, int std_size, int stdOutCh, int outputNumber);
     void loadBinFile(std::string binFileName, bool isInput, int idx);
     std::string toHexWidth2( uint32_t i );
@@ -145,7 +149,8 @@ class Dpuv3Int8DebugController : public Dpuv3Int8Controller {
     std::vector<int8_t> debugBatchInterleaved_;
         
     std::ofstream debug_dumpvals_;
-    
+    std::vector<std::unique_ptr<XrtContext>> contexts_;
+
     bool dumpDmem_;
 };
 

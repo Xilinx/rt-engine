@@ -9,6 +9,12 @@
 #include <string>
 #include <xrt.h>
 #include <CL/opencl.h>
+#include "xir/attrs/attrs.hpp"
+
+namespace xir {
+//class Subgraph;
+class Attrs;
+}  // namespace xir
 
 namespace butler {
   class ButlerClient;
@@ -34,7 +40,7 @@ struct DeviceInfo {
  */
 class DeviceResource {
  public:
-  DeviceResource(std::string kernelName, std::string xclbin);
+  DeviceResource(std::string kernelName, std::string xclbin, xir::Attrs* attrs);
   DeviceResource() {}
   virtual ~DeviceResource();
   const DeviceInfo& get_device_info() const { return *info_; }
@@ -45,7 +51,7 @@ class DeviceResource {
 
 class ButlerResource : public DeviceResource {
  public:
-  ButlerResource(std::string kernelName, std::string xclbin);
+  ButlerResource(std::string kernelName, std::string xclbin, xir::Attrs* attrs);
   ~ButlerResource();
 
  private:
@@ -55,9 +61,11 @@ class ButlerResource : public DeviceResource {
 
 class XrmResource : public DeviceResource {
  public:
-  XrmResource(std::string kernelName, std::string xclbin);
+  XrmResource(std::string kernelName, std::string xclbin, xir::Attrs* attrs);
   ~XrmResource();
-
+  int alloc_from_attrs(std::string kernelName, char* xclbinPath, xir::Attrs* attrs);
+  int alloc_with_deviceId(std::string kernelName, char* xclbinPath, xir::Attrs* attrs);
+  int alloc_without_deviceId(std::string kernelName, char* xclbinPath, xir::Attrs* attrs);
  private:
   void *context_;
   std::unique_ptr<xrmCuProperty> cu_prop_;
@@ -71,7 +79,7 @@ class XrmResource : public DeviceResource {
 
 class DeviceHandle {
  public:
-  DeviceHandle(std::string kernelName, std::string xclbin);
+  DeviceHandle(std::string kernelName, std::string xclbin, xir::Attrs* attrs);
   virtual ~DeviceHandle() {}
   const DeviceInfo& get_device_info() const { return resource_->get_device_info(); }
 
@@ -83,7 +91,7 @@ class DeviceHandle {
 
 class XclDeviceHandle : public DeviceHandle {
  public:
-  XclDeviceHandle(std::string kernelName, std::string xclbin);
+  XclDeviceHandle(std::string kernelName, std::string xclbin, xir::Attrs* attrs);
   virtual ~XclDeviceHandle();
   const cl_context& get_context() const { return context_; }
   const cl_command_queue& get_command_queue() const { return commands_; }
@@ -104,7 +112,7 @@ class XclDeviceHandle : public DeviceHandle {
 class XrtContext;
 class XrtDeviceHandle : public DeviceHandle {
  public:
-  XrtDeviceHandle(std::string kernelName, std::string xclbin);
+  XrtDeviceHandle(std::string kernelName, std::string xclbin, xir::Attrs* attrs);
   virtual ~XrtDeviceHandle();
 
   // a convenience context for basic work 
@@ -116,6 +124,7 @@ class XrtDeviceHandle : public DeviceHandle {
   std::unique_ptr<XrtContext> context_;
   std::array<unsigned char, sizeof(xuid_t)> uuid_;
 };
+
 
 class XrtContext {
  // must create a separate XrtContext for each hostcode worker thread
@@ -134,5 +143,18 @@ class XrtContext {
   xclDeviceHandle dev_handle_;
   xclBufferHandle bo_handle_;
   void *bo_addr_;
+};
+
+class KernelNameManager {
+  public:
+    ~KernelNameManager() { }
+    static KernelNameManager &getInstance() {
+      static KernelNameManager instance;
+      return instance;
+    }
+    std::string getRealKernelName(std::string xclbinPath, std::string kernelName);
+  private:
+    KernelNameManager() {};
+    unordered_map<std::string, unsigned > xclbin2usedCuIdx;
 };
 

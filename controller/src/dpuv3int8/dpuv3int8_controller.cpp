@@ -1,3 +1,5 @@
+#include <xrt.h>
+#include "engine.hpp"
 #include "dpuv3int8_controller.hpp"
 #include <mutex>
 
@@ -6,8 +8,12 @@
 using namespace std;
 std::mutex globalMutex;
 
-Dpuv3Int8Controller::Dpuv3Int8Controller(std::string meta) : XclDpuController<XclDeviceHandle, XclDeviceBuffer, XclDeviceBuffer>(meta) {
-  
+Dpuv3Int8Controller::Dpuv3Int8Controller(std::string meta) : XclDpuController<XrtDeviceHandle, XrtDeviceBuffer, XrtDeviceBuffer>(meta) {
+ 
+  Engine& engine = Engine::get_instance();
+  for (unsigned i=0; i < engine.get_num_workers(); i++)
+    contexts_.emplace_back(new XrtContext(*handle_));
+ 
   xmodel_.reset(new Xmodel(meta, false));
   
   initializeTensors(); 
@@ -15,8 +21,12 @@ Dpuv3Int8Controller::Dpuv3Int8Controller(std::string meta) : XclDpuController<Xc
   initCreateBuffers();
 }
 
-Dpuv3Int8Controller::Dpuv3Int8Controller(const xir::Subgraph *subgraph) : XclDpuController<XclDeviceHandle, XclDeviceBuffer, XclDeviceBuffer>(subgraph)
+Dpuv3Int8Controller::Dpuv3Int8Controller(const xir::Subgraph *subgraph) : XclDpuController<XrtDeviceHandle, XrtDeviceBuffer, XrtDeviceBuffer>(subgraph)
 {
+
+  Engine& engine = Engine::get_instance();
+  for (unsigned i=0; i < engine.get_num_workers(); i++)
+    contexts_.emplace_back(new XrtContext(*handle_));
 
   xmodel_ = std::make_unique<Xmodel>(subgraph, false);
   
@@ -33,7 +43,7 @@ void Dpuv3Int8Controller::initializeTensors()
       inHwDims = { int32_t(xmodel_->getInW()*xmodel_->getInH()*BATCH_SIZE*ceil((float)xmodel_->getInCh()/16)*16)};
     const std::vector<std::int32_t> outHwDims = { BATCH_SIZE, 1, 1, int32_t(xmodel_->getOutDdrSize())};
    
-    xir::Tensor *in_t = xir::Tensor::create("input", indims, xir::DataType{xir::DataType::XINT, 8}).release();
+    xir::Tensor *in_t = xir::Tensor::create(xmodel_->getInTensorsNames()[0], indims, xir::DataType{xir::DataType::XINT, 8}).release();
     xir::Tensor *in_hw = xir::Tensor::create("inputHw", inHwDims, xir::DataType{xir::DataType::XINT, 8}).release();
     xir::Tensor *op_hw = xir::Tensor::create("outputHw", outHwDims, xir::DataType{xir::DataType::XINT, 8}).release();
     
@@ -45,7 +55,7 @@ void Dpuv3Int8Controller::initializeTensors()
     for(uint32_t k=0; k<xmodel_->getOutputNum(); k++)
     {
       std::vector<std::int32_t> outputdims = { BATCH_SIZE, xmodel_->getOutTensorsDims()[k][0], xmodel_->getOutTensorsDims()[k][1], xmodel_->getOutTensorsDims()[k][2]};
-      xir::Tensor *outputOp = xir::Tensor::create("output"+std::to_string(k), outputdims, xir::DataType{xir::DataType::XINT, 8}).release();
+      xir::Tensor *outputOp = xir::Tensor::create(xmodel_->getOutTensorsNames()[k], outputdims, xir::DataType{xir::DataType::XINT, 8}).release();
       std::unique_ptr<xir::Tensor> outtensor;
       outtensor.reset(outputOp);
       outtensor->set_attr<std::int32_t>("fix_point", xmodel_->get_output_fix_point_values()[k]);
@@ -56,43 +66,91 @@ void Dpuv3Int8Controller::initializeTensors()
 
 Dpuv3Int8Controller::~Dpuv3Int8Controller() {}
 
-void Dpuv3Int8Controller::runKernel(xrtcpp::exec::exec_write_command cmd, uint64_t* buf_addr, uint32_t* reg_val)
+void Dpuv3Int8Controller::runKernel(ert_start_kernel_cmd* ecmd, uint64_t* buf_addr, uint32_t* reg_val, xclDeviceHandle xcl_handle, xclBufferHandle bo_handle)
 {
+  ecmd->cu_mask = handle_->get_device_info().cu_mask;
+  ecmd->extra_cu_masks = 0;
+  ecmd->stat_enabled = 1;
+  ecmd->state = ERT_CMD_STATE_NEW;
+  ecmd->opcode = ERT_EXEC_WRITE;
+  ecmd->type = ERT_CTRL;
 
-    cmd.add(CONTROL_ADDR_BLOCK_INSTR ,(buf_addr[BUF_IDX_INSTR]) & 0xFFFFFFFF);
-    cmd.add(CONTROL_ADDR_BLOCK_INSTR + 0x4 ,((buf_addr[BUF_IDX_INSTR]) >> 32) & 0xFFFFFFFF);
-    cmd.add(CONTROL_ADDR_BLOCK_PARAMS ,(buf_addr[BUF_IDX_PARAMS]) & 0xFFFFFFFF);
-    cmd.add(CONTROL_ADDR_BLOCK_PARAMS + 0x4 ,((buf_addr[BUF_IDX_PARAMS]) >> 32) & 0xFFFFFFFF);
-    
-    cmd.add(CONTROL_ADDR_BLOCK_SWAP ,(buf_addr[BUF_IDX_SWAP]) & 0xFFFFFFFF);
-    cmd.add(CONTROL_ADDR_BLOCK_SWAP + 0x4 ,((buf_addr[BUF_IDX_SWAP]) >> 32) & 0xFFFFFFFF);
-    cmd.add(CONTROL_ADDR_BLOCK_RSLT ,(buf_addr[BUF_IDX_RESULT]) & 0xFFFFFFFF);
-    cmd.add(CONTROL_ADDR_BLOCK_RSLT + 0x4 ,((buf_addr[BUF_IDX_RESULT]) >> 32) & 0xFFFFFFFF);
-    cmd.add(CONTROL_ADDR_BLOCK_SRC ,(buf_addr[BUF_IDX_SRC]) & 0xFFFFFFFF);
-    cmd.add(CONTROL_ADDR_BLOCK_SRC + 0x4 ,((buf_addr[BUF_IDX_SRC]) >> 32) & 0xFFFFFFFF);
-    cmd.add(CONTROL_ADDR_BLOCK_DST ,(buf_addr[BUF_IDX_DST]) & 0xFFFFFFFF);
-    cmd.add(CONTROL_ADDR_BLOCK_DST + 0x4 ,((buf_addr[BUF_IDX_DST]) >> 32) & 0xFFFFFFFF);
+  std::vector<std::pair<int, int> > regVals;
+  regVals.push_back({CONTROL_ADDR_BLOCK_INSTR ,(buf_addr[BUF_IDX_INSTR]) & 0xFFFFFFFF});
+  regVals.push_back({CONTROL_ADDR_BLOCK_INSTR + 0x4 ,((buf_addr[BUF_IDX_INSTR]) >> 32) & 0xFFFFFFFF});
+  regVals.push_back({CONTROL_ADDR_BLOCK_PARAMS ,(buf_addr[BUF_IDX_PARAMS]) & 0xFFFFFFFF});
+  regVals.push_back({CONTROL_ADDR_BLOCK_PARAMS + 0x4 ,((buf_addr[BUF_IDX_PARAMS]) >> 32) & 0xFFFFFFFF});
+  
+  regVals.push_back({CONTROL_ADDR_BLOCK_SWAP ,(buf_addr[BUF_IDX_SWAP]) & 0xFFFFFFFF});
+  regVals.push_back({CONTROL_ADDR_BLOCK_SWAP + 0x4 ,((buf_addr[BUF_IDX_SWAP]) >> 32) & 0xFFFFFFFF});
+  regVals.push_back({CONTROL_ADDR_BLOCK_RSLT ,(buf_addr[BUF_IDX_RESULT]) & 0xFFFFFFFF});
+  regVals.push_back({CONTROL_ADDR_BLOCK_RSLT + 0x4 ,((buf_addr[BUF_IDX_RESULT]) >> 32) & 0xFFFFFFFF});
+  regVals.push_back({CONTROL_ADDR_BLOCK_SRC ,(buf_addr[BUF_IDX_SRC]) & 0xFFFFFFFF});
+  regVals.push_back({CONTROL_ADDR_BLOCK_SRC + 0x4 ,((buf_addr[BUF_IDX_SRC]) >> 32) & 0xFFFFFFFF});
+  regVals.push_back({CONTROL_ADDR_BLOCK_DST ,(buf_addr[BUF_IDX_DST]) & 0xFFFFFFFF});
+  regVals.push_back({CONTROL_ADDR_BLOCK_DST + 0x4 ,((buf_addr[BUF_IDX_DST]) >> 32) & 0xFFFFFFFF});
 
-    cmd.add(CONTROL_ADDR_TASK_DRU_ADDR_STRD ,reg_val[REG_IDX_TASK_DRU_ADDR_STRD]);
-    cmd.add(CONTROL_ADDR_TASK_DRU_KW ,reg_val[REG_IDX_TASK_DRU_KW]);
-    cmd.add(CONTROL_ADDR_TASK_DRU_SW ,reg_val[REG_IDX_TASK_DRU_SW]);
-    cmd.add(CONTROL_ADDR_TASK_DRU_IC ,reg_val[REG_IDX_TASK_DRU_IC]);
-    cmd.add(CONTROL_ADDR_TASK_DRU_OW ,reg_val[REG_IDX_TASK_DRU_OW]);
-    cmd.add(CONTROL_ADDR_TASK_DRU_OH ,reg_val[REG_IDX_TASK_DRU_OH]);
-    cmd.add(CONTROL_ADDR_TASK_DRU_SRC_NTRANS ,reg_val[REG_IDX_TASK_DRU_SRC_NTRANS]);
-    cmd.add(CONTROL_ADDR_TASK_DRU_DST_NTRANS ,reg_val[REG_IDX_TASK_DRU_DST_NTRANS]);
-    cmd.add(CONTROL_ADDR_TASK_DRU_PL_CORR	,reg_val[REG_IDX_TASK_DRU_PL_CORR]);
-    cmd.add(CONTROL_ADDR_TASK_DRU_PR_CORR	,reg_val[REG_IDX_TASK_DRU_PR_CORR]);
-    cmd.add(CONTROL_ADDR_TASK_DRU_IW_CORR	,reg_val[REG_IDX_TASK_DRU_IW_CORR]);
-    cmd.add(CONTROL_ADDR_TASK_DRU_SW_CORR	,reg_val[REG_IDX_TASK_DRU_SW_CORR]);
-    cmd.add(CONTROL_ADDR_TASK_DRU_WCG_CORR ,reg_val[REG_IDX_TASK_DRU_WCG_CORR]);
-    cmd.add(CONTROL_ADDR_TASK_DRU_READ_MODE ,reg_val[REG_IDX_TASK_DRU_READ_MODE]);
-    cmd.add(CONTROL_ADDR_TASK_MODE ,reg_val[REG_IDX_TASK_MODE]);
-    cmd.add(CONTROL_ADDR_REG_AXCACHE_AXOS	,reg_val[REG_IDX_REG_AXCACHE_AXOS]);
-   
-    cmd.execute();
-    cmd.wait();
+  regVals.push_back({CONTROL_ADDR_TASK_DRU_ADDR_STRD ,reg_val[REG_IDX_TASK_DRU_ADDR_STRD]});
+  regVals.push_back({CONTROL_ADDR_TASK_DRU_KW ,reg_val[REG_IDX_TASK_DRU_KW]});
+  regVals.push_back({CONTROL_ADDR_TASK_DRU_SW ,reg_val[REG_IDX_TASK_DRU_SW]});
+  regVals.push_back({CONTROL_ADDR_TASK_DRU_IC ,reg_val[REG_IDX_TASK_DRU_IC]});
+  regVals.push_back({CONTROL_ADDR_TASK_DRU_OW ,reg_val[REG_IDX_TASK_DRU_OW]});
+  regVals.push_back({CONTROL_ADDR_TASK_DRU_OH ,reg_val[REG_IDX_TASK_DRU_OH]});
+  regVals.push_back({CONTROL_ADDR_TASK_DRU_SRC_NTRANS ,reg_val[REG_IDX_TASK_DRU_SRC_NTRANS]});
+  regVals.push_back({CONTROL_ADDR_TASK_DRU_DST_NTRANS ,reg_val[REG_IDX_TASK_DRU_DST_NTRANS]});
+  regVals.push_back({CONTROL_ADDR_TASK_DRU_PL_CORR	,reg_val[REG_IDX_TASK_DRU_PL_CORR]});
+  regVals.push_back({CONTROL_ADDR_TASK_DRU_PR_CORR	,reg_val[REG_IDX_TASK_DRU_PR_CORR]});
+  regVals.push_back({CONTROL_ADDR_TASK_DRU_IW_CORR	,reg_val[REG_IDX_TASK_DRU_IW_CORR]});
+  regVals.push_back({CONTROL_ADDR_TASK_DRU_SW_CORR	,reg_val[REG_IDX_TASK_DRU_SW_CORR]});
+  regVals.push_back({CONTROL_ADDR_TASK_DRU_WCG_CORR ,reg_val[REG_IDX_TASK_DRU_WCG_CORR]});
+  regVals.push_back({CONTROL_ADDR_TASK_DRU_READ_MODE ,reg_val[REG_IDX_TASK_DRU_READ_MODE]});
+  regVals.push_back({CONTROL_ADDR_TASK_MODE ,reg_val[REG_IDX_TASK_MODE]});
+  regVals.push_back({CONTROL_ADDR_REG_AXCACHE_AXOS	,reg_val[REG_IDX_REG_AXCACHE_AXOS]});
 
+  int p = 6;
+  for (unsigned i=0; i < regVals.size(); i++) {
+    ecmd->data[p++] = (regVals[i].first);
+    ecmd->data[p++] = (regVals[i].second);
+  }
+  ecmd->count = 1 + p; 
+
+    // exec kernel
+  auto exec_buf_result = xclExecBuf(xcl_handle, bo_handle);
+  if (exec_buf_result)
+    throw std::runtime_error("Error: xclExecBuf failed");
+
+  // wait for kernel
+  for (int wait_count=0; wait_count < 15 && xclExecWait(xcl_handle, 1000) == 0 
+          && ecmd->state != ERT_CMD_STATE_COMPLETED; wait_count++);
+          
+  if (ecmd->state != ERT_CMD_STATE_COMPLETED)
+    std::cout << "Error: CU timeout " << std::endl;
+
+}
+
+void Dpuv3Int8Controller::readRegs(xclDeviceHandle xcl_handle)
+{
+  std::cout<<"--------------------------------------------------------"<<std::endl;
+  std::cout<<"CU BASE ADDR: "<<handle_->get_device_info().cu_base_addr<<std::endl;
+  std::cout << "VERSION: " << read32_dpu_reg(xcl_handle,  handle_->get_device_info().cu_base_addr+ 0x07C) << std::endl;
+  std::cout << "LOAD START:" << read32_dpu_reg(xcl_handle,  handle_->get_device_info().cu_base_addr+ 0x098) << std::endl;
+  std::cout << "LOAD END  :" << read32_dpu_reg(xcl_handle,  handle_->get_device_info().cu_base_addr+ 0x0A8) << std::endl;
+  std::cout << "SAVE START:" << read32_dpu_reg(xcl_handle,  handle_->get_device_info().cu_base_addr+ 0x09C) << std::endl;
+  std::cout << "SAVE END  :" << read32_dpu_reg(xcl_handle,  handle_->get_device_info().cu_base_addr+ 0x0AC) << std::endl;
+  std::cout << "CONV START:" << read32_dpu_reg(xcl_handle,  handle_->get_device_info().cu_base_addr+ 0x0A0) << std::endl;
+  std::cout << "CONV END  :" << read32_dpu_reg(xcl_handle,  handle_->get_device_info().cu_base_addr+ 0x0B0) << std::endl;
+  std::cout << "MISC START:" << read32_dpu_reg(xcl_handle,  handle_->get_device_info().cu_base_addr+ 0x0A4) << std::endl;
+  std::cout << "MISC END  :" << read32_dpu_reg(xcl_handle,  handle_->get_device_info().cu_base_addr+ 0x0B4) << std::endl;
+  std::cout << "DPU STATUS :" << read32_dpu_reg(xcl_handle,  handle_->get_device_info().cu_base_addr+ 0x0B8) << std::endl;
+  std::cout << "DRU STATUS :" << read32_dpu_reg(xcl_handle,  handle_->get_device_info().cu_base_addr+ 0x0BC) << std::endl;
+  std::cout<<"----------------------------------------------------------"<<std::endl;
+
+}
+
+static uint32_t Dpuv3Int8Controller::read32_dpu_reg(xclDeviceHandle dpu_handle, uint64_t offset) {
+  uint32_t val;
+  xclRead(dpu_handle, XCL_ADDR_KERNEL_CTRL, offset, (void *)(&val), 4);
+  return val;
 }
 
 void Dpuv3Int8Controller::initializeTaskDRUVariables()
@@ -193,7 +251,8 @@ void Dpuv3Int8Controller::initCreateBuffers()
       params_tensor_.reset(params_t);
 
       paramsTbuf_.reset(new vart::CpuFlatTensorBuffer((void*)params_.data(),&(*params_tensor_)));
-      params_buf_.reset(new XclDeviceBuffer(handle_.get(), paramsTbuf_.get(), handle_->get_device_info().ddr_bank));
+      params_buf_.reset(new XrtDeviceBuffer(handle_.get(), paramsTbuf_.get(), handle_->get_device_info().ddr_bank));
+      params_buf_->upload();
     }
     
     const std::vector<std::int32_t> swapdims = { int32_t(xmodel_->getSwapBufSize()) };
@@ -212,11 +271,12 @@ void Dpuv3Int8Controller::initCreateBuffers()
     
     instrTbuf_.reset(new vart::CpuFlatTensorBuffer((void*)instr_.data(),&(*instr_tensor_)));
     
-    instr_buf_.reset(new XclDeviceBuffer(handle_.get(), instrTbuf_.get(), handle_->get_device_info().ddr_bank));
+    instr_buf_.reset(new XrtDeviceBuffer(handle_.get(), instrTbuf_.get(), handle_->get_device_info().ddr_bank));
+    instr_buf_->upload();
     
 }
 
-void Dpuv3Int8Controller::initRunBufs(uint64_t *buf_addr, XclDeviceBuffer* swap_buf, XclDeviceBuffer* druSrc_buf, XclDeviceBuffer* druDst_buf)
+void Dpuv3Int8Controller::initRunBufs(uint64_t *buf_addr, XrtDeviceBuffer* swap_buf, XrtDeviceBuffer* druSrc_buf, XrtDeviceBuffer* druDst_buf)
 {
     buf_addr[BUF_IDX_INSTR] = instr_buf_->get_phys_addr();
     buf_addr[BUF_IDX_PARAMS] = params_buf_->get_phys_addr();
@@ -232,16 +292,6 @@ void Dpuv3Int8Controller::initRunBufs(uint64_t *buf_addr, XclDeviceBuffer* swap_
     {                                                                 
         buf_addr[BUF_IDX_SRC] = buf_addr[BUF_IDX_NULL];
     }
-
-}
-
-
-void Dpuv3Int8Controller::execute(uint64_t *buf_addr)
-{
-    xrt_device* xdev = handle_->get_device_info().xdev;
-    xrtcpp::exec::exec_write_command cmd(xdev);
-    cmd.add_cu(handle_->get_device_info().cu_index);
-    runKernel( cmd, buf_addr, reg_val);
 
 }
 
@@ -619,7 +669,17 @@ void Dpuv3Int8Controller::data_float2fix(int8_t* dataDst, float* dataSrc, int si
 
 void Dpuv3Int8Controller::run(const std::vector<vart::TensorBuffer*> &inputs,
                         const std::vector<vart::TensorBuffer*> &outputs) {
-  
+ 
+  Engine& engine = Engine::get_instance();
+  const unsigned worker_id = engine.get_my_worker_id();
+  if (worker_id >= contexts_.size())
+    throw std::runtime_error("Error: worker_id too large; update controller code");
+
+  auto &context = *(contexts_[worker_id]);
+  auto xcl_handle = context.get_dev_handle();
+  auto bo_handle = context.get_bo_handle();
+  auto bo_addr = context.get_bo_addr();
+
   std::vector<vart::TensorBuffer*> input_tensor_buffers;
   std::vector<vart::TensorBuffer*> output_tensor_buffers;
 
@@ -632,7 +692,6 @@ void Dpuv3Int8Controller::run(const std::vector<vart::TensorBuffer*> &inputs,
   if (it == stdbuf2hwbuf_.end())
   {
     create_tb_outside=true;
-    std::cout << "WARNING: Running in non-performance mode." << std::endl;
   }
 
   // If the user has provided us TB
@@ -671,11 +730,11 @@ void Dpuv3Int8Controller::run(const std::vector<vart::TensorBuffer*> &inputs,
   vart::TensorBuffer* druSrcTbuf = stdbuf2druSrcbuf_[input_tensor_buffers[0]];
   vart::TensorBuffer* druDstTbuf = stdbuf2druDstbuf_[input_tensor_buffers[0]];
 
-  auto *inHwBuf = dynamic_cast<XclDeviceBuffer*>(get_device_buffer(inHwTbuf));
-  auto *outHwBuf = dynamic_cast<XclDeviceBuffer*>(get_device_buffer(outHwTbuf));
-  auto *swapBuf = dynamic_cast<XclDeviceBuffer*>(get_device_buffer(swapTbuf));
-  auto *druSrcBuf = dynamic_cast<XclDeviceBuffer*>(get_device_buffer(druSrcTbuf));
-  auto *druDstBuf = dynamic_cast<XclDeviceBuffer*>(get_device_buffer(druDstTbuf));
+  auto *inHwBuf = dynamic_cast<XrtDeviceBuffer*>(get_device_buffer(inHwTbuf));
+  auto *outHwBuf = dynamic_cast<XrtDeviceBuffer*>(get_device_buffer(outHwTbuf));
+  auto *swapBuf = dynamic_cast<XrtDeviceBuffer*>(get_device_buffer(swapTbuf));
+  auto *druSrcBuf = dynamic_cast<XrtDeviceBuffer*>(get_device_buffer(druSrcTbuf));
+  auto *druDstBuf = dynamic_cast<XrtDeviceBuffer*>(get_device_buffer(druDstTbuf));
 
   preprocess(input_tensor_buffers[0], inHwTbuf);
 
@@ -696,10 +755,26 @@ void Dpuv3Int8Controller::run(const std::vector<vart::TensorBuffer*> &inputs,
       buf_addr[BUF_IDX_DST] = buf_addr[BUF_IDX_DIN];
   }
   
-  inHwBuf->upload();
-  execute(buf_addr);
-  outHwBuf->download();
+  uint64_t data;
+  size_t size;
 
+  std::tie(data, size) = inHwTbuf->data();
+
+  if (xclUnmgdPwrite(xcl_handle, 0, data, size, inHwBuf->get_phys_addr()))
+    throw std::runtime_error("Error: upload failed");
+  
+  auto ecmd = reinterpret_cast<ert_start_kernel_cmd*>(bo_addr);
+ 
+  runKernel(ecmd, buf_addr, reg_val, xcl_handle, bo_handle);
+
+  uint64_t outdata;
+  size_t outsize;
+
+  std::tie(outdata, outsize) = outHwTbuf->data();
+
+  if (xclUnmgdPread(xcl_handle, 0, outdata, outsize, outHwBuf->get_phys_addr()))
+    throw std::runtime_error("Error: dump failed!");
+  
   postprocess(output_tensor_buffers, outHwTbuf);
 
   // If the user has provided us TB

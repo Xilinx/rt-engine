@@ -9,8 +9,8 @@
 class DpuCloudController 
 : public XclDpuController<XrtDeviceHandle, XrtDeviceBuffer, XrtDeviceBuffer> {
  public:
-  DpuCloudController(std::string meta);
-  DpuCloudController(const xir::Subgraph *subgraph);
+  DpuCloudController(std::string meta, xir::Attrs* attrs);
+  DpuCloudController(const xir::Subgraph *subgraph, xir::Attrs* attrs);
   virtual ~DpuCloudController() override;
   virtual void run(
     const std::vector<vart::TensorBuffer*> &inputs, 
@@ -32,7 +32,7 @@ class DpuCloudController
 
   //virtual void init(const std::string &meta);
   //virtual void init(const xir::Subgraph* subgraph);
-  virtual void init_graph(vector<unsigned> hbmw, vector<unsigned> hbmc);
+  virtual void init_graph(vector<unsigned> hbmw, vector<unsigned> hbmc, xir::Attrs* attrs);
   virtual std::vector<const xir::Tensor*> get_merged_io_tensors(int size) const;
   virtual std::vector<vart::TensorBuffer*> init_tensor_buffer(std::vector<const xir::Tensor*> tensors, int batchSupport, unsigned runEngine=1);
   virtual std::vector<const xir::Tensor*> init_tensor(std::vector<const xir::Tensor*> tensors, int batchSupport, unsigned runEngine=1);
