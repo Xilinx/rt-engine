@@ -625,9 +625,11 @@ void DpuCloudController::tensorbuffer_trans(std::vector<vart::TensorBuffer*> &in
   for (unsigned i=0; i < tensors.size(); i++ ) {
     int tensor_size = tensors[i]->get_element_num()/batch_size_;
     unsigned tensor_idx=0;
-    auto shape = input_tensor_buffers[i]->get_tensor()->get_shape();
+    vector<int> shape;
     if (!is_input)
       shape = output_tensor_buffers[i]->get_tensor()->get_shape();
+    else
+      shape = input_tensor_buffers[i]->get_tensor()->get_shape();
     auto dims = std::vector<int>(shape.size(),0);
     for (unsigned j=0; j < buffers.size(); j++) {
       if (tensors[i]->get_name().find(buffers[j]->get_tensor()->get_name()) != std::string::npos) {
