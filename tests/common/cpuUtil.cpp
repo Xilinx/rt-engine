@@ -7,7 +7,7 @@ using namespace std;
 using namespace boost::filesystem;
 
 cpuUtil::cpuUtil(std::string xmodel, std::string image_dir, unsigned num_queries, bool verbose,
-                 std::string synset_filename, std::string golden_filename)
+                 std::string synset_filename, std::string golden_filename, std::string accuracyCheckTop1Top5Nums)
   : keysobj_(std::make_unique<XirKeys>(xmodel)), verbose_(verbose), synset_filename_(synset_filename),
     golden_filename_(golden_filename) {
 
@@ -21,6 +21,7 @@ cpuUtil::cpuUtil(std::string xmodel, std::string image_dir, unsigned num_queries
     top5Count_ = 0;
     load_golden();
   }
+  parseTop1Top5Expected(accuracyCheckTop1Top5Nums);
 }
 
 void cpuUtil::load_golden() {
@@ -43,12 +44,41 @@ void cpuUtil::load_golden() {
 
 }
 
-void cpuUtil::printtop1top5(unsigned num_queries) {
+void cpuUtil::parseTop1Top5Expected(std::string accuracyCheckTop1Top5Nums)
+{
+
+    std::string buf;                 
+    std::stringstream ss(accuracyCheckTop1Top5Nums);    
+    std::vector<std::string> tokens(2);
+    int count=0;
+    while (ss >> buf)
+    {
+       tokens[count]=buf;
+       count++;
+    }
+    
+    std::stringstream numbers0(tokens[0]);
+    std::stringstream numbers1(tokens[1]);
+
+    numbers0 >> top1Expected_;
+    numbers1 >> top5Expected_;
+}
+
+
+int cpuUtil::printtop1top5(unsigned num_queries) {
   std::cout << "Num images processed: " << num_queries*4 << std::endl;
+  float top1 = ((float) (top1Count_)/((float) (num_queries*4)))*100;
+  float top5 = ((float) (top5Count_)/((float) (num_queries*4)))*100;
   if (goldenAvailable_) {
-    std::cout << "Top-1: " << ((float) (top1Count_)/((float) (num_queries*4)))*100 << "%" << std::endl;
-    std::cout << "Top-5: " << ((float) (top5Count_)/((float) (num_queries*4)))*100 << "%" << std::endl;
+    std::cout << "Top-1: " << top1 << "%" << std::endl;
+    std::cout << "Top-5: " << top5 << "%" << std::endl;
   }
+  
+  if(top1>top1Expected_ && top5>top5Expected_)
+     return 0;
+  
+  return -1;
+
 
 }
 

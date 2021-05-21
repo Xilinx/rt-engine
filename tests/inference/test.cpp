@@ -34,10 +34,13 @@ protected:
       "XLNX_NUM_QUERIES",
       "XLNX_NUM_THREADS",
       "XLNX_NUM_RUNNERS",
-      "XLNX_VERBOSE"
+      "XLNX_VERBOSE",
+      "XLNX_CHECK_ACCURACY"
     };
     for (auto& var : environment)
+    {
       env_[var] = std::string(std::getenv(var.c_str()));
+    }
 
     start_time_ = time(nullptr);
   }
@@ -63,7 +66,8 @@ TEST_F(InferenceTest, classify) {
     env_["XLNX_IMAGE_DIR"],
     env_["XLNX_VERBOSE"] == "TRUE",
     env_["XLNX_SYNSET"],
-    env_["XLNX_GOLD"]
+    env_["XLNX_GOLD"],
+    env_["XLNX_CHECK_ACCURACY"]
   );
                       
   EXPECT_TRUE(inference.run() == EXIT_SUCCESS);

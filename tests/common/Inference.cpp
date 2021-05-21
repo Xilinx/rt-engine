@@ -3,7 +3,7 @@
 
 Inference::Inference(
   std::string xmodel, unsigned num_queries, unsigned num_threads, unsigned num_runners, std::string image_dir,
-  const bool verbose, std::string synset_filename, std::string golden_filename)
+  const bool verbose, std::string synset_filename, std::string golden_filename, std::string accuracyCheckTop1Top5Nums)
   : xmodel_(xmodel), num_queries_(num_queries), num_threads_(num_threads), num_runners_(num_runners) {
 
   std::unique_ptr<xir::Graph> graph = xir::Graph::deserialize(xmodel_);
@@ -17,7 +17,7 @@ Inference::Inference(
   std::cout << "********************************" << std::endl;
   std::cout << "Loading " << num_queries_ * 4 << " Images ..." << std::endl;
 
-  cpuUtilobj_ = std::make_unique<cpuUtil>(xmodel, image_dir, num_queries_, verbose, synset_filename, golden_filename);
+  cpuUtilobj_ = std::make_unique<cpuUtil>(xmodel, image_dir, num_queries_, verbose, synset_filename, golden_filename, accuracyCheckTop1Top5Nums);
 
 
 }
@@ -34,9 +34,9 @@ int Inference::run() {
   for (unsigned ti = 0; ti < threads.size(); ti++)
     threads[ti].join();
 
-  cpuUtilobj_->printtop1top5(num_queries_);
+  int returnCode = cpuUtilobj_->printtop1top5(num_queries_);
 
-  return 0;
+  return returnCode;
 }
 
 void Inference::run_thread(unsigned tidx, unsigned ridx, unsigned n) {

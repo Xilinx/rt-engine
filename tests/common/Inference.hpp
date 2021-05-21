@@ -14,7 +14,7 @@ class Inference {
 public:
 
   Inference(std::string xmodel, unsigned num_queries, unsigned num_threads, unsigned num_runners, std::string image_dir,
-            bool verbose, std::string synset_filename = std::string(), std::string golden_filename = std::string());
+            bool verbose, std::string synset_filename = std::string(), std::string golden_filename = std::string(), std::string accuracyCheckTop1Top5Nums=" ");
 
   int run();
 
