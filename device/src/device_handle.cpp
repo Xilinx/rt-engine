@@ -143,16 +143,23 @@ static std::vector<std::string> get_xclbins_in_dir(std::string path) {
 std::string KernelNameManager::getRealKernelName(std::string xclbinPath, std::string kernelName) {
   xir::XrtBinStream binstream(xclbinPath);
   auto cu_num = binstream.get_num_of_cu();
-  if (binstream.get_cu(0) == kernelName)
-    return kernelName; // exact match
-  if (find_kernel_name(binstream.get_cu(0)).empty())
-    return kernelName; // exact match
-  if (xclbin2usedCuIdx.find(xclbinPath) == xclbin2usedCuIdx.end())
-    xclbin2usedCuIdx[xclbinPath] = 0;
-  auto cuIdx = (xclbin2usedCuIdx[xclbinPath]++ % cu_num);
-  auto realKernelName = find_kernel_name(binstream.get_cu(cuIdx));
-  if (realKernelName.empty())
-    return kernelName; // exact match
+  std::string realKernelName; 
+  for(int nameIdx=0; nameIdx < cu_num; nameIdx++) { //for TRD if there is other IP with differnet CU name, need to loop 
+    if ((binstream.get_cu(nameIdx) == kernelName))
+      return kernelName; // exact match
+    if ((find_kernel_name(binstream.get_cu(nameIdx))) == kernelName)
+      return kernelName; // exact match
+    if (xclbin2usedCuIdx.find(xclbinPath) == xclbin2usedCuIdx.end())
+      xclbin2usedCuIdx[xclbinPath] = 0;
+    auto cuIdx = (xclbin2usedCuIdx[xclbinPath]++ % cu_num);
+    auto tmpKernelName = find_kernel_name(binstream.get_cu(cuIdx));
+    if(tmpKernelName.find(kernelName) != std::string::npos) { // find correct dpu CU
+      realKernelName = tmpKernelName;
+      break;
+    }
+  }
+  if (realKernelName.empty()) 
+    return kernelName;
   // found matching "real kernel name"
   return realKernelName;
 }
