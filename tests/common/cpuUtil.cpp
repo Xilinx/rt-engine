@@ -46,15 +46,23 @@ void cpuUtil::load_golden() {
 
 void cpuUtil::parseTop1Top5Expected(std::string accuracyCheckTop1Top5Nums)
 {
-
+    top1Expected_ = 0;
+    top5Expected_ = 0;
     std::string buf;                 
     std::stringstream ss(accuracyCheckTop1Top5Nums);    
-    std::vector<std::string> tokens(2);
+    std::vector<std::string> tokens(2,"0");
     int count=0;
     while (ss >> buf)
     {
-       tokens[count]=buf;
-       count++;
+       if(count<2)
+       {
+         tokens[count]=buf;
+         count++;
+       }
+       else
+       {
+         throw std::runtime_error("Format expected for env variable XLNX_CHECK_ACCURACY \"top1 top5\", such as \"50 70\", in order to skip checking accuracy please pass in an empty string for env variable XLNX_CHECK_ACCURACY");
+       }
     }
     
     std::stringstream numbers0(tokens[0]);
@@ -73,7 +81,14 @@ int cpuUtil::printtop1top5(unsigned num_queries) {
     std::cout << "Top-1: " << top1 << "%" << std::endl;
     std::cout << "Top-5: " << top5 << "%" << std::endl;
   }
-  
+ 
+  if(top1Expected_>0 or top5Expected_>0)
+  {
+     std::cout<<"Accuracy Check against expected top1 top5 numbers ..."<<std::endl;
+     std::cout<<"Top-1: Expected: >="<<top1Expected_<<"%"<<" Seen from program: "<<top1<<"%"<<std::endl;
+     std::cout<<"Top-5: Expected: >="<<top5Expected_<<"%"<<" Seen from program: "<<top5<<"%"<<std::endl;
+  }
+
   if(top1>top1Expected_ && top5>top5Expected_)
      return 0;
   
