@@ -253,12 +253,18 @@ void DpuCloudController::init_graph(vector<unsigned> hbmw, vector<unsigned> hbmc
 
   //for (auto p : model_->get_parameter()) {
   auto weights = model_->get_parameter();
+  auto segment = model_->get_xdpu_regid_to_hw_segment();
   for (unsigned param_idx=0; param_idx < weights.size(); param_idx++) {
     auto p = weights[param_idx];
     if (std::get<1>(p)) {
       xclBufferHandle reg0Mem  = NULLBO;
       if ((handle_->get_device_info().full_name).find("DPUCAHX8H") != std::string::npos) { //V3E
-        reg0Mem = get_xrt_bo(get<0>(p), get<1>(p), hbmw[floor(param_idx/2)]);
+        if (segment.find(std::get<2>(p)) != segment.end()) {
+          auto seg = segment.find(std::get<2>(p));
+          auto seg_str = seg->second;
+          int seg_id = seg_str[seg_str.length()-1]- '0';  //W0, W1
+          reg0Mem = get_xrt_bo(get<0>(p), get<1>(p), hbmw[seg_id]);
+        }
       }
       if (reg0Mem == NULLBO)
         reg0Mem = get_xrt_bo(get<0>(p), get<1>(p), hbmw);

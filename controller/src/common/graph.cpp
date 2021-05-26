@@ -189,6 +189,16 @@ void DpuXmodel::init_graph(const xir::Subgraph* subgraph) {
   // Get Reg ID size
   size_t total_io_size = 0;
   split_io = 0;
+  if (subgraph_->has_attr("reg_id_to_hw_segment")) {
+    auto reg_id_to_hw_segment =
+      subgraph_->template get_attr<std::map<std::string, std::string>>(
+          "reg_id_to_hw_segment");
+    for(auto &r : reg_id_to_hw_segment) {
+      auto reg_id_str = r.first;
+      int reg_id = reg_id_str[reg_id_str.length()-1]- '0';
+      xdpu_regid_to_hw_segment.emplace(std::make_pair(reg_id,r.second));
+    }
+  }
   if (subgraph_->has_attr("reg_id_to_context_type_v2")) {
 
     auto reg_id_to_context_type_v2 =

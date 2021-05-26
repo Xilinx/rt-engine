@@ -95,6 +95,9 @@ class DpuXmodel  {
   std::vector<std::pair<int32_t, int32_t>> get_xdpu_workspace_reg_map() {
     return xdpu_workspace_reg_map;
   }
+  std::unordered_map<int32_t, std::string> get_xdpu_regid_to_hw_segment() {
+    return xdpu_regid_to_hw_segment;
+  }
   int32_t get_total_out_size() { return xdpu_total_out_size;}
   int32_t get_total_in_size() { return xdpu_total_in_size;}
   std::vector<layer_info> dbg_layers_;
@@ -132,6 +135,7 @@ class DpuXmodel  {
   std::unordered_map<int32_t, int32_t> xdpu_total_reg_map;
   std::vector<std::pair<int32_t, int32_t>> xdpu_total_reg_map_out;
   std::vector<std::tuple<char*, int32_t,int>> xdpu_parameter_map;
+  std::unordered_map<int32_t,std::string> xdpu_regid_to_hw_segment;
   std::unordered_map<char*, std::pair<int32_t,int>> xdpu_code_map;
   // Debug instruction support
   //****************************************************
