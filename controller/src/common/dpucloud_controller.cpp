@@ -194,6 +194,14 @@ xclBufferHandle  DpuCloudController::get_xrt_bo(void* data, int size, vector<uns
   return reg0Mem;
 
 }
+
+xclBufferHandle  DpuCloudController::get_xrt_bo(void* data, int size, unsigned hbm) {
+  auto handle = contexts_[0]->get_dev_handle();
+  xclBufferHandle reg0Mem;
+  reg0Mem = xclAllocUserPtrBO(handle, data, size, hbm);
+  return reg0Mem;
+
+}
 void DpuCloudController::init_graph(vector<unsigned> hbmw, vector<unsigned> hbmc, xir::Attrs* attrs ) {
 
   auto handle = contexts_[0]->get_dev_handle();
@@ -243,19 +251,27 @@ void DpuCloudController::init_graph(vector<unsigned> hbmw, vector<unsigned> hbmc
     xdpu_total_reg_map.emplace((model_->get_xdpu_total_reg_map())[regc]);
   }
 
-    for (auto p : model_->get_parameter()) {
-      if (std::get<1>(p)) {
-        auto reg0Mem = get_xrt_bo(get<0>(p), get<1>(p), hbmw);
-        xclSyncBO(handle, reg0Mem, XCL_BO_SYNC_BO_TO_DEVICE, std::get<1>(p), 0);
-        xclGetBOProperties(handle, reg0Mem, &boProp);
-        reg0_addr_ = boProp.paddr;
-
-      } else {
-        reg0_addr_ = 0;
+  //for (auto p : model_->get_parameter()) {
+  auto weights = model_->get_parameter();
+  for (unsigned param_idx=0; param_idx < weights.size(); param_idx++) {
+    auto p = weights[param_idx];
+    if (std::get<1>(p)) {
+      xclBufferHandle reg0Mem  = NULLBO;
+      if ((handle_->get_device_info().full_name).find("DPUCAHX8H") != std::string::npos) { //V3E
+        reg0Mem = get_xrt_bo(get<0>(p), get<1>(p), hbmw[floor(param_idx/2)]);
       }
-      xdpu_total_dpureg_map.emplace(std::make_pair(std::get<2>(p),reg0_addr_));
-      
+      if (reg0Mem == NULLBO)
+        reg0Mem = get_xrt_bo(get<0>(p), get<1>(p), hbmw);
+      xclSyncBO(handle, reg0Mem, XCL_BO_SYNC_BO_TO_DEVICE, std::get<1>(p), 0);
+      xclGetBOProperties(handle, reg0Mem, &boProp);
+      reg0_addr_ = boProp.paddr;
+
+    } else {
+      reg0_addr_ = 0;
     }
+    xdpu_total_dpureg_map.emplace(std::make_pair(std::get<2>(p),reg0_addr_));
+    
+  }
   code_addr_=0x0ul;
   preload_code_addr_=0x0ul;
   // Load mc_code
@@ -816,7 +832,7 @@ void DpuCloudController::dpu_trigger_run(ert_start_kernel_cmd* ecmd, xclDeviceHa
     regVals.push_back(  { (XDPU_CONTROL_ADDR_0_H + 8*iter->first) / 4, (iter->second >> 32) & 0xFFFFFFFF });
     LOG_IF(INFO, ENV_PARAM(DEBUG_DPU_CONTROLLER))
         << "parameter: "  //
-        << std::hex
+        << iter->first << " : " << std::hex
         << iter->second      //
         ;
     iter++;
@@ -827,7 +843,8 @@ void DpuCloudController::dpu_trigger_run(ert_start_kernel_cmd* ecmd, xclDeviceHa
     regVals.push_back(  { (XDPU_CONTROL_ADDR_0_H + 8*std::get<0>(iter2) + std::get<1>(iter2)*0x100) / 4, (std::get<2>(iter2) >> 32) & 0xFFFFFFFF });
     LOG_IF(INFO, ENV_PARAM(DEBUG_DPU_CONTROLLER))
         << "io: " 
-        << std::hex //
+        <<std::get<1>(iter2) 
+        << " regid: " << std::hex //
         << std::get<0>(iter2) << " "
         << std::get<2>(iter2)      //
         ;

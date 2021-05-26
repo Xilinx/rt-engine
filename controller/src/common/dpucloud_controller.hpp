@@ -43,6 +43,7 @@ class DpuCloudController
   std::vector<vart::TensorBuffer*> create_tensorbuffer_for_batch(vector<unsigned> hbm, bool isInputs, std::vector<const xir::Tensor*> tensors, std::vector<int> tensor_offset, int output_bz, bool isTensorsBatch);
   void dpu_trigger_run(ert_start_kernel_cmd* ecmd, xclDeviceHandle xcl_handle, xclBufferHandle bo_handle, vector<std::tuple<int, int,uint64_t>> xdpu_total_dpureg_map2);
   xclBufferHandle get_xrt_bo(void* data, int size, vector<unsigned> hbm);
+  xclBufferHandle get_xrt_bo(void* data, int size, unsigned hbm);
   std::unordered_map<vart::TensorBuffer*, std::unordered_map<int,vector<vart::TensorBuffer*>>> tbuf2hwbufsio_;
   std::mutex hwbufio_mtx_;
   std::list<std::unique_ptr<vart::TensorBuffer>> bufs_;
