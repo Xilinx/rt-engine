@@ -109,14 +109,7 @@ DpuV3eController::DpuV3eController(const xir::Subgraph *subgraph, xir::Attrs* at
   hbmw.clear();
   hbmc.clear();
 
-  if(ENV_PARAM(XLNX_DPU_HBM_GLOBAL_ADDRESSING)) {
-    for (int i=0; i< 32; i++) {
-      hbmio.push_back(i);
-      hbmc.push_back(i);
-      hbmw.push_back(i);
-    }
-  }
-  else {
+  if(!ENV_PARAM(XLNX_DPU_HBM_GLOBAL_ADDRESSING)) {
     auto handle = contexts_[0]->get_dev_handle();
     auto cu_index = handle_->get_device_info().cu_index;
 
@@ -197,6 +190,11 @@ DpuV3eController::DpuV3eController(const xir::Subgraph *subgraph, xir::Attrs* at
         hbmw.push_back(15);
       }
     }
+  }
+  for (int i=0; i< 32; i++) {
+    hbmio.push_back(i);
+    hbmc.push_back(i);
+    hbmw.push_back(i);
   }
 
 
