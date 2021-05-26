@@ -164,7 +164,7 @@ std::string KernelNameManager::getRealKernelName(std::string xclbinPath, std::st
   return realKernelName;
 }
 
-int XrmResource::alloc_without_deviceId(std::string kernelName, char* xclbinPath, xir::Attrs* attrs) {
+int XrmResource::alloc_without_deviceId(std::string kernelName, char* xclbinPath) {
   KernelNameManager& kernelNameManager = KernelNameManager::getInstance();
   auto realKernel = kernelNameManager.getRealKernelName(xclbinPath, kernelName);
   std::strcpy(cu_prop_->kernelName, std::string(realKernel).c_str());
@@ -187,34 +187,28 @@ int XrmResource::alloc_from_attrs(std::string kernelName, char* xclbinPath, xir:
   std::vector<std::unique_ptr<xrmCuResource>> cu_rsrc;
   std::string fnm = std::string(xclbinPath);
   xir::XrtBinStream binstream(fnm);
-  std::vector<pair<int, int>> allocedCus;
+  std::unordered_map<int, int> allocedCus;
+  auto cu_num = binstream.get_num_of_cu();
   while(!cu_correct) {
     if (attrs->has_attr("__device_id__")) {
       err = alloc_with_deviceId(kernelName, xclbinPath, attrs);
     } else {
-      err = alloc_without_deviceId(kernelName, xclbinPath, attrs);
+      err = alloc_without_deviceId(kernelName, xclbinPath);
     } 
     if (0==err) {   
-      //select correct batch
+      //select correct core
       if ((kernelName == "DPUCVDX8H")||(kernelName == "DPUCAHX8L")||(kernelName == "DPUCAHX8H")) {
-        if (attrs->has_attr("__batch__")) { // this only used in runtime and can't be set outside
-          auto batch = attrs->get_attr<size_t>("__batch__");
-          uint32_t val;
-          auto base_addr = cu_rsrc_->baseAddr;
-          auto handle = xclOpen(cu_rsrc_->deviceId, NULL, XCL_INFO);
-          xclRead(handle, XCL_ADDR_KERNEL_CTRL, base_addr+0x1ec, (void *)(&val), 4);
-          xclClose(handle);
-          if (val != batch ) {
-            for (auto cu : allocedCus) {
-              if ((cu_rsrc_->deviceId == cu.second)&&(cu_rsrc_->cuId == cu.first)) {
-                for (unsigned sz=0;sz<cu_rsrc.size();sz++) {
-                  xrmCuRelease(context_, cu_rsrc[sz].get());
-                }
-                xrmCuRelease(context_, cu_rsrc_.get());
-                return -1;
+        if (attrs->has_attr("__device_core_id__")) { // this only used in runtime and can't be set outside
+          auto core_id = attrs->get_attr<size_t>("__device_core_id__");
+          if (cu_rsrc_->cuId != core_id ) {
+            if (allocedCus.size() == cu_num) {
+              for (unsigned sz=0;sz<cu_rsrc.size();sz++) {
+                xrmCuRelease(context_, cu_rsrc[sz].get());
               }
+              xrmCuRelease(context_, cu_rsrc_.get());
+              return -1;
             }
-            allocedCus.emplace_back(std::make_pair(cu_rsrc_->cuId,cu_rsrc_->deviceId));
+            allocedCus.emplace(std::make_pair(cu_rsrc_->cuId,cu_rsrc_->deviceId));
             cu_rsrc.emplace_back(std::move(cu_rsrc_));
             cu_rsrc_.reset(new xrmCuResource); 
             std::memset(cu_rsrc_.get(), 0, sizeof(xrmCuResource));

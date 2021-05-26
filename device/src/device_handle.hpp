@@ -66,7 +66,7 @@ class XrmResource : public DeviceResource {
   ~XrmResource();
   int alloc_from_attrs(std::string kernelName, char* xclbinPath, xir::Attrs* attrs);
   int alloc_with_deviceId(std::string kernelName, char* xclbinPath, xir::Attrs* attrs);
-  int alloc_without_deviceId(std::string kernelName, char* xclbinPath, xir::Attrs* attrs);
+  int alloc_without_deviceId(std::string kernelName, char* xclbinPath);
  private:
   void *context_;
   std::unique_ptr<xrmCuProperty> cu_prop_;
