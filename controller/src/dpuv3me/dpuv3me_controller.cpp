@@ -314,21 +314,24 @@ void DpuV3meController::run(const std::vector<vart::TensorBuffer*> &inputs,
   bool create_tb_outside=check_tensorbuffer_outside(outputs);
   bool create_tb_batch=false;
   bool tensorbuffer_phy=true;
-  if (!create_tb_outside) {
+  if (outputs[0]->get_location() == vart::TensorBuffer::location_t::HOST_VIRT)
+    tensorbuffer_phy=false;
+  //if ((!create_tb_outside) || tensorbuffer_phy) {
 
     if (((ibs == inputBs)&&(ibs > 1) && (batch_size_ > 1)) || (batch_size_==1))
     {
       create_tb_batch = true;
     }
 
-  }
-  if (outputs[0]->get_location() == vart::TensorBuffer::location_t::HOST_VIRT)
-    tensorbuffer_phy=false;
+  //}
   if(create_tb_outside) {
     LOG_IF(INFO, ENV_PARAM(DEBUG_DPU_CONTROLLER))
       << "create tensorbuffer by user side";
     if (!tensorbuffer_phy) {
       tensorbuffer_trans(input_tensor_buffers, output_tensor_buffers,inputs,outputs, true);
+    } else {
+      input_tensor_buffers = inputs;
+      output_tensor_buffers = outputs;
     }
   }
   else {
@@ -349,12 +352,11 @@ void DpuV3meController::run(const std::vector<vart::TensorBuffer*> &inputs,
 
   std::vector<uint64_t> in_addrs(batch_size_);
   std::vector<uint64_t> out_addrs(batch_size_);
-  //if (!tensorbuffer_phy) {
+  if (create_tb_outside && tensorbuffer_phy) {
+    xdpu_total_dpureg_map2 = get_dpu_reg_outside(create_tb_batch, in_addrs, out_addrs, input_tensor_buffers, output_tensor_buffers);
+  } else {
     xdpu_total_dpureg_map2 = get_dpu_reg_inside(create_tb_batch, in_addrs, out_addrs, output_tensor_buffers, input_tensor_buffers);
-  //} else {
-  //  xdpu_total_dpureg_map2 = get_dpu_reg_outside(xcl_handle, create_tb_batch, in_addrs, out_addrs, inputs, outputs);
-  //}
-
+  }
 
   // upload batch of inputs
   //const auto inSize = get_input_tensors()[0]->get_element_num();

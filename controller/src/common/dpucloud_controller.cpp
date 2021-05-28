@@ -46,6 +46,7 @@ using namespace chrono;
 #define XDPU_CONTROL_ISR 0x0C
 #define BASE_ADDR 0x00000 // NOTE: USE ONLY FOR BEFORE 2020.1
 #define XDPU_CONTROL_START 0x10  /* write 1 to enable DPU start */
+#define XDPU_SAVE_EARLY_DONE 0x14  /* write 1 to enable DPU start */
 #define XDPU_CONTROL_RESET 0x1C  /* reset DPU active low */
 #define XDPU_CONTROL_HP 0x20
 #define XDPU_CONTROL_INSTR_L 0x140
@@ -610,6 +611,7 @@ vector<int32_t> DpuCloudController::getOutputOffsets() {
 }
 bool DpuCloudController::check_tensorbuffer_outside(const std::vector<vart::TensorBuffer*> &outputs) {
   bool create_tb_outside=false;
+  //if(!tensorbuffer_phy)
   {
   
     std::unique_lock<std::mutex> lock(hwbufio_mtx_);
@@ -643,7 +645,6 @@ void DpuCloudController::tensorbuffer_trans(std::vector<vart::TensorBuffer*> &in
     buffers = outputs;
     tsize = obs;
   }
-
   for (unsigned i=0; i < tensors.size(); i++ ) {
     int tensor_size = tensors[i]->get_element_num()/batch_size_;
     unsigned tensor_idx=0;
@@ -653,21 +654,23 @@ void DpuCloudController::tensorbuffer_trans(std::vector<vart::TensorBuffer*> &in
     else
       shape = input_tensor_buffers[i]->get_tensor()->get_shape();
     auto dims = std::vector<int>(shape.size(),0);
+    auto dims_idx = std::vector<int>(shape.size(),0);
     for (unsigned j=0; j < buffers.size(); j++) {
       if (tensors[i]->get_name().find(buffers[j]->get_tensor()->get_name()) != std::string::npos) {
         if (ibs == inputBs) { //one tensrobuffer store batch
           for (int b=0; b < tsize; b++) {
             int idx = b*tensors.size()+i;
+            dims_idx[0] = b;
             if (buffers[j]->get_tensor()->get_data_type().type == xir::DataType::FLOAT) {
               if (is_input)
-                data_float2fix((int8_t*)input_tensor_buffers[idx]->data(dims).first,(float*)inputs[j]->data().first+b*tensor_size,tensor_size, model_->get_input_scales()[i]);
+                data_float2fix((int8_t*)input_tensor_buffers[idx]->data(dims).first,(float*)inputs[j]->data(dims_idx).first,tensor_size,  model_->get_input_scales()[i]);
               else
-                data_fix2float((float*)outputs[j]->data().first+b*tensor_size, (int8_t*)output_tensor_buffers[idx]->data(dims).first,tensor_size,model_->get_output_scales()[i]);
+                data_fix2float((float*)outputs[j]->data(dims_idx).first, (int8_t*)output_tensor_buffers[idx]->data(dims).first,tensor_size,model_->get_output_scales()[i]);
             } else {
               if (is_input)
-                memcpy((int8_t*)input_tensor_buffers[idx]->data(dims).first,(int8_t*)inputs[j]->data().first+b*tensor_size,tensor_size);
+                memcpy((int8_t*)input_tensor_buffers[idx]->data(dims).first,(int8_t*)inputs[j]->data(dims_idx).first,tensor_size);
               else
-                memcpy((char*)outputs[j]->data().first+b*tensor_size, (void*)output_tensor_buffers[idx]->data(dims).first,tensor_size);
+                memcpy((char*)outputs[j]->data(dims_idx).first, (void*)output_tensor_buffers[idx]->data(dims).first,tensor_size);
             }
             tensor_idx++;
           }
@@ -676,14 +679,14 @@ void DpuCloudController::tensorbuffer_trans(std::vector<vart::TensorBuffer*> &in
           int idx = tensor_idx*tensors.size()+i;
           if (buffers[j]->get_tensor()->get_data_type().type == xir::DataType::FLOAT) {    
             if (is_input)
-    	      data_float2fix((int8_t*)input_tensor_buffers[idx]->data(dims).first,(float*)inputs[j]->data().first,tensor_size, model_->get_input_scales()[i]);
+    	      data_float2fix((int8_t*)input_tensor_buffers[idx]->data(dims).first,(float*)inputs[j]->data(dims).first,tensor_size, model_->get_input_scales()[i]);
             else
-              data_fix2float((float*)outputs[j]->data().first,(int8_t*)output_tensor_buffers[idx]->data(dims).first,tensor_size,model_->get_output_scales()[i]);
+              data_fix2float((float*)outputs[j]->data(dims).first,(int8_t*)output_tensor_buffers[idx]->data(dims).first,tensor_size,model_->get_output_scales()[i]);
           } else {
             if (is_input)
-    	      memcpy((int8_t*)input_tensor_buffers[idx]->data(dims).first,(int8_t*)inputs[j]->data().first,tensor_size);
+    	      memcpy((int8_t*)input_tensor_buffers[idx]->data(dims).first,(int8_t*)inputs[j]->data(dims).first,tensor_size);
             else
-              memcpy((int8_t*)outputs[j]->data().first,(int8_t*)output_tensor_buffers[idx]->data(dims).first,tensor_size);
+              memcpy((int8_t*)outputs[j]->data(dims).first,(int8_t*)output_tensor_buffers[idx]->data(dims).first,tensor_size);
           }
           tensor_idx++;
         }
@@ -708,6 +711,7 @@ vector<std::tuple<int, int,uint64_t>>  DpuCloudController::get_dpu_reg_inside(bo
     tensor_inBatch= batch_size_;
     tensors_sz = 1;
   }
+cout << tensors_sz << " " << tensor_inBatch << " " << output_tensor_buffers.size()<<endl;
   for (int idx=0; idx<tensors_sz; idx++) {
     {
       std::unique_lock<std::mutex> lock(hwbufio_mtx_);
@@ -768,6 +772,53 @@ vector<std::tuple<int, int,uint64_t>>  DpuCloudController::get_dpu_reg_inside(bo
       out_addrs[std::get<1>(iter2)] = std::get<2>(iter2); 
     }
   }   
+  return xdpu_total_dpureg_map2;
+}
+vector<std::tuple<int, int,uint64_t>>  DpuCloudController::get_dpu_reg_outside(bool create_tb_batch, std::vector<uint64_t> &in_addrs, std::vector<uint64_t> &out_addrs, const std::vector<vart::TensorBuffer*> &inputs, const std::vector<vart::TensorBuffer*> &outputs) {
+  return get_dpu_reg_outside_hbm(create_tb_batch, in_addrs, out_addrs, inputs, outputs);
+}
+vector<std::tuple<int, int,uint64_t>>  DpuCloudController::get_dpu_reg_outside_hbm(bool create_tb_batch, std::vector<uint64_t> &in_addrs, std::vector<uint64_t> &out_addrs, const std::vector<vart::TensorBuffer*> &inputs, const std::vector<vart::TensorBuffer*> &outputs) {
+  // for the condition that alloc memory without API
+  vector<std::tuple<int, int,uint64_t>> xdpu_total_dpureg_map2;
+  if (model_->get_input_regid() != model_->get_output_regid()) {
+    auto dims_size = (inputs[0]->get_tensor()->get_shape()).size();
+    auto dims_out_size = (outputs[0]->get_tensor()->get_shape()).size();
+    auto dims = std::vector<int32_t>(dims_size, 0);
+    auto dims_out = std::vector<int32_t>(dims_out_size, 0);
+    int tensor_batch = 1;
+    if (!create_tb_batch) {
+      tensor_batch = batch_size_;
+    }
+    for (int ts=0; ts < tensor_batch; ts++) {
+      for (int i=0; i < batch_size_/tensor_batch; i++) {
+        dims[0] = i;
+        dims_out[0] = i;
+        int input_idx = ts*model_->get_input_tensors().size();
+        int output_idx = ts*model_->get_output_tensors().size();
+        if (model_->get_input_tensors()[0]->get_name().find(inputs[input_idx]->get_tensor()->get_name()) != std::string::npos) {
+          in_addrs[i+ts] = inputs[input_idx]->data_phy(dims).first-model_->get_input_offset()[0];
+          xdpu_total_dpureg_map2.push_back(std::make_tuple(model_->get_input_regid(),i+ts,in_addrs[i+ts]));
+        }
+        if (model_->get_output_tensors()[0]->get_name().find(outputs[output_idx]->get_tensor()->get_name()) != std::string::npos) {
+          out_addrs[i+ts] = outputs[output_idx]->data_phy(dims_out).first-model_->get_output_offset()[0];
+          xdpu_total_dpureg_map2.push_back(std::make_tuple(model_->get_output_regid(),i+ts,out_addrs[i+ts]));
+        }
+      } 
+    } 
+    for (int i=0; i < batch_size_; i++) {
+      auto iter = xdpu_total_reg_map.begin();
+      while(iter !=xdpu_total_reg_map.end()) {
+        auto reg_workspace = xdpu_workspace_dpu.find(iter->first);
+        if (reg_workspace != xdpu_workspace_dpu.end()) {
+          auto io_buf = reg_workspace->second[i];
+          xdpu_total_dpureg_map2.push_back(std::make_tuple(iter->first,i,io_buf->data_phy(std::vector<int>{0,0}).first));
+        }
+        iter++;
+      }
+    }
+  } else {
+    throw std::runtime_error("need enable split-io");
+  }
   return xdpu_total_dpureg_map2;
 }
 
@@ -913,20 +964,25 @@ void DpuCloudController::run(const std::vector<vart::TensorBuffer*> &inputs,
   bool create_tb_outside=check_tensorbuffer_outside(outputs);
   bool create_tb_batch=false;
   bool tensorbuffer_phy=true;
-  if (!create_tb_outside) {
+  if (outputs[0]->get_location() == vart::TensorBuffer::location_t::HOST_VIRT) 
+    tensorbuffer_phy=false;
+  //if ((!create_tb_outside)||tensorbuffer_phy) {
     if (((ibs == inputBs)&&(ibs > 1) && (batch_size_ > 1)) || (batch_size_==1))
     {
       create_tb_batch = true;
     }
-  }
-  if (outputs[0]->get_location() == vart::TensorBuffer::location_t::HOST_VIRT)
-    tensorbuffer_phy=false;
+  //}
   if(create_tb_outside) {
     LOG_IF(INFO, ENV_PARAM(DEBUG_DPU_CONTROLLER))
       << "create tensorbuffer by user side";
     if (!tensorbuffer_phy) {
       tensorbuffer_trans(input_tensor_buffers, output_tensor_buffers,inputs,outputs, true);
-    }
+      create_tb_batch = false; // we call get_inputs(1), tensorbuffer.data not in batch
+    } else {
+      input_tensor_buffers = inputs;
+      output_tensor_buffers = outputs;
+
+    } 
   }
   else {
     input_tensor_buffers = inputs;
@@ -947,7 +1003,11 @@ void DpuCloudController::run(const std::vector<vart::TensorBuffer*> &inputs,
 
   std::vector<uint64_t> in_addrs(batch_size_);
   std::vector<uint64_t> out_addrs(batch_size_);
-  xdpu_total_dpureg_map_io = get_dpu_reg_inside(create_tb_batch, in_addrs, out_addrs, output_tensor_buffers, input_tensor_buffers);
+  if (create_tb_outside && tensorbuffer_phy) {
+    xdpu_total_dpureg_map_io = get_dpu_reg_outside(create_tb_batch, in_addrs, out_addrs, input_tensor_buffers, output_tensor_buffers);
+  } else {
+    xdpu_total_dpureg_map_io = get_dpu_reg_inside(create_tb_batch, in_addrs, out_addrs, output_tensor_buffers, input_tensor_buffers);
+  }
   if (!tensorbuffer_phy) {
   __TIC__(INPUT_H2D)
     for (int i=0; i < inputBs; i++)
