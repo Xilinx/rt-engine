@@ -711,7 +711,6 @@ vector<std::tuple<int, int,uint64_t>>  DpuCloudController::get_dpu_reg_inside(bo
     tensor_inBatch= batch_size_;
     tensors_sz = 1;
   }
-cout << tensors_sz << " " << tensor_inBatch << " " << output_tensor_buffers.size()<<endl;
   for (int idx=0; idx<tensors_sz; idx++) {
     {
       std::unique_lock<std::mutex> lock(hwbufio_mtx_);
