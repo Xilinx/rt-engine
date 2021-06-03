@@ -39,7 +39,10 @@ protected:
     };
     for (auto& var : environment)
     {
-      env_[var] = std::string(std::getenv(var.c_str()));
+      if(std::getenv(var.c_str())!=NULL)
+        env_[var] = std::string(std::getenv(var.c_str()));
+      else
+        std::cout<<var.c_str()<<" env var not set"<<std::endl;
     }
 
     start_time_ = time(nullptr);
