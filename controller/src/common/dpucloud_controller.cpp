@@ -34,6 +34,8 @@
 #include "vitis/ai/env_config.hpp"
 #include "vitis/ai/profiling.hpp"
 #include "device_handle.hpp"
+#include "vart/trace/trace.hpp"
+
 using namespace std;
 using namespace chrono;
 #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
@@ -94,8 +96,10 @@ DpuCloudController::DpuCloudController(std::string meta, xir::Attrs* attrs)
   // assign many contexts -- one for each worker thread
   // threads cannot share contexts (or xclExecWait may miss the 'done' signal)
   Engine& engine = Engine::get_instance();
-  for(unsigned i=0; i < engine.get_num_workers(); i++)
+  for (unsigned i=0; i < engine.get_num_workers(); i++) {
     contexts_.emplace_back(new XrtContext(*handle_));
+  }
+
   model_ =std::make_shared<DpuXmodel>(meta);
 }
 
@@ -106,6 +110,22 @@ DpuCloudController::DpuCloudController(const xir::Subgraph *subgraph, xir::Attrs
     contexts_.emplace_back(new XrtContext(*handle_));
   model_ =std::make_shared<DpuXmodel>(subgraph);
 }
+
+void DpuCloudController::init_profiler() {
+  auto dev_info = handle_->get_device_info();
+  size_t cu_device_id = dev_info.device_id;
+  size_t cu_core_id = dev_info.cu_index;
+  std::string cu_name = dev_info.full_name;
+  auto cu_full_name = dev_info.full_name;
+  uint64_t cu_fingerprint = dev_info.fingerprint;
+  size_t cu_batch = batch_size_;
+  vitis::ai::trace::add_info("dpu-controller",
+    TRACE_VAR(cu_device_id), TRACE_VAR(cu_core_id),
+    TRACE_VAR(cu_batch), TRACE_VAR(cu_name),
+    TRACE_VAR(cu_full_name),
+    TRACE_VAR(cu_fingerprint));
+}
+
 DpuCloudController::~DpuCloudController() {
 }
 std::vector<unsigned> DpuCloudController::get_hbmw() {
@@ -207,10 +227,9 @@ void DpuCloudController::init_graph(vector<unsigned> hbmw, vector<unsigned> hbmc
 
   auto handle = contexts_[0]->get_dev_handle();
   auto cu_base_addr = handle_->get_device_info().cu_base_addr;
-  if(ENV_PARAM(XLNX_ENABLE_FINGERPRINT_CHECK)) {
-    //if (subgraph->has_attr("dpu_fingerprint")) {
-      uint64_t fingerprint = model_->get_fingerprint();
+  uint64_t fingerprint = model_->get_fingerprint();
 
+  if(ENV_PARAM(XLNX_ENABLE_FINGERPRINT_CHECK)) {
       uint32_t low = read32_dpu_reg(handle,  cu_base_addr + VERSION_CODE_L);
       uint32_t high = read32_dpu_reg(handle,  cu_base_addr + VERSION_CODE_H);
       uint64_t version = high;
@@ -232,6 +251,9 @@ void DpuCloudController::init_graph(vector<unsigned> hbmw, vector<unsigned> hbmc
       attrs->set_attr<size_t>("__batch__", batch_size_);
     }
   }
+
+  init_profiler();
+
   xclBOProperties boProp;
   dump_mode_ = model_->get_dump_mode();
   debug_mode_ = model_->get_debug_mode();
@@ -826,6 +848,7 @@ void DpuCloudController::dpu_trigger_run(ert_start_kernel_cmd* ecmd, xclDeviceHa
   int exec_buf_result;
   auto dev_info = handle_->get_device_info();
   auto cu_base_addr = dev_info.cu_base_addr;
+  auto core_idx = dev_info.cu_index;
 
   std::vector<std::pair<int, int> > regVals;
   if (0 == program_once_complete) {
@@ -856,6 +879,9 @@ void DpuCloudController::dpu_trigger_run(ert_start_kernel_cmd* ecmd, xclDeviceHa
         ecmd->data[p++] = (regVals[i].second);
       }
       ecmd->count = 1 + p;
+
+      vitis::ai::trace::add_trace("dpu-controller", vitis::ai::trace::func_start, core_idx);
+
       exec_buf_result = xclExecBuf(xcl_handle, bo_handle);
       if (exec_buf_result)
         throw std::runtime_error("Error: xclExecBuf failed");
@@ -863,6 +889,8 @@ void DpuCloudController::dpu_trigger_run(ert_start_kernel_cmd* ecmd, xclDeviceHa
       // wait for kernel
       for (int wait_count=0; wait_count < 15 && xclExecWait(xcl_handle, 1000) == 0
               && ecmd->state != ERT_CMD_STATE_COMPLETED; wait_count++);
+
+      vitis::ai::trace::add_trace("dpu-controller", vitis::ai::trace::func_end, core_idx);
 
       if (ecmd->state != ERT_CMD_STATE_COMPLETED) {
         std::cout << "LOAD START:" << read32_dpu_reg(xcl_handle, cu_base_addr + DPUREG_LOAD_START) << std::endl;
@@ -913,6 +941,8 @@ void DpuCloudController::dpu_trigger_run(ert_start_kernel_cmd* ecmd, xclDeviceHa
   }
   ecmd->count = 1 + p;
 
+  vitis::ai::trace::add_trace("dpu-controller", vitis::ai::trace::func_start, core_idx);
+
   // exec kernel
   exec_buf_result = xclExecBuf(xcl_handle, bo_handle);
   if (exec_buf_result)
@@ -921,6 +951,8 @@ void DpuCloudController::dpu_trigger_run(ert_start_kernel_cmd* ecmd, xclDeviceHa
   // wait for kernel
   for (int wait_count=0; wait_count < 15 && xclExecWait(xcl_handle, 1000) == 0
           && ecmd->state != ERT_CMD_STATE_COMPLETED; wait_count++);
+
+vitis::ai::trace::add_trace("dpu-controller", vitis::ai::trace::func_end, core_idx);
 
   if (ecmd->state != ERT_CMD_STATE_COMPLETED) {
     std::cout << "Error: CU timeout " << std::endl;
@@ -1064,6 +1096,8 @@ void DpuCloudController::run(const std::vector<vart::TensorBuffer*> &inputs,
       }
     }
 
+    auto info = model_->get_subgraph_info();
+    vitis::ai::trace::add_trace("dpu-runner", info.name, batch_size_, info.workload, info.depth);
     dpu_trigger_run(ecmd,xcl_handle, bo_handle, xdpu_total_dpureg_map_io);
 
     if(dump_mode_ ) {  // dump final output
@@ -1112,18 +1146,19 @@ void DpuCloudController::run(const std::vector<vart::TensorBuffer*> &inputs,
       auto code_info = layer_debug_mode.find(layer.name);
       if (code_info != layer_debug_mode.end()) {
         if((code_info->second).second>0) {
-         code_addr_ = (code_info->second).first;
-         auto code_info_pre = layer_debug_mode_preload.find(layer.name);
-         if (code_info_pre != layer_debug_mode_preload.end()) {
-           if((code_info_pre->second).second>0) {
-             preload_code_addr_ = (code_info_pre->second).first;
-           }
-         }
-      //if(std::get<1>(layer.code_addr) > 0) {
-      //  code_addr_ = std::get<0>(layer.code_addr);
-       }
+          code_addr_ = (code_info->second).first;
+          auto code_info_pre = layer_debug_mode_preload.find(layer.name);
+          if (code_info_pre != layer_debug_mode_preload.end()) {
+            if((code_info_pre->second).second>0) {
+              preload_code_addr_ = (code_info_pre->second).first;
+            }
+          }
+        }
+
+        vitis::ai::trace::add_trace("dpu-runner", layer.name, batch_size_, layer.workload, layer.depth);
         dpu_trigger_run(ecmd,xcl_handle, bo_handle, xdpu_total_dpureg_map_io);
       }
+
       // Save the outputs to file
       if(dump_mode_) {
         int tensor_idx = 0;

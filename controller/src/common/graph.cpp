@@ -29,6 +29,7 @@
 #include "vitis/ai/env_config.hpp"
 #include "vitis/ai/profiling.hpp"
 #include "device_handle.hpp"
+#include "vart/trace/trace.hpp"
 using namespace std;
 using namespace chrono;
 #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
@@ -184,7 +185,8 @@ void DpuXmodel::init_graph(const xir::Subgraph* subgraph) {
   dump_mode_ = dump_mode_|| ENV_PARAM(XLNX_ENABLE_DUMP);
   debug_mode_ = debug_mode_|| ENV_PARAM(XLNX_ENABLE_DEBUG_MODE);
   // Get one subgraph
-  const xir::Subgraph* subgraph_ = subgraph; // check subgraph_->get_name()
+  subgraph_ = subgraph; // check subgraph_->get_name()
+  vitis::ai::trace::add_subgraph(subgraph_);
 
   // Get Reg ID size
   size_t total_io_size = 0;
@@ -283,8 +285,11 @@ void DpuXmodel::init_graph(const xir::Subgraph* subgraph) {
       }
     }
   }
-
-  layer_info layer(subgraph_->get_name()); 
+  
+  layer_info layer(subgraph_->get_name());
+  subgraph_info.workload = subgraph_->get_attr<uint64_t>("workload");
+  subgraph_info.depth = subgraph_->get_depth();
+  subgraph_info.name = subgraph_->get_name();
   // Get input offset
   auto input_tensors = subgraph_->get_input_tensors();
   auto output_tensors = subgraph_->get_output_tensors();
@@ -341,7 +346,6 @@ void DpuXmodel::init_graph(const xir::Subgraph* subgraph) {
     auto& mc_code = subgraph_->get_attr<std::vector<char>>("mc_code");
     unsigned size = mc_code.size();
     void *codePtr = NULL;
-    //unsigned size = mc_code.size();
     if (posix_memalign(&codePtr, getpagesize(), size))
       throw std::bad_alloc();
     for (unsigned i=0; i < size; i++) ((char*)codePtr)[i] = mc_code[i];
@@ -351,33 +355,22 @@ void DpuXmodel::init_graph(const xir::Subgraph* subgraph) {
       if (mc_code_preload.size() > 0) {
         unsigned size_pre = mc_code_preload.size();
         void *codePtr_pre = NULL;
-        //unsigned size = mc_code.size();
         if (posix_memalign(&codePtr_pre, getpagesize(), size_pre))
           throw std::bad_alloc();
         for (unsigned i=0; i < size_pre; i++) ((char*)codePtr_pre)[i] = mc_code_preload[i];
         xdpu_code_map.emplace(std::make_pair((char*)codePtr_pre, std::make_pair(size_pre,1)));
-        //layer.preload_code_addr = alloc_and_fill_device_memory(handle, mc_code_preload);
-        //preload_code_addr_ = std::get<0>(layer.preload_code_addr);
       }
     }
-    //auto codeMem 
-    //  = xclAllocUserPtrBO(handle, codePtr, size, handle_->get_device_info().ddr_bank);
-    //xclSyncBO(handle, codeMem, XCL_BO_SYNC_BO_TO_DEVICE, size, 0);
-    //xclGetBOProperties(handle, codeMem, &boProp);
-    //code_addr_ = boProp.paddr;
-    //free(codePtr);
-    //LOG_IF(INFO, ENV_PARAM(DEBUG_DPU_CONTROLLER))
-    //  << "code size: "  //
-    //  << size
-    //  ;
-
   } else {
     auto children = subgraph_->get_children(); 
     auto child_order = subgraph_->get_attr<std::vector<std::string>>("children_topological_sort");
+
     for (const auto& child_name : child_order) { 
       auto child = std::find_if(children.begin(), children.end(),
           [&child_name](auto g) { return g->get_name() == child_name; });
       layer_info layer(child_name); 
+      layer.workload = subgraph_->get_attr<uint64_t>("workload");
+      layer.depth = subgraph_->get_depth();
       if ((*child)->has_attr("mc_code")) {
         auto& mc_code = (*child)->get_attr<std::vector<char> >("mc_code"); 
 

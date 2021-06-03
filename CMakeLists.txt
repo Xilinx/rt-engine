@@ -28,7 +28,7 @@ find_package(glog REQUIRED)
 find_package(unilog REQUIRED)
 find_package(target-factory REQUIRED)
 find_package(xir REQUIRED)
-find_package(vart COMPONENTS runner REQUIRED)
+find_package(vart COMPONENTS runner trace REQUIRED)
 find_package(glog REQUIRED)
 find_package(Protobuf REQUIRED) # rt-engine does not need, but this is forced upon us by target-factory
 find_package(XRM REQUIRED)
@@ -123,6 +123,7 @@ target_link_libraries(
   target-factory::target-factory 
   ${Protobuf_LIBRARIES}
   vart::runner
+  vart::trace
   ${XRM_LIBRARIES}
   XRT::XRT
   #${XRT_OPENCL_LIBRARIES}

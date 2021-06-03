@@ -86,6 +86,6 @@ class DpuCloudController
   std::shared_ptr<DpuXmodel> model_;
  private:
   int flag;
- 
+  void init_profiler();
 };
 
