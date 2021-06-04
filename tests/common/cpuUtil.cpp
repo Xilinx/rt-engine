@@ -7,7 +7,7 @@ using namespace std;
 using namespace boost::filesystem;
 
 cpuUtil::cpuUtil(std::string xmodel, std::string image_dir, unsigned num_queries, bool verbose,
-                 std::string synset_filename, std::string golden_filename, std::string accuracyCheckTop1Top5Nums)
+                 std::string synset_filename, std::string golden_filename, std::string accuracyCheckTop1Top5Nums, std::string performanceCheck)
   : keysobj_(std::make_unique<XirKeys>(xmodel)), verbose_(verbose), synset_filename_(synset_filename),
     golden_filename_(golden_filename) {
 
@@ -22,6 +22,8 @@ cpuUtil::cpuUtil(std::string xmodel, std::string image_dir, unsigned num_queries
     load_golden();
   }
   parseTop1Top5Expected(accuracyCheckTop1Top5Nums);
+  parsePerformanceExpected(performanceCheck);
+
 }
 
 void cpuUtil::load_golden() {
@@ -72,11 +74,32 @@ void cpuUtil::parseTop1Top5Expected(std::string accuracyCheckTop1Top5Nums)
     numbers1 >> top5Expected_;
 }
 
+void cpuUtil::parsePerformanceExpected(std::string performanceExpected)
+{
+    performanceExpected_ = 0;
+    std::string buf;                 
+    std::stringstream ss(performanceExpected);    
+    int count=0;
+    while (ss >> buf)
+    {
+       if(count<1)
+       {
+         performanceExpected_=std::stoi(buf);
+         count++;
+       }
+       else
+       {
+         throw std::runtime_error("Format expected for env variable XLNX_CHECK_PERFORMANCE \"qps\", such as \"50\", in order to skip checking performance please pass in an empty string for env variable XLNX_CHECK_PERFORMANCE");
+       }
+    }
 
-int cpuUtil::printtop1top5(unsigned num_queries) {
+}
+
+int cpuUtil::printtop1top5(unsigned num_queries, double totalTimeSec) {
   std::cout << "Num images processed: " << num_queries*4 << std::endl;
   float top1 = ((float) (top1Count_)/((float) (num_queries*4)))*100;
   float top5 = ((float) (top5Count_)/((float) (num_queries*4)))*100;
+  float performance = (float)(((float)num_queries)/((float)totalTimeSec));
   if (goldenAvailable_) {
     std::cout << "Top-1: " << top1 << "%" << std::endl;
     std::cout << "Top-5: " << top5 << "%" << std::endl;
@@ -89,7 +112,13 @@ int cpuUtil::printtop1top5(unsigned num_queries) {
      std::cout<<"Top-5: Expected: >="<<top5Expected_<<"%"<<" Seen from program: "<<top5<<"%"<<std::endl;
   }
 
-  if(top1>top1Expected_ && top5>top5Expected_)
+  if(performanceExpected_>0)
+  {
+    std::cout<<"Performance Check against expected queries per sec ..."<<std::endl;
+    std::cout<<"Queries per sec Expected: >="<<performanceExpected_<<"qps"<<" Seen from program: "<<performance<<"qps"<<std::endl;
+  }
+
+  if(top1>=top1Expected_ && top5>=top5Expected_ && performance>=performanceExpected_)
      return 0;
   
   return -1;

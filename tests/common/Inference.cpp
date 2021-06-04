@@ -1,9 +1,10 @@
 #include <thread>
+#include <chrono>
 #include "Inference.hpp"
 
 Inference::Inference(
   std::string xmodel, unsigned num_queries, unsigned num_threads, unsigned num_runners, std::string image_dir,
-  const bool verbose, std::string synset_filename, std::string golden_filename, std::string accuracyCheckTop1Top5Nums)
+  const bool verbose, std::string synset_filename, std::string golden_filename, std::string accuracyCheckTop1Top5Nums, std::string performanceCheck)
   : xmodel_(xmodel), num_queries_(num_queries), num_threads_(num_threads), num_runners_(num_runners) {
 
   std::unique_ptr<xir::Graph> graph = xir::Graph::deserialize(xmodel_);
@@ -17,12 +18,13 @@ Inference::Inference(
   std::cout << "********************************" << std::endl;
   std::cout << "Loading " << num_queries_ * 4 << " Images ..." << std::endl;
 
-  cpuUtilobj_ = std::make_unique<cpuUtil>(xmodel, image_dir, num_queries_, verbose, synset_filename, golden_filename, accuracyCheckTop1Top5Nums);
+  cpuUtilobj_ = std::make_unique<cpuUtil>(xmodel, image_dir, num_queries_, verbose, synset_filename, golden_filename, accuracyCheckTop1Top5Nums, performanceCheck);
 
 
 }
 
 int Inference::run() {
+  auto t0 = std::chrono::high_resolution_clock::now();               
 
   std::vector<std::thread> threads(num_threads_);
 
@@ -34,7 +36,12 @@ int Inference::run() {
   for (unsigned ti = 0; ti < threads.size(); ti++)
     threads[ti].join();
 
-  int returnCode = cpuUtilobj_->printtop1top5(num_queries_);
+  auto t1 = std::chrono::high_resolution_clock::now();
+  std::chrono::duration<double> elapsed = t1-t0;
+  
+  std::cout << "Total Execution time for "<<num_queries_<<" queries: "<<elapsed.count()*1000 <<"ms"<< std::endl;
+  std::cout << "Average queries per second: " << num_queries_/elapsed.count() << "qps"<<std::endl;
+  int returnCode = cpuUtilobj_->printtop1top5(num_queries_, elapsed.count());
 
   return returnCode;
 }

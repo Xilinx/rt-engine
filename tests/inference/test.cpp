@@ -35,7 +35,8 @@ protected:
       "XLNX_NUM_THREADS",
       "XLNX_NUM_RUNNERS",
       "XLNX_VERBOSE",
-      "XLNX_CHECK_ACCURACY"
+      "XLNX_CHECK_ACCURACY",
+      "XLNX_CHECK_PERFORMANCE"
     };
     for (auto& var : environment)
     {
@@ -70,8 +71,10 @@ TEST_F(InferenceTest, classify) {
     env_["XLNX_VERBOSE"] == "TRUE",
     env_["XLNX_SYNSET"],
     env_["XLNX_GOLD"],
-    env_["XLNX_CHECK_ACCURACY"]
+    env_["XLNX_CHECK_ACCURACY"],
+    env_["XLNX_CHECK_PERFORMANCE"]
   );
-                      
+     
   EXPECT_TRUE(inference.run() == EXIT_SUCCESS);
+
 }
