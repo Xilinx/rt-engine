@@ -113,7 +113,7 @@ DpuCloudController::DpuCloudController(const xir::Subgraph *subgraph, xir::Attrs
 
 void DpuCloudController::init_profiler() {
   auto dev_info = handle_->get_device_info();
-  size_t cu_device_id = dev_info.device_id;
+  size_t cu_device_id = dev_info.device_index;
   size_t cu_core_id = dev_info.cu_index;
   std::string cu_name = dev_info.full_name;
   auto cu_full_name = dev_info.full_name;
@@ -414,8 +414,6 @@ std::vector<vart::TensorBuffer*>  DpuCloudController::create_tensor_buffers_hbm(
         unsigned alloc_begin=0;
         if (int(hbm.size()) > batch_size_) {
           alloc_begin=batch_size_;
-        } else {
-          alloc_begin = 1;
         }
         for (unsigned idx = alloc_begin; idx<hbm.size(); idx++){
           buf = create_tensor_buffers(ts,isInput,std::vector<int>(1,hbm[idx]));
