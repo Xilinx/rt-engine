@@ -26,6 +26,7 @@
 #include "dpu_runner.hpp"
 #include "xir/tensor/tensor.hpp"
 #include "vart/tensor_buffer.hpp"
+#include "vart/trace/trace.hpp"
 
 
 #include "vitis/ai/env_config.hpp"
@@ -403,7 +404,7 @@ void DpuV3meController::run(const std::vector<vart::TensorBuffer*> &inputs,
   ecmd->opcode = ERT_EXEC_WRITE;
   ecmd->type = ERT_CTRL;
 
-
+  auto core_idx = handle_->get_device_info().cu_index;
 auto trigger_dpu_func = [&](){
   __TIC__(DPU_TRIGGER)
 
@@ -443,6 +444,7 @@ auto trigger_dpu_func = [&](){
       }
       ecmd->count = 1 + p;
 
+      //vitis::ai::trace::add_trace("dpu-controller", vitis::ai::trace::func_start, core_idx);
       // exec kernel
       exec_buf_result = xclExecBuf(xcl_handle, bo_handle);
       if (exec_buf_result)
@@ -451,6 +453,7 @@ auto trigger_dpu_func = [&](){
       // wait for kernel
       for (int wait_count=0; wait_count < 15 && xclExecWait(xcl_handle, 1000) == 0
               && ecmd->state != ERT_CMD_STATE_COMPLETED; wait_count++);
+      //vitis::ai::trace::add_trace("dpu-controller", vitis::ai::trace::func_start, core_idx);
 
       if (ecmd->state != ERT_CMD_STATE_COMPLETED) {
         _show_regs(xcl_handle, handle_->get_device_info().cu_base_addr);
@@ -507,6 +510,7 @@ auto trigger_dpu_func = [&](){
   uint64_t start = tp2ns(&tp);
 
   // exec kernel
+  vitis::ai::trace::add_trace("dpu-controller", vitis::ai::trace::func_start, core_idx);
   exec_buf_result = xclExecBuf(xcl_handle, bo_handle);
   if (exec_buf_result)
     throw std::runtime_error("Error: xclExecBuf failed");
@@ -514,8 +518,7 @@ auto trigger_dpu_func = [&](){
   // wait for kernel
   for (int wait_count=0; wait_count < 15 && xclExecWait(xcl_handle, 1000) == 0
             && ecmd->state != ERT_CMD_STATE_COMPLETED; wait_count++);
-
-
+  vitis::ai::trace::add_trace("dpu-controller", vitis::ai::trace::func_end, core_idx);
   if(ENV_PARAM(XRT_STAT)){
     clock_gettime(CLOCK_MONOTONIC, &tp);
     uint64_t end = tp2ns(&tp);
@@ -579,7 +582,8 @@ auto trigger_dpu_func = [&](){
         tensor_idx++;
       }
     }
-
+    auto info = model_->get_subgraph_info();
+    vitis::ai::trace::add_trace("dpu-runner", info.name, batch_size_, info.workload, info.depth);
     trigger_dpu_func();
 
     if(dump_mode_ ) {  // dump final output
@@ -636,6 +640,7 @@ auto trigger_dpu_func = [&](){
       //if(std::get<1>(layer.code_addr) > 0) {
       //  code_addr_ = std::get<0>(layer.code_addr);
        }
+        vitis::ai::trace::add_trace("dpu-runner", layer.name, batch_size_, layer.workload, layer.depth);
         trigger_dpu_func();
       }
 
