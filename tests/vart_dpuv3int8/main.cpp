@@ -1,18 +1,16 @@
-/*
- * Copyright 2019 Xilinx Inc.
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *    http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
+// Copyright 2021 Xilinx Inc.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
 
 #include <assert.h>
 #include <dirent.h>
@@ -77,7 +75,7 @@ int main(int argc, char* argv[]) {
 
   string xmodel_filename = argv[1];
   int numImgs = 4;
-  int batchSz = 4; 
+  int batchSz = 4;
   string meta = argv[1];
   bool goldenAvailable = 0;
   bool verbose = 1;
@@ -101,10 +99,10 @@ int main(int argc, char* argv[]) {
   auto runner = r.get();
   auto inputs = dynamic_cast<vart::RunnerExt*>(runner)->get_inputs();
   auto outputs = dynamic_cast<vart::RunnerExt*>(runner)->get_outputs();
-  
+
   std::unique_ptr<cpuUtil> cpuUtilobj_;
   cpuUtilobj_.reset(new cpuUtil(meta, goldenAvailable, verbose, img_dir, num_queries_));
-  
+
   std::cout << std::endl << "Testing single thread..." << std::endl;
   auto t1 = std::chrono::high_resolution_clock::now();
   std::cout<<"Loading "<<num_queries_*4<<" Images ..."<<std::endl;
