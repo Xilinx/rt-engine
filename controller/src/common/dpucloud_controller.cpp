@@ -116,6 +116,7 @@ void DpuCloudController::init_profiler() {
   size_t cu_device_id = dev_info.device_index;
   size_t cu_core_id = dev_info.cu_index;
   std::string cu_name = dev_info.full_name;
+  std::replace(cu_name.begin(), cu_name.end(), ':', '_');
   auto cu_full_name = dev_info.full_name;
   uint64_t cu_fingerprint = dev_info.fingerprint;
   size_t cu_batch = batch_size_;
