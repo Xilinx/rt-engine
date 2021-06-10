@@ -1,18 +1,16 @@
-/*
- * Copyright 2019 Xilinx Inc.
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *    http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
+// Copyright 2021 Xilinx Inc.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
 
 #include <assert.h>
 #include <dirent.h>
@@ -62,7 +60,7 @@ int main(int argc, char* argv[]) {
 
   string xmodel_filename = argv[1];
   int numImgs = 4;
-  int batchSz = 4; 
+  int batchSz = 4;
   string meta = argv[2];
   //bool goldenAvailable = 0;
   //bool verbose = 1;
@@ -88,10 +86,10 @@ int main(int argc, char* argv[]) {
   auto runner = r.get();
   auto inputs = dynamic_cast<vart::RunnerExt*>(runner)->get_inputs();
   auto outputs = dynamic_cast<vart::RunnerExt*>(runner)->get_outputs();
-  auto output_tensors = runner->get_output_tensors(); 
+  auto output_tensors = runner->get_output_tensors();
   //std::unique_ptr<cpuUtil> cpuUtilobj_;
   //cpuUtilobj_.reset(new cpuUtil(meta, goldenAvailable, verbose, img_dir, num_queries_));
-  std::vector<vart::TensorBuffer*> inTensors;    
+  std::vector<vart::TensorBuffer*> inTensors;
   void *codePtr = NULL;
   std::string inputbin = "./tests/app/models/v4e_resnet50/input.bin";
   unsigned int size = getFileSize(inputbin);
@@ -108,7 +106,7 @@ int main(int argc, char* argv[]) {
    input->sync_for_write(0, input->get_tensor()->get_element_num() /
                               input->get_tensor()->get_shape()[0]);
    }
- 
+
   auto tensorr = inputs[0]->get_tensor()->get_shape()[0];
   std::cout << std::endl << "Testing single thread..." << std::endl;
   auto t1 = std::chrono::high_resolution_clock::now();
@@ -127,7 +125,7 @@ int main(int argc, char* argv[]) {
 
     const auto mode = std::ios_base::out | std::ios_base::binary | std::ios_base::trunc;
     for (int bi=0; bi < 8; bi++) {
-      for (int t=0;t<3;t++) { 
+      for (int t=0;t<3;t++) {
         auto output_file = "./output0" +to_string(t)+ to_string( bi) + ".bin";
         //auto output_file = "./output1" + to_string( bi) + ".bin";
         //auto output_file = "./output2" + to_string( bi) + ".bin";

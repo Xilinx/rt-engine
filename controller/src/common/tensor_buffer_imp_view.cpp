@@ -1,18 +1,16 @@
-/*
- * Copyright 2019 Xilinx Inc.
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
+// Copyright 2021 Xilinx Inc.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
 
 #include "./tensor_buffer_imp_view.hpp"
 
@@ -30,13 +28,13 @@ TensorBufferExtImpView::TensorBufferExtImpView(
       tensor_{
           std::unique_ptr<xir::Tensor>(const_cast<xir::Tensor*>(get_tensor()))},
       offset_{offset} {
-  for (unsigned i =0; i< backstore.size();i++) 
+  for (unsigned i =0; i< backstore.size();i++)
     backstore_.emplace_back(backstore[i]);
   if (backstore.size() != 1)
     backstore_batch = true;
   // when dims[0] from xir is bigger than 1, need to handle data in tensor_batch in etch tensorbuffer
   tensor_batch = tensor->get_shape()[0]/backstore_.size();
-  CHECK_EQ(tensor->get_shape()[0], tensor_batch*backstore_.size()); 
+  CHECK_EQ(tensor->get_shape()[0], tensor_batch*backstore_.size());
   LOG_IF(INFO, ENV_PARAM(DEBUG_TENSOR_BUFFER_ALLOCATOR) >= 3)
       << " TensorBufferExtImpView created: " << to_string();
   ;
@@ -69,7 +67,7 @@ std::pair<uint64_t, size_t> TensorBufferExtImpView::data_x(
 
   if (idx_orig.size()) {
     CHECK_EQ(dims.size(), idx_orig.size());
-    idx = std::vector<int32_t>(idx_orig);    
+    idx = std::vector<int32_t>(idx_orig);
   } else {
     idx = std::vector<int32_t>(dims.size(), 0);
   }
@@ -105,7 +103,7 @@ std::pair<uint64_t, size_t> TensorBufferExtImpView::data_x(
           backstore_[buf_idx]->data({0, offset_in_single_batch});
     }
 
-  } else { 
+  } else {
     if (phy) {
       std::tie(data_back, size_back) =
           backstore_[0]->data_phy({buf_idx, offset_in_single_batch});
@@ -115,8 +113,8 @@ std::pair<uint64_t, size_t> TensorBufferExtImpView::data_x(
     }
   }
   //LOG_IF(INFO, ENV_PARAM(DEBUG_TENSOR_BUFFER_ALLOCATOR) >= 3)
-  //    << " TensorBufferExtImpView data: " << data_back 
-  //    << " size " << size_back 
+  //    << " TensorBufferExtImpView data: " << data_back
+  //    << " size " << size_back
   //    <<" offset_ " << offset_
   //    <<" offset " << offset
   //    << " size left " << size_left_in_single_batch;

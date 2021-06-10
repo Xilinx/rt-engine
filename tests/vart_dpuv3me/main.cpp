@@ -1,18 +1,16 @@
-/*
- * Copyright 2019 Xilinx Inc.
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *    http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
+// Copyright 2021 Xilinx Inc.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
 
 #include <assert.h>
 #include <dirent.h>
@@ -103,20 +101,20 @@ void preprocess(std::string filename, int8_t* dataPtr) {
 
   cv::Mat resizedImage = cv::Mat(new_h, new_w, CV_8SC3);
   cv::resize(orig, resizedImage, cv::Size(new_w, new_h),0,0, cv::INTER_AREA);
-  
+
   /// Center Crop Image
   const int offsetW = (new_w - outWidth) / 2;
   const int offsetH = (new_h - outHeight) / 2;
 
   const cv::Rect roi(offsetW, offsetH, outWidth, outHeight);
   resizedImage = resizedImage(roi).clone();
-  float* dataTmp = new float[224*224*3]; 
+  float* dataTmp = new float[224*224*3];
   /// Pre-Processing loop
   for (int c = 0; c < 3; c++)
     for (int h = 0; h < outHeight; h++)
       for (int w = 0; w < outWidth; w++) {
-        
-        
+
+
         dataPtr[0
           + (3*h*outWidth)
           + (3*w) + c]
@@ -163,13 +161,13 @@ int main(int argc, char* argv[]) {
 
   string xmodel_filename = argv[1];
   int numImgs = 4;
-  int batchSz = 4; 
+  int batchSz = 4;
   string filename = argv[2];
   string img_dir = argv[3];
   assert((numImgs%batchSz)==0);
   const unsigned num_queries_ = numImgs/batchSz;
     vector<string> kinds, images;
-    //ListImages("./", images); 
+    //ListImages("./", images);
   LoadWords("./words.txt", kinds);
   std::unique_ptr<xir::Graph> graph0 = xir::Graph::deserialize(xmodel_filename);
 
@@ -183,9 +181,9 @@ int main(int argc, char* argv[]) {
   //runner.reset(new vart::DpuRunner(subgraph[0]));
   //auto inputs = runner->make_inputs(1);
   //auto outputs = runner->make_outputs(1);
- 
-  auto output_tensors = runner->get_output_tensors(); 
-  std::vector<vart::TensorBuffer*> inTensors;    
+
+  auto output_tensors = runner->get_output_tensors();
+  std::vector<vart::TensorBuffer*> inTensors;
   unsigned int size = 224*224*3*4;
   int8_t* codePtr= NULL;
   float *codePtrF = new float[size/4];
@@ -208,7 +206,7 @@ cout << inputs.size()<<endl;
     }
 
   auto tensorr = inputs[0]->get_tensor()->get_shape()[0];
-  
+
   std::cout << std::endl << "Testing single thread..." << std::endl;
   auto t1 = std::chrono::high_resolution_clock::now();
   for (unsigned i=0; i < num_queries_; i++)
@@ -223,7 +221,7 @@ cout << inputs.size()<<endl;
     float* softnax = new float[1000];
     const auto mode = std::ios_base::out | std::ios_base::binary | std::ios_base::trunc;
     for (int bi=0; bi < 1; bi++) {
-      for (int t=0;t<1;t++) { 
+      for (int t=0;t<1;t++) {
         auto output_file = "./output0" +to_string(t)+ to_string( bi) + ".bin";
         for (int n=0;n<1000;n++)
           out[n] = ((char*)outputs[t]->data(std::vector<int>{0,0}).first)[n] * 0.25;

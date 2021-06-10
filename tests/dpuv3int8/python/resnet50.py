@@ -1,18 +1,16 @@
-"""
-Copyright 2020 Xilinx Inc.
-
-Licensed under the Apache License, Version 2.0 (the "License");
-you may not use this file except in compliance with the License.
-You may obtain a copy of the License at
-
-    http://www.apache.org/licenses/LICENSE-2.0
-
-Unless required by applicable law or agreed to in writing, software
-distributed under the License is distributed on an "AS IS" BASIS,
-WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-See the License for the specific language governing permissions and
-limitations under the License.
-"""
+# Copyright 2021 Xilinx Inc.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#      http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
 
 from typing import List
 import cv2
@@ -100,7 +98,7 @@ def get_child_subgraph_dpu(graph: "Graph") -> List["Subgraph"]:
 
 
 def main():
-    
+
     g = Graph.deserialize(SCRIPT_PATH + '/../models/dpuv3int8_xir/resnet50_handwritten.xmodel')
     subgraphs = get_child_subgraph_dpu(g)
     assert len(subgraphs) == 1  # only one DPU kernel
@@ -122,8 +120,8 @@ def main():
 
     pre_output_size = int(output_tensor_buffers[0].get_tensor().get_data_size() / batch)
     output_data = np.asarray(output_tensor_buffers[0])
-    
-    
+
+
     sfm_data = CPUCalcSoftmax(output_data[0], pre_output_size)
     TopK(sfm_data, pre_output_size, SCRIPT_PATH + "/words.txt")
     del runner
