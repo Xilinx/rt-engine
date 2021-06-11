@@ -1,16 +1,17 @@
 // Copyright 2021 Xilinx Inc.
+// //
+// // Licensed under the Apache License, Version 2.0 (the "License");
+// // you may not use this file except in compliance with the License.
+// // You may obtain a copy of the License at
+// //
+// //      http://www.apache.org/licenses/LICENSE-2.0
+// //
+// // Unless required by applicable law or agreed to in writing, software
+// // distributed under the License is distributed on an "AS IS" BASIS,
+// // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// // See the License for the specific language governing permissions and
+// // limitations under the License.
 //
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-//      http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
 
 #include <assert.h>
 #include <dirent.h>
@@ -44,28 +45,19 @@ static long getFileSize(std::string filename)
     return rc == 0 ? stat_buf.st_size : -1;
 }
 
-/**
- * @brief Entry for runing ResNet50 neural network
- *
- * @note Runner APIs prefixed with "dpu" are used to easily program &
- *       deploy ResNet50 on DPU platform.
- *
- */
 int main(int argc, char* argv[]) {
   // Check args
-  if (argc != 4) {
-    cout << "Usage: ./resnet50 [xmodel_file] [core_batch] [thread_num]" << endl;
+  if (argc != 6) {
+    cout << "Usage: ./resnet50 [xmodel_file] [input_file] [core_batch] [tensor_batch] [thread_num]" << endl;
     return -1;
   }
 
   string xmodel_filename = argv[1];
-  int core_batch = atoi(argv[2]);
-  int thread_num = atoi(argv[3]);
+  string input_file = argv[2];
+  int core_batch = atoi(argv[3]);
+  int tensor_batch = atoi(argv[4]); // 2 for image bonding, 1 for others
+  int thread_num = atoi(argv[5]);
   std::cout << "core_batch " << core_batch << ", thread_num " << thread_num << std::endl;
-  int numImgs = 4;
-  int batchSz = 4;
-  assert((numImgs%batchSz)==0);
-  const unsigned num_queries_ = numImgs/batchSz;
 
   std::unique_ptr<xir::Graph> graph0 = xir::Graph::deserialize(xmodel_filename);
 #if 0
@@ -92,47 +84,43 @@ int main(int argc, char* argv[]) {
       auto output_tensors = runner->get_output_tensors();
 
       void *codePtr = NULL;
-      std::string inputbin = "./tests/vart_dpuv3e/data.bin";
+      std::string inputbin = input_file;
       unsigned int size = getFileSize(inputbin);
       if (posix_memalign(&codePtr, getpagesize(), size * core_batch))
         throw std::bad_alloc();
       auto infile = ifstream(inputbin, ios::in | ios::binary);
       for (unsigned i=0; infile.read(&((char*)codePtr)[i], sizeof(int8_t)); i++);
-
       for (int bi=0; bi < core_batch; bi++)
       {
-         memcpy((void*)inputs[0]->data(std::vector<int>{bi,0,0,0}).first, codePtr,size);
+         memcpy((void*)inputs[0]->data(std::vector<int>{bi,0,0,0}).first, codePtr, size);
       }
 
       for (auto& input : inputs) {
-        input->sync_for_write(0, input->get_tensor()->get_element_num() /
+	//std::cout << input->get_tensor()->get_element_num() << " " << input->get_tensor()->get_shape()[0] << std::endl;
+        input->sync_for_write(0, tensor_batch*input->get_tensor()->get_element_num() /
                                    input->get_tensor()->get_shape()[0]);
       }
-      auto t1 = std::chrono::high_resolution_clock::now();
-
-      for (unsigned i=0; i < num_queries_; i++)
-      {
-         auto ret = (runner)->execute_async(inputs, outputs);
-        	(runner)->wait(uint32_t(ret.first), -1);
-         for (auto& output : outputs) {
-           output->sync_for_read(0, output->get_tensor()->get_element_num() /
-                                      output->get_tensor()->get_shape()[0]);
-          }
-         const auto mode = std::ios_base::out | std::ios_base::binary | std::ios_base::trunc;
-	 //std::cout << "thread: " << th << std::endl;
-         for (int bi=0; bi < core_batch; bi++) {
-          auto dims = outputs[0]->get_tensor()->get_shape();
-          dims[0] = bi;
-          for (int j=1;j<dims.size();j++)
-            dims[j]=0;
-           for (int t=0;t<1;t++) {
-             auto output_file = "./output" + to_string(th) +  to_string(t) + to_string(bi) + ".bin";
-             std::ofstream(output_file, mode).write((char*)outputs[t]->data(dims).first, output_tensors[t]->get_element_num()/output_tensors[t]->get_shape()[0]);
-           }
-         }
+      
+      auto ret = (runner)->execute_async(inputs, outputs);
+             (runner)->wait(uint32_t(ret.first), -1);
+      for (auto& output : outputs) {
+        //std::cout << output->get_tensor()->get_element_num() << " " << output->get_tensor()->get_shape()[0] << std::endl;
+        output->sync_for_read(0, tensor_batch*output->get_tensor()->get_element_num() /
+                                   output->get_tensor()->get_shape()[0]);
       }
-    //auto t2 = std::chrono::high_resolution_clock::now();
-    //std::chrono::duration<double> elapsed = t2-t1;
+
+      const auto mode = std::ios_base::out | std::ios_base::binary | std::ios_base::trunc;
+      auto dims = outputs[0]->get_tensor()->get_shape();
+      for (auto &x : dims) x=0;
+
+      for (int bi = 0; bi < core_batch; bi++) {
+	dims[0]=bi;
+        for (int o = 0; o < output_tensors.size(); o++) {
+          auto output_file = "./output_th" + to_string(th) + "_o" + to_string(o) + "_b" + to_string(bi) + ".bin";
+          std::ofstream(output_file, mode).write((char*)outputs[o]->data(dims).first, tensor_batch*output_tensors[o]->get_element_num()/output_tensors[o]->get_shape()[0]);
+        }
+      }
+
     });
   }
 
@@ -140,7 +128,5 @@ int main(int argc, char* argv[]) {
     workers[th].join();
   }
 
-  //std::cout << "Elapsed: " << elapsed.count() << std::endl;
-  //std::cout << "QPS: " << num_queries_/elapsed.count() << std::endl;
   return 0;
 }
