@@ -1,17 +1,3 @@
-// Copyright 2021 Xilinx Inc.
-//
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-//      http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
-
 #include <xrt.h>
 #include "engine.hpp"
 #include "dpuv3int8_controller.hpp"
@@ -23,13 +9,14 @@ using namespace std;
 std::mutex globalMutex;
 
 Dpuv3Int8Controller::Dpuv3Int8Controller(std::string meta) : XclDpuController<XrtDeviceHandle, XrtDeviceBuffer, XrtDeviceBuffer>(meta) {
- 
+
   Engine& engine = Engine::get_instance();
   for (unsigned i=0; i < engine.get_num_workers(); i++)
     contexts_.emplace_back(new XrtContext(*handle_));
- 
+  inputsTBfs_.resize(engine.get_num_workers());
+  outputsTBfs_.resize(engine.get_num_workers());
   xmodel_.reset(new Xmodel(meta, false));
-  
+
   initializeTensors(); 
   initializeTaskDRUVariables();
   initCreateBuffers();
@@ -41,9 +28,10 @@ Dpuv3Int8Controller::Dpuv3Int8Controller(const xir::Subgraph *subgraph) : XclDpu
   Engine& engine = Engine::get_instance();
   for (unsigned i=0; i < engine.get_num_workers(); i++)
     contexts_.emplace_back(new XrtContext(*handle_));
-
+  inputsTBfs_.resize(engine.get_num_workers());
+  outputsTBfs_.resize(engine.get_num_workers());
   xmodel_ = std::make_unique<Xmodel>(subgraph, false);
-  
+ 
   initializeTensors();
   initializeTaskDRUVariables();
   initCreateBuffers();
@@ -408,20 +396,20 @@ Dpuv3Int8Controller::get_outputs(int batchsz) {
 
 std::vector<vart::TensorBuffer*>
 Dpuv3Int8Controller::create_hw_buffers(std::vector<vart::TensorBuffer*> stdBuf, bool isInput) {
-  
   std::unique_lock<std::mutex> lock(globalMutex);
   std::vector<vart::TensorBuffer*> hwBuf;
   std::vector<vart::TensorBuffer*> swapBuf;
   std::vector<vart::TensorBuffer*> druSrcBuf;
   std::vector<vart::TensorBuffer*> druDstBuf;
   
+
   if(isInput)
     {
       hwBuf = create_tensor_buffers({in_hw_tensor_.get()}, isInput);
       swapBuf = create_tensor_buffers({swap_tensor_.get()}, isInput);
       druSrcBuf = create_tensor_buffers({druSrc_tensor_.get()}, isInput);
       druDstBuf = create_tensor_buffers({druDst_tensor_.get()}, isInput);
-
+      
       stdbuf2swapbuf_[stdBuf[0]] = swapBuf[0];
       stdbuf2druSrcbuf_[stdBuf[0]] = druSrcBuf[0];
       stdbuf2druDstbuf_[stdBuf[0]] = druDstBuf[0];
@@ -683,7 +671,7 @@ void Dpuv3Int8Controller::data_float2fix(int8_t* dataDst, float* dataSrc, int si
 
 void Dpuv3Int8Controller::run(const std::vector<vart::TensorBuffer*> &inputs,
                         const std::vector<vart::TensorBuffer*> &outputs) {
- 
+
   Engine& engine = Engine::get_instance();
   const unsigned worker_id = engine.get_my_worker_id();
   if (worker_id >= contexts_.size())
@@ -710,9 +698,14 @@ void Dpuv3Int8Controller::run(const std::vector<vart::TensorBuffer*> &inputs,
 
   // If the user has provided us TB
   if(create_tb_outside) {
-    input_tensor_buffers = get_inputs();
-    output_tensor_buffers = get_outputs();
-
+   if(inputsTBfs_[worker_id].size()==0)
+   {
+       inputsTBfs_[worker_id] = get_inputs();
+       outputsTBfs_[worker_id] = get_outputs();
+   }
+    input_tensor_buffers = inputsTBfs_[worker_id];
+    output_tensor_buffers = outputsTBfs_[worker_id];
+    
     // Must copy input data from user's tensor buffers
     // Iterate over both vectors simultaneously
     auto i = inputs.begin();
