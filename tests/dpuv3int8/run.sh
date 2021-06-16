@@ -29,7 +29,7 @@ export LD_LIBRARY_PATH=build:${CONDA_PREFIX}/lib:/opt/xilinx/xrt/lib:${XILINX_VA
 export XILINX_XRT=/opt/xilinx/xrt
 
 # Set below env corresponding to xclbin
-export XLNX_VART_FIRMWARE=tests/dpuv3int8/models/commonImgLabelDir
+export XLNX_VART_FIRMWARE=${PWD}/tests/dpuv3int8/models/commonImgLabelDir/dpdpuv3_wrapper.hw.xilinx_u250_xdma_201830_2.xclbin
 
 if [[ -z "${XLNX_VART_FIRMWARE}" ]]; then
     export XLNX_VART_FIRMWARE=/usr/lib
