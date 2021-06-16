@@ -82,7 +82,7 @@ export LD_LIBRARY_PATH=/opt/xilinx/xrt/lib:$LD_LIBRARY_PATH
 ./cmake.sh --clean --build-dir=$PWD/build --install-prefix=$CONDA_PREFIX --conda --type=release
 
 #If you would like to utilise system's XRM, please build using the following command
-./cmake.sh --clean --build-dir=$PWD/cmake-build --install-prefix=$CONDA_PREFIX --conda --cmake-options="-DXRM_DIR=/opt/xilinx/xrm/share/cmake" --type=release
+./cmake.sh --clean --build-dir=$PWD/build --install-prefix=$CONDA_PREFIX --conda --cmake-options="-DXRM_DIR=/opt/xilinx/xrm/share/cmake" --type=release
 
 # Link from and install to system
 ./cmake.sh --clean --build-dir=$PWD/build --type=release --cmake-options="-DXRM_DIR=/opt/xilinx/xrm/share/cmake" --install-prefix=/usr/
