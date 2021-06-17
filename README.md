@@ -75,6 +75,9 @@ int DpuRunner::wait(int jobid, int timeout) {
 
 ### Build && Install
 ```
+# LD_LIBRARY_PATH required for linking tests to XRT
+export LD_LIBRARY_PATH=/opt/xilinx/xrt/lib:$LD_LIBRARY_PATH
+
 # Link from and install to Conda Environment
 ./cmake.sh --clean --build-dir=$PWD/build --install-prefix=$CONDA_PREFIX --conda --type=release
 

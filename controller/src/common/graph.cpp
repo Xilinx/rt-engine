@@ -146,9 +146,12 @@ static const xir::Tensor* find_tensor(const xir::Tensor* in_tensor, const xir::S
     } else if (!out->has_attr("reg_id")) {
       auto fanout_ops = op_tmp->get_fanout_ops();
       auto subgraph_ops = subgraph->get_ops();
+      auto subgraph_ops1 = std::vector<const xir::Op*>(subgraph_ops.begin(), subgraph_ops.end());
+      std::sort(fanout_ops.begin(), fanout_ops.end());
+      std::sort(subgraph_ops1.begin(), subgraph_ops1.end());
       auto ops = std::vector<const xir::Op*>();
       std::set_intersection(fanout_ops.begin(), fanout_ops.end(),
-                            subgraph_ops.begin(), subgraph_ops.end(),
+                            subgraph_ops1.begin(), subgraph_ops1.end(),
                             std::back_inserter(ops));
       auto upload_op = ops.front();
       out = upload_op->get_output_tensor();
