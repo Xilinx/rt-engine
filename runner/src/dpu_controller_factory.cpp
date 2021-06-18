@@ -21,6 +21,8 @@ std::shared_ptr<DpuController> DpuControllerFactory::get(std::string kernel, T s
     // TODO/FIXME replace kernel name with standard name for dpuv3int8
     // e.g., DPUABC123XYZ
   {
+    if (kernel == "dpdpuv3_wrapper")
+       std::cout<<"KernelName dpdpuv3_wrapper detected, please change it to DPUCADF8H"<<std::endl;
     const bool DPUV3INT8_DEBUGMODE =
       std::getenv("DPUV3INT8_DEBUGMODE") ? atoi(std::getenv("DPUV3INT8_DEBUGMODE")) == 1 : false;
 
