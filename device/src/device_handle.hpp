@@ -31,9 +31,6 @@ namespace xir {
 class Attrs;
 }  // namespace xir
 
-namespace butler {
-  class ButlerClient;
-}
 class xrmCuProperty;
 class xrmCuResource;
 
@@ -62,16 +59,6 @@ class DeviceResource {
 
  protected:
   std::unique_ptr<DeviceInfo> info_;
-};
-
-class ButlerResource : public DeviceResource {
- public:
-  ButlerResource(std::string kernelName, std::string xclbin, xir::Attrs* attrs);
-  ~ButlerResource();
-
- private:
-  unsigned int handle_;
-  std::unique_ptr<butler::ButlerClient> client_;
 };
 
 class XrmResource : public DeviceResource {
