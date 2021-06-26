@@ -13,8 +13,8 @@ add_definitions("-fpermissive" "-Wall")
 
 #set(CMAKE_VERBOSE_MAKEFILE ON)
 
-message("-- Host system processor is ${CMAKE_HOST_SYSTEM_PROCESSOR}")
-message("-- Target system processor is ${CMAKE_SYSTEM_PROCESSOR}")
+message(STATUS "Host system processor is ${CMAKE_HOST_SYSTEM_PROCESSOR}")
+message(STATUS "Target system processor is ${CMAKE_SYSTEM_PROCESSOR}")
 
 set(CMAKE_MODULE_PATH "${CMAKE_MODULE_PATH};${CMAKE_SOURCE_DIR}/cmake")
 
@@ -33,16 +33,20 @@ find_package(glog REQUIRED)
 find_package(Protobuf REQUIRED) # rt-engine does not need, but this is forced upon us by target-factory
 find_package(XRM REQUIRED)
 
+find_package(XRT REQUIRED HINTS /opt/xilinx/xrt)
+if (${XRT_FOUND})
+  message(STATUS "Found XRT: ${XRT_DIR} \(found version \"${XRT_VERSION}\"\)")
+endif(${XRT_FOUND})
 
-# Fix Some Day
-# Would prefer to find XRT the normal way
-find_package(Xrt REQUIRED)
-#find_package(XRT REQUIRED PATHS /opt/xilinx/xrt)
+if (DEFINED BUILD_EMULATION)
+  message(STATUS "Linking XRT for Hardware Emulation")
+  set (XRT_CORE_LIBRARY XRT::xrt_hwemu)
+else()
+  set (XRT_CORE_LIBRARY XRT::xrt_core)
+endif()
 
 find_path(JSONC_INCLUDE_DIRS NAMES json-c)
 find_library(JSONC_LIBRARIES NAMES json-c REQUIRED)
-#message (${JSONC_INCLUDE_DIRS})
-#message (${JSONC_LIBRARIES})
 
 if(TARGET jsoncpp_lib)
   set(JSONCPP_LIBRARY_TARGET jsoncpp_lib)
@@ -125,7 +129,8 @@ target_link_libraries(
   vart::runner
   vart::trace
   ${XRM_LIBRARIES}
-  XRT::XRT
+  ${XRT_CORE_LIBRARY}
+  XRT::xilinxopencl
   #${XRT_OPENCL_LIBRARIES}
   #${XRT_CORE_LIBRARIES}
   glog::glog
