@@ -53,10 +53,10 @@ Dpuv3Int8Controller::Dpuv3Int8Controller(const xir::Subgraph *subgraph) : XclDpu
 
 void Dpuv3Int8Controller::initializeTensors()
 {
-    const std::vector<std::int32_t> indims = { BATCH_SIZE, int32_t(xmodel_->getInW()), int32_t(xmodel_->getInH()), int32_t(xmodel_->getInCh())};
-    std::vector<std::int32_t> inHwDims = { int32_t(BATCH_SIZE*xmodel_->getInW()*xmodel_->getInH()*xmodel_->getInCh())};
+    const std::vector<std::int32_t> indims = { BATCH_SIZE, int32_t(xmodel_->getInH()), int32_t(xmodel_->getInW()), int32_t(xmodel_->getInCh())};
+    std::vector<std::int32_t> inHwDims = { int32_t(BATCH_SIZE*xmodel_->getInH()*xmodel_->getInW()*xmodel_->getInCh())};
     if(not xmodel_->getDruMode())
-      inHwDims = { int32_t(xmodel_->getInW()*xmodel_->getInH()*BATCH_SIZE*ceil((float)xmodel_->getInCh()/16)*16)};
+      inHwDims = { int32_t(xmodel_->getInH()*xmodel_->getInW()*BATCH_SIZE*ceil((float)xmodel_->getInCh()/16)*16)};
     const std::vector<std::int32_t> outHwDims = { BATCH_SIZE, 1, 1, int32_t(xmodel_->getOutDdrSize())};
    
     xir::Tensor *in_t = xir::Tensor::create(xmodel_->getInTensorsNames()[0], indims, xir::DataType{xir::DataType::XINT, 8}).release();
@@ -70,7 +70,7 @@ void Dpuv3Int8Controller::initializeTensors()
     
     for(uint32_t k=0; k<xmodel_->getOutputNum(); k++)
     {
-      std::vector<std::int32_t> outputdims = { BATCH_SIZE, xmodel_->getOutTensorsDims()[k][0], xmodel_->getOutTensorsDims()[k][1], xmodel_->getOutTensorsDims()[k][2]};
+      std::vector<std::int32_t> outputdims = { BATCH_SIZE, xmodel_->getOutTensorsDims()[k][1], xmodel_->getOutTensorsDims()[k][0], xmodel_->getOutTensorsDims()[k][2]};
       xir::Tensor *outputOp = xir::Tensor::create(xmodel_->getOutTensorsNames()[k], outputdims, xir::DataType{xir::DataType::XINT, 8}).release();
       std::unique_ptr<xir::Tensor> outtensor;
       outtensor.reset(outputOp);
