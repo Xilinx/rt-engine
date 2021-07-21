@@ -141,6 +141,12 @@ void Dpuv3Int8Controller::runKernel(ert_start_kernel_cmd* ecmd, uint64_t* buf_ad
   }
   ecmd->count = 1 + p; 
 
+  
+  const bool XLNX_EMIT_PROFILING_INFO = std::getenv("XLNX_EMIT_PROFILING_INFO") ? atoi(std::getenv("XLNX_EMIT_PROFILING_INFO")) == 1:false;
+  
+  
+  auto t1 = std::chrono::high_resolution_clock::now();
+
     // exec kernel
   auto exec_buf_result = xclExecBuf(xcl_handle, bo_handle);
   if (exec_buf_result)
@@ -152,7 +158,14 @@ void Dpuv3Int8Controller::runKernel(ert_start_kernel_cmd* ecmd, uint64_t* buf_ad
           
   if (ecmd->state != ERT_CMD_STATE_COMPLETED)
     std::cout << "Error: CU timeout " << std::endl;
+  
+  auto t2 = std::chrono::high_resolution_clock::now();
+  std::chrono::duration<double> elapsed = t2-t1;
 
+  if(XLNX_EMIT_PROFILING_INFO==1)
+  {
+    std::cout<<"Kernel time(milliseconds): "<< elapsed.count()*1000 <<std::endl;
+  }
 }
 
 void Dpuv3Int8Controller::readRegs(xclDeviceHandle xcl_handle)
