@@ -64,6 +64,7 @@ int checker(const std::string& xmodel, const std::string& input_raw, const std::
   auto subgraph = *std::find_if(subgraphs.begin(), subgraphs.end(), [](xir::Subgraph *sg) {
     return sg->get_attr<std::string>("device") == "DPU";
   });
+  std::cout << "Running Subgraph: " << subgraph->get_name() << std::endl;
 
   // Create Runner
   auto vart_runner = vart::Runner::create_runner(subgraph, "run");

@@ -56,10 +56,16 @@ protected:
 
 int create_runners(std::string &xmodel, unsigned int numRunners) {
 
-
+  // Read in XMODEL
   std::unique_ptr<xir::Graph> graph = xir::Graph::deserialize(xmodel);
+  std::cout << "Loaded Graph: " << graph->get_name() << std::endl;
+
+  // Get the First FPGA Subgraph
   std::vector<xir::Subgraph *> subgraphs = graph->get_root_subgraph()->children_topological_sort();
-  auto subgraph = subgraphs[1];
+  auto subgraph = *std::find_if(subgraphs.begin(), subgraphs.end(), [](xir::Subgraph *sg) {
+    return sg->get_attr<std::string>("device") == "DPU";
+  });
+  std::cout << "Running Subgraph: " << subgraph->get_name() << std::endl;
 
   std::vector<std::unique_ptr<vart::Runner>> runners;
   std::vector<std::thread> threads(numRunners);
