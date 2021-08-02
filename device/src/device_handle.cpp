@@ -24,6 +24,7 @@
 #pragma GCC diagnostic pop
  
 #include <experimental/xrm_experimental.h>
+#include <experimental/xrt-next.h>
 
 #include "experimental/xrt++.hpp"
 #include "xrt_bin_stream.hpp"
@@ -49,11 +50,21 @@ DeviceResource::DeviceResource(std::string kernelName, std::string xclbin, xir::
   // TODO support multiple devices
   //const int deviceIdx = 0;
   size_t deviceIdx=0;
+  // cuIdx is for cu index in xclbin
+  // cuIdx_xrt is for cu index from XRT side
   size_t cuIdx=0;
+  size_t cuIdx_xrt=0;
   xir::XrtBinStream binstream(xclbin);
-  naive_resource_mgr_on_ = true;
+  auto handle = xclOpen(deviceIdx, NULL, XCL_INFO);
+  static std::unordered_map<size_t,size_t> cuIdxMap;
   cuIdx = naive_resource_mgr_cu_idx_.fetch_add(1);
-  if (cuIdx > (binstream.get_num_of_cu()-1)) cuIdx = rand()%binstream.get_num_of_cu(); 
+  if (cuIdx == 0) {
+    binstream.burn(handle); // only program if you're the first CU
+    for (size_t cucnt = 0; cucnt < binstream.get_num_of_cu(); cucnt++) {
+      cuIdx_xrt = xclIPName2Index(handle, binstream.get_cu(cucnt).c_str());
+      cuIdxMap.emplace(cuIdx_xrt, cucnt); 
+    }
+  }
   if (attrs->has_attr("__device_id__")) { 
     auto device_index = attrs->get_attr<size_t>("__device_id__");
     if (device_index > (num_devices-1))
@@ -64,25 +75,39 @@ DeviceResource::DeviceResource(std::string kernelName, std::string xclbin, xir::
     auto cu_index = attrs->get_attr<size_t>("__device_core_id__");
     if (cu_index > (binstream.get_num_of_cu()-1))
       throw std::runtime_error("Error: no CU available");
-    cuIdx = cu_index;
-  } 
+    cuIdx_xrt = cu_index;
+    auto item = cuIdxMap.find(cuIdx_xrt);
+    if (item == cuIdxMap.end()) {
+      throw std::runtime_error("Error: no CUs available");
+    } else {
+      cuIdx = item->second;
+    }
+  } else {
+    //seed to make sure rand() is differnet in differnet process 
+    srand((int)time(0));
+    if (cuIdx > (binstream.get_num_of_cu()-1)) cuIdx = rand()%binstream.get_num_of_cu(); 
+    cuIdx_xrt = xclIPName2Index(handle, binstream.get_cu(cuIdx).c_str());
+  }
+  xclClose(handle);
+  naive_resource_mgr_on_ = true;
 
-  if (cuIdx >= binstream.get_num_of_cu())
+  if (cuIdx_xrt >= binstream.get_num_of_cu())
     throw std::runtime_error("Error: no CUs available");
 
   auto cu_full_name = kernelName + ":" 
-    + std::to_string(deviceIdx) + ":" + std::to_string(cuIdx);
-
+    + std::to_string(deviceIdx) + ":" + std::to_string(cuIdx_xrt);
+  uuid_ = binstream.get_uuid();
   info_.reset(new DeviceInfo{
       .cu_base_addr = binstream.get_cu_base_addr(cuIdx),
       .ddr_bank = 0, // TODO get actual DDR bank
       .device_index = deviceIdx,
-      .cu_index = cuIdx,
-      .cu_mask = (1u << cuIdx),
+      .cu_index = cuIdx_xrt,
+      .cu_mask = (1u << cuIdx_xrt),
       .xclbin_path = xclbin,
       .full_name = cu_full_name,
       .device_id = 0,
       .xdev = nullptr,
+      .uuid = get_uuid(),
       .fingerprint = 0,
   });
 
@@ -158,7 +183,7 @@ std::string KernelNameManager::getRealKernelName(std::string xclbinPath, std::st
   xir::XrtBinStream binstream(xclbinPath);
   auto cu_num = binstream.get_num_of_cu();
   std::string realKernelName; 
-  for(int nameIdx=0; nameIdx < cu_num; nameIdx++) { //for TRD if there is other IP with differnet CU name, need to loop 
+  for(unsigned int nameIdx=0; nameIdx < cu_num; nameIdx++) { //for TRD if there is other IP with differnet CU name, need to loop 
     if ((binstream.get_cu(nameIdx) == kernelName))
       return kernelName; // exact match
     if ((find_kernel_name(binstream.get_cu(nameIdx))) == kernelName)
@@ -214,7 +239,7 @@ int XrmResource::alloc_from_attrs(std::string kernelName, char* xclbinPath, xir:
       if ((kernelName == "DPUCVDX8H")||(kernelName == "DPUCAHX8L")||(kernelName == "DPUCAHX8H")) {
         if (attrs->has_attr("__device_core_id__")) { // this only used in runtime and can't be set outside
           auto core_id = attrs->get_attr<size_t>("__device_core_id__");
-          if (cu_rsrc_->cuId != core_id ) {
+          if (cu_rsrc_->cuId != (int)core_id ) {
             if (allocedCus.size() == cu_num) {
               for (unsigned sz=0;sz<cu_rsrc.size();sz++) {
                 xrmCuRelease(context_, cu_rsrc[sz].get());
@@ -323,6 +348,7 @@ XrmResource::XrmResource(std::string kernelName, std::string xclbin, xir::Attrs*
         .full_name = cu_full_name,
         .device_id = nullptr,
         .xdev = nullptr,
+        .uuid =&(cu_rsrc_->uuid[0]),
         .fingerprint = 0,
     });
 
@@ -472,14 +498,6 @@ XclDeviceHandle::~XclDeviceHandle() {
 
 XrtDeviceHandle::XrtDeviceHandle(std::string kernelName, std::string xclbin, xir::Attrs* attrs)
     : DeviceHandle(kernelName, xclbin, attrs) {
-  auto handle = xclOpen(get_device_info().device_index, NULL, XCL_INFO);
-  std::string fnm = std::string(get_device_info().xclbin_path);
-  xir::XrtBinStream binstream(fnm);
-  if (get_device_info().cu_index == 0)
-    binstream.burn(handle); // only program if you're the first CU
-  xclClose(handle);
-
-  uuid_ = binstream.get_uuid();
   context_.reset(new XrtContext(*this));
 }
 
@@ -491,7 +509,7 @@ XrtDeviceHandle::~XrtDeviceHandle() {
  */
 XrtContext::XrtContext(XrtDeviceHandle &handle) : handle_(handle) {
   dev_handle_ = xclOpen(handle.get_device_info().device_index, NULL, XCL_INFO);
-  auto ret = xclOpenContext(dev_handle_, handle.get_uuid(), 
+  auto ret = xclOpenContext(dev_handle_, handle.get_device_info().uuid, 
     handle.get_device_info().cu_index, true);
   if (ret)
     throw std::runtime_error("Error: xclOpenContext failed");
@@ -501,6 +519,6 @@ XrtContext::XrtContext(XrtDeviceHandle &handle) : handle_(handle) {
 
 XrtContext::~XrtContext() {
   xclFreeBO(dev_handle_, bo_handle_);
-  xclCloseContext(dev_handle_, handle_.get_uuid(), handle_.get_device_info().cu_index);
+  xclCloseContext(dev_handle_, handle_.get_device_info().uuid, handle_.get_device_info().cu_index);
   xclClose(dev_handle_);
 }

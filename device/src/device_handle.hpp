@@ -44,6 +44,7 @@ struct DeviceInfo {
   std::string full_name;
   cl_device_id device_id;
   xrt_device *xdev;
+  unsigned char*  uuid;
   uint32_t fingerprint;
 };
 
@@ -56,9 +57,11 @@ class DeviceResource {
   DeviceResource() {}
   virtual ~DeviceResource();
   const DeviceInfo& get_device_info() const { return *info_; }
+  unsigned char* get_uuid() { return &uuid_[0]; }
 
  protected:
   std::unique_ptr<DeviceInfo> info_;
+  std::array<unsigned char, sizeof(xuid_t)> uuid_;
 };
 
 class XrmResource : public DeviceResource {
@@ -120,11 +123,9 @@ class XrtDeviceHandle : public DeviceHandle {
   // a convenience context for basic work 
   // IMPORTANT: each worker thread must alloc its own context for exec()/wait()
   const XrtContext& get_context() const { return *context_; }
-  unsigned char* get_uuid() { return &uuid_[0]; }
   
  private:
   std::unique_ptr<XrtContext> context_;
-  std::array<unsigned char, sizeof(xuid_t)> uuid_;
 };
 
 
