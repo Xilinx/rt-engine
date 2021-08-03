@@ -1,5 +1,7 @@
 cmake_minimum_required(VERSION 3.9)
 
+option(BUILD_EMULATION "Link Emulation Library" OFF)
+
 if(DEFINED ENV{BUILD_VER})
   project(rt-engine VERSION $ENV{BUILD_VER} LANGUAGES C CXX)
 else()
@@ -38,7 +40,7 @@ if (${XRT_FOUND})
   message(STATUS "Found XRT: ${XRT_DIR} \(found version \"${XRT_VERSION}\"\)")
 endif(${XRT_FOUND})
 
-if (DEFINED BUILD_EMULATION)
+if (BUILD_EMULATION)
   message(STATUS "Linking XRT for Hardware Emulation")
   set (XRT_CORE_LIBRARY XRT::xrt_hwemu)
 else()
@@ -108,6 +110,7 @@ include_directories(
   ${CMAKE_SOURCE_DIR}/controller/src/dpuv4e
   ${CMAKE_SOURCE_DIR}/controller/src/dpuv3e
   ${CMAKE_SOURCE_DIR}/controller/src/dpuv3int8
+  ${CMAKE_SOURCE_DIR}/controller/src/ipuv1cnn
   ${CMAKE_SOURCE_DIR}/vitis/src
   )
         #${CMAKE_SOURCE_DIR}/tests/common

@@ -399,13 +399,25 @@ XrmResource::~XrmResource() {
 
 ///////////////////////////////////////////////
 
-DeviceHandle::DeviceHandle(std::string kernelName, std::string xclbin, xir::Attrs* attrs) {
-  if (std::getenv("RTE_ACQUIRE_DEVICE_UNMANAGED")) {
+DeviceHandle::DeviceHandle(std::string kernelName, std::string xclbin, xir::Attrs* attrs, ResourceType type) {
+
+  if (std::getenv("RTE_ACQUIRE_DEVICE_UNMANAGED") || type == ResourceType::DEVICE) {
     resource_.reset(new DeviceResource(kernelName, xclbin, attrs));
     return;
   }
 
-  resource_.reset(new XrmResource(kernelName, xclbin, attrs));
+  if (type == ResourceType::XRM) {
+    resource_.reset(new XrmResource(kernelName, xclbin, attrs));
+    return;
+  }
+
+  if (type == ResourceType::IPU) {
+    std::cout << "Called IPU Resource Allocator" << std::endl;
+    resource_.reset(new IpuResource(kernelName, xclbin, attrs));
+    return;
+  }
+
+  throw std::runtime_error("Error: Unknown Resource Type Requested");
 }
 
 /*
@@ -521,4 +533,75 @@ XrtContext::~XrtContext() {
   xclFreeBO(dev_handle_, bo_handle_);
   xclCloseContext(dev_handle_, handle_.get_device_info().uuid, handle_.get_device_info().cu_index);
   xclClose(dev_handle_);
+}
+
+/*
+ * IPU device handle
+ */
+IpuDeviceHandle::IpuDeviceHandle(std::string kernelName, std::string xclbin, xir::Attrs* attrs)
+  : DeviceHandle(kernelName, xclbin, attrs, ResourceType::IPU) {
+
+  context_ = std::make_unique<IpuContext>(*this);
+
+}
+
+IpuDeviceHandle::~IpuDeviceHandle() = default;
+
+/*
+ * IPU device context (MUST alloc one for each thread)
+ */
+IpuContext::IpuContext(IpuDeviceHandle &handle) : handle_(handle) {
+  dev_handle_ = xclOpen(handle.get_device_info().device_index, NULL, XCL_INFO);
+  
+  // Unclear if I need xclOpenContext for IPU
+
+  //auto ret = xclOpenContext(dev_handle_, handle.get_uuid(),
+  //                          handle.get_device_info().cu_index, true);
+  //if (ret)
+  //  throw std::runtime_error("Error: xclOpenContext failed");
+  bo_handle_ = xclAllocBO(dev_handle_, 4096, 0, XCL_BO_FLAGS_EXECBUF);
+  bo_addr_ = xclMapBO(dev_handle_, bo_handle_, true);
+}
+
+IpuContext::~IpuContext() {
+  xclFreeBO(dev_handle_, bo_handle_);
+  xclCloseContext(dev_handle_, handle_.get_uuid(), handle_.get_device_info().cu_index);
+  xclClose(dev_handle_);
+}
+
+IpuResource::IpuResource(std::string kernelName, std::string xclbin, xir::Attrs* attrs) {
+
+  auto num_devices = xclProbe();
+  if (num_devices == 0)
+    throw std::runtime_error("Error: no devices available");
+
+  size_t deviceIdx=0;
+  size_t cuIdx=0;
+  
+  auto handle = xclOpen(deviceIdx, NULL, XCL_INFO);
+  xir::XrtBinStream binstream(xclbin);
+  binstream.burn(handle);
+  xclClose(handle);
+
+  uuid_ = binstream.get_uuid();
+
+  auto cu_full_name = kernelName + ":"
+         + std::to_string(deviceIdx) + ":" + std::to_string(cuIdx);
+
+  info_.reset(new DeviceInfo{
+    .cu_base_addr = 0,
+    .ddr_bank = 0,
+    .device_index = deviceIdx,
+    .cu_index = cuIdx,
+    .cu_mask = (1u << cuIdx),
+    .xclbin_path = xclbin,
+    .full_name = cu_full_name,
+    .device_id = 0,
+    .xdev = nullptr,
+    .uuid = get_uuid(),
+    .fingerprint = 0,
+  });
+}
+
+IpuResource::~IpuResource() {
 }

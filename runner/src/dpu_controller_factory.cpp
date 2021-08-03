@@ -47,6 +47,10 @@ std::shared_ptr<DpuController> DpuControllerFactory::get(std::string kernel, T s
   {
     return std::make_shared<DpuV3eController>(subgraph, attrs);
   }
+  else if (kernel == "IPUV1CNN")
+  {
+    return std::make_shared<Ipuv1CnnController>(subgraph);
+  }
   else
     throw std::runtime_error("Error: no DpuController found for " + kernel);
 }

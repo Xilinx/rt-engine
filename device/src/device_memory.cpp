@@ -188,3 +188,76 @@ XrtDeviceBuffer::~XrtDeviceBuffer() {
   auto devHandle = myHandle->get_context().get_dev_handle();
   xclFreeBO(devHandle, mem_);
 }
+
+/*
+ * IpuDeviceBuffer
+ */
+IpuDeviceBuffer::IpuDeviceBuffer(const IpuDeviceHandle *handle, vart::TensorBuffer *tbuf, unsigned bank) 
+ : DeviceBuffer(handle, tbuf, bank) {
+  auto myHandle = dynamic_cast<const IpuDeviceHandle*>(handle_);
+  auto devHandle = myHandle->get_context().get_dev_handle();
+  mem_ = xclAllocUserPtrBO(devHandle, (void*)tbuf->data().first, size_, bank_);
+  if (mem_ == NULLBO)
+    throw std::bad_alloc();
+
+  xclBOProperties p;
+  xclGetBOProperties(devHandle, mem_, &p);
+  phys_addr_ = p.paddr;
+}
+
+IpuDeviceBuffer::IpuDeviceBuffer(const IpuDeviceHandle *handle, void *data, size_t size, unsigned bank)
+  : DeviceBuffer(handle, data, size, bank) {
+  auto myHandle = dynamic_cast<const IpuDeviceHandle*>(handle_);
+  auto devHandle = myHandle->get_context().get_dev_handle();
+  mem_ = xclAllocUserPtrBO(devHandle, data, size, bank);
+  if (mem_ == NULLBO)
+    throw std::bad_alloc();
+
+  xclBOProperties p;
+  xclGetBOProperties(devHandle, mem_, &p);
+  phys_addr_ = p.paddr;
+}
+
+void IpuDeviceBuffer::upload() const {
+  auto myHandle = dynamic_cast<const IpuDeviceHandle*>(handle_);
+  auto devHandle = myHandle->get_context().get_dev_handle();
+  xclSyncBO(devHandle, mem_, XCL_BO_SYNC_BO_TO_DEVICE, size_, 0);
+}
+
+void IpuDeviceBuffer::download() const {
+  auto myHandle = dynamic_cast<const IpuDeviceHandle*>(handle_);
+  auto devHandle = myHandle->get_context().get_dev_handle();
+  xclSyncBO(devHandle, mem_, XCL_BO_SYNC_BO_FROM_DEVICE, size_, 0);
+}
+
+void IpuDeviceBuffer::sync_for_read(uint64_t offset, size_t size) {
+  auto myHandle = dynamic_cast<const IpuDeviceHandle*>(handle_);
+  auto devHandle = myHandle->get_context().get_dev_handle();
+  xclSyncBO(devHandle, mem_, XCL_BO_SYNC_BO_FROM_DEVICE, size, offset);
+}
+
+void IpuDeviceBuffer::sync_for_write(uint64_t offset, size_t size) {
+  auto myHandle = dynamic_cast<const IpuDeviceHandle*>(handle_);
+  auto devHandle = myHandle->get_context().get_dev_handle();
+  xclSyncBO(devHandle, mem_, XCL_BO_SYNC_BO_TO_DEVICE, size, offset);
+}
+
+void IpuDeviceBuffer::copy_from_host(const void* buf, size_t size, size_t offset) {
+  auto myHandle = dynamic_cast<const IpuDeviceHandle*>(handle_);
+  auto devHandle = myHandle->get_context().get_dev_handle();
+  auto ok = xclUnmgdPwrite(devHandle, 0, buf, size, get_phys_addr() + offset);
+  CHECK_EQ(ok, 0);
+}
+
+void IpuDeviceBuffer::copy_to_host(void* buf, size_t size, size_t offset) {
+  auto myHandle = dynamic_cast<const IpuDeviceHandle*>(handle_);
+  auto devHandle = myHandle->get_context().get_dev_handle();
+  auto ok = xclUnmgdPread(devHandle, 0, buf, size, get_phys_addr() + offset);
+  CHECK_EQ(ok, 0);
+}
+
+IpuDeviceBuffer::~IpuDeviceBuffer() {
+  auto myHandle = dynamic_cast<const IpuDeviceHandle*>(handle_);
+  auto devHandle = myHandle->get_context().get_dev_handle();
+  xclFreeBO(devHandle, mem_);
+}

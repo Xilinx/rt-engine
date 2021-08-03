@@ -323,7 +323,9 @@ void SampleDpuController::execute(XclDeviceBuffer *in, XclDeviceBuffer *out) con
  */
 template XclDpuController<XclDeviceHandle, XclDeviceBuffer, XclDeviceBuffer>::XclDpuController(std::string meta, xir::Attrs* attrs);
 template XclDpuController<XrtDeviceHandle, XrtDeviceBuffer, XrtDeviceBuffer>::XclDpuController(std::string meta, xir::Attrs* attrs);
+template XclDpuController<IpuDeviceHandle, IpuDeviceBuffer, IpuDeviceBuffer>::XclDpuController(std::string meta, xir::Attrs* attrs);
 template XclDpuController<XclDeviceHandle, XclDeviceBuffer, XclDeviceBuffer>::XclDpuController(const xir::Subgraph *subgraph, xir::Attrs* attrs);
 template XclDpuController<XrtDeviceHandle, XrtDeviceBuffer, XrtDeviceBuffer>::XclDpuController(const xir::Subgraph *subgraph, xir::Attrs* attrs);
+template XclDpuController<IpuDeviceHandle, IpuDeviceBuffer, IpuDeviceBuffer>::XclDpuController(const xir::Subgraph *subgraph, xir::Attrs* attrs);
 template DeviceBuffer* XclDpuController<XclDeviceHandle, XclDeviceBuffer, XclDeviceBuffer>::get_device_buffer(vart::TensorBuffer *tb);
 template DeviceBuffer* XclDpuController<XrtDeviceHandle, XrtDeviceBuffer, XrtDeviceBuffer>::get_device_buffer(vart::TensorBuffer *tb);
