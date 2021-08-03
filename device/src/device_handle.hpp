@@ -48,7 +48,11 @@ struct DeviceInfo {
   uint32_t fingerprint;
 };
 
-/* 
+// Define resource Types
+// Each type of resource will be acquired in a different way
+enum class ResourceType {DEVICE, XRM, IPU};
+
+/*
  * DeviceResource acquires/releases resource & populates DeviceInfo
  */
 class DeviceResource {
@@ -77,6 +81,11 @@ class XrmResource : public DeviceResource {
   std::unique_ptr<xrmCuResource> cu_rsrc_;
 };
 
+class IpuResource : public DeviceResource {
+public:
+  IpuResource(std::string kernelName, std::string xclbin, xir::Attrs* attrs);
+  ~IpuResource();
+};
 /* 
  * DeviceHandle holds a DeviceResource
  * Derived classes add convenience functions for XRT API layer
@@ -84,7 +93,7 @@ class XrmResource : public DeviceResource {
 
 class DeviceHandle {
  public:
-  DeviceHandle(std::string kernelName, std::string xclbin, xir::Attrs* attrs);
+  DeviceHandle(std::string kernelName, std::string xclbin, xir::Attrs* attrs, ResourceType type = ResourceType::XRM );
   virtual ~DeviceHandle() {}
   const DeviceInfo& get_device_info() const { return resource_->get_device_info(); }
 
@@ -143,6 +152,41 @@ class XrtContext {
   XrtContext(const XrtContext &) = delete;
 
   XrtDeviceHandle &handle_;
+  xclDeviceHandle dev_handle_;
+  xclBufferHandle bo_handle_;
+  void *bo_addr_;
+};
+
+class IpuContext;
+class IpuDeviceHandle : public DeviceHandle {
+public:
+  IpuDeviceHandle(std::string kernelName, std::string xclbin, xir::Attrs* attrs);
+  virtual ~IpuDeviceHandle();
+
+  // a convenience context for basic work
+  // IMPORTANT: each worker thread must alloc its own context for exec()/wait()
+  const IpuContext& get_context() const { return *context_; }
+  unsigned char* get_uuid() { return &uuid_[0]; }
+
+private:
+  std::unique_ptr<IpuContext> context_;
+  std::array<unsigned char, sizeof(xuid_t)> uuid_;
+};
+
+class IpuContext {
+  // must create a separate IpuContext for each hostcode worker thread
+public:
+  IpuContext(IpuDeviceHandle &);
+  virtual ~IpuContext();
+  xclDeviceHandle get_dev_handle() const { return dev_handle_; }
+  xclBufferHandle get_bo_handle() const { return bo_handle_; }
+  void *get_bo_addr() { return bo_addr_; }
+
+private:
+  IpuContext() = delete;
+  IpuContext(const IpuContext &) = delete;
+
+  IpuDeviceHandle &handle_;
   xclDeviceHandle dev_handle_;
   xclBufferHandle bo_handle_;
   void *bo_addr_;
