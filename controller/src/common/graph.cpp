@@ -30,7 +30,6 @@
 #include <sys/types.h>
 #include <iomanip>
 #include <math.h>
-#include "xir/xir.h"
 #include "xir/graph/graph.hpp"
 #include "xir/graph/subgraph.hpp"
 #include "json-c/json.h"

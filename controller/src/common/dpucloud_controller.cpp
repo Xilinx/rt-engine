@@ -32,7 +32,6 @@
 #include <math.h>
 #include "engine.hpp"
 #include "dpucloud_controller.hpp"
-#include "xir/xir.h"
 #include "xir/graph/graph.hpp"
 #include "xir/graph/subgraph.hpp"
 #include "json-c/json.h"

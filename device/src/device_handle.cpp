@@ -30,7 +30,6 @@
 #include "xrt_bin_stream.hpp"
 #include "device_handle.hpp"
 #include "vitis/ai/env_config.hpp"
-#include "xir/xir.h"
 #include <glog/logging.h>
 
 DEF_ENV_PARAM(DEBUG_DEVICE_HANDLE, "0")
