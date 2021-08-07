@@ -15,9 +15,13 @@
 #include <vector>
 #include <string>
 #include <iostream>
+#include <iterator>
+#include <memory>
+#include <ert.h> // ert_start_kernel_cmd
 #include <xir/graph/subgraph.hpp> // xir::Subgraph
 #include "dpu_controller.hpp" // XclDpuController
 #include "engine.hpp" // Engine
+#include "device_memory.hpp" // IpuDeviceBuffer
 
 /*!
  * @class Ipuv1CnnController
@@ -57,6 +61,30 @@ public:
   virtual void run(const std::vector<vart::TensorBuffer*> &inputs, const std::vector<vart::TensorBuffer*> &outputs) override;
 
 protected:
+
+  // Get Input/Output Tensors from subgraph
+  set<const xir::Tensor *> inTensors_;
+  set<const xir::Tensor *> outTensors_;
+
+  // Reference to the engine
+  Engine& engine_;
+
+  // Create a context for each worker thread
   std::vector<std::unique_ptr<IpuContext>> contexts_;
-  const xir::Subgraph *subgraph_; 
+
+  // Create input and output buffers for each worker thread
+  // These are 2D vectors, first dimension being worker_id, second dimension being input_id
+  // This is to support M workers and N inputs/outputs
+  // Note that each device buffer is mapped to its own host pointer
+  std::vector<std::vector<IpuDeviceBuffer>> inputDeviceBuffers_;
+  std::vector<std::vector<IpuDeviceBuffer>> outputDeviceBuffers_;
+
+  // Create Device Buffers for instructions and model parameters
+  std::unique_ptr<IpuDeviceBuffer> weights_;
+  std::unique_ptr<IpuDeviceBuffer> biases_;
+
+  //std::unique_ptr<IpuDeviceBuffer> instructions_;
+  //std::unique_ptr<IpuDeviceBuffer> parameters_;
+
+
 };

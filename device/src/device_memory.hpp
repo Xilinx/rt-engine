@@ -112,6 +112,7 @@ class IpuDeviceBuffer : public DeviceBuffer {
  public:
   IpuDeviceBuffer(const IpuDeviceHandle *handle, vart::TensorBuffer *tbuf, unsigned bank);
   IpuDeviceBuffer(const IpuDeviceHandle *handle, void *data, size_t size, unsigned bank);
+  IpuDeviceBuffer(const IpuDeviceHandle *handle, size_t size, unsigned bank);
   ~IpuDeviceBuffer();
   void upload() const override;
   void download() const override;
@@ -119,7 +120,7 @@ class IpuDeviceBuffer : public DeviceBuffer {
   void sync_for_write(uint64_t offset, size_t size) override;
   void copy_from_host(const void* buf, size_t size, size_t offset) override;
   void copy_to_host(void* buf, size_t size, size_t offset) override;
-
+  void* get_data() const;
  private:
   xclBufferHandle mem_;
 };

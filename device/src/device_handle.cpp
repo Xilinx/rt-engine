@@ -105,6 +105,7 @@ DeviceResource::DeviceResource(std::string kernelName, std::string xclbin, xir::
       .xclbin_path = xclbin,
       .full_name = cu_full_name,
       .device_id = 0,
+      .device_handle = nullptr,
       .xdev = nullptr,
       .uuid = get_uuid(),
       .fingerprint = 0,
@@ -346,6 +347,7 @@ XrmResource::XrmResource(std::string kernelName, std::string xclbin, xir::Attrs*
         .xclbin_path = cu_rsrc_->xclbinFileName,
         .full_name = cu_full_name,
         .device_id = nullptr,
+        .device_handle = nullptr,
         .xdev = nullptr,
         .uuid =&(cu_rsrc_->uuid[0]),
         .fingerprint = 0,
@@ -550,8 +552,11 @@ IpuDeviceHandle::~IpuDeviceHandle() = default;
  * IPU device context (MUST alloc one for each thread)
  */
 IpuContext::IpuContext(IpuDeviceHandle &handle) : handle_(handle) {
-  dev_handle_ = xclOpen(handle.get_device_info().device_index, NULL, XCL_INFO);
-  
+
+  // Deal with hwemu limitation share single handle for now.
+  // dev_handle_ = xclOpen(handle.get_device_info().device_index, NULL, XCL_INFO);
+  dev_handle_ = handle_.get_device_info().device_handle;
+
   // Unclear if I need xclOpenContext for IPU
 
   //auto ret = xclOpenContext(dev_handle_, handle.get_uuid(),
@@ -580,7 +585,7 @@ IpuResource::IpuResource(std::string kernelName, std::string xclbin, xir::Attrs*
   auto handle = xclOpen(deviceIdx, NULL, XCL_INFO);
   xir::XrtBinStream binstream(xclbin);
   binstream.burn(handle);
-  xclClose(handle);
+  //xclClose(handle); Don't close it for now due to hwemu limitation
 
   uuid_ = binstream.get_uuid();
 
@@ -596,6 +601,7 @@ IpuResource::IpuResource(std::string kernelName, std::string xclbin, xir::Attrs*
     .xclbin_path = xclbin,
     .full_name = cu_full_name,
     .device_id = 0,
+    .device_handle = handle,
     .xdev = nullptr,
     .uuid = get_uuid(),
     .fingerprint = 0,
