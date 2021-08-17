@@ -29,7 +29,7 @@ export LD_LIBRARY_PATH=build:${CONDA_PREFIX}/lib:/opt/xilinx/xrt/lib:${XILINX_VA
 export XILINX_XRT=/opt/xilinx/xrt
 
 # Set below env corresponding to xclbin
-export XLNX_VART_FIRMWARE=${PWD}/tests/dpuv3int8/models/commonImgLabelDir/dpdpuv3_wrapper.hw.xilinx_u250_xdma_201830_2.xclbin
+export XLNX_VART_FIRMWARE=/opt/xilinx/overlaybins/dpuv3int8
 
 if [[ -z "${XLNX_VART_FIRMWARE}" ]]; then
     export XLNX_VART_FIRMWARE=/usr/lib
@@ -39,8 +39,9 @@ export DPUV3INT8_DEBUGMODE=0
 
 #xmodel format
 #single thread
-build/dpuv3int8.exe -r tests/dpuv3int8/models/dpuv3int8_xir/resnet50_handwritten.xmodel -t tc -d tests/dpuv3int8/models/commonImgLabelDir/imageDir100 -n 100 -s 4 -g true
+build/dpuv3int8.exe -r tests/dpuv3int8/models/dpuv3int8_xir/resnet_v1_50_tf.xmodel -t tc -d tests/dpuv3int8/models/commonImgLabelDir/imageDir100 -n 100 -s 4 -g true
 
 #multi thread
-build/dpuv3int8.exe -r tests/dpuv3int8/models/dpuv3int8_xir/resnet50_handwritten.xmodel -t tcmt -d tests/dpuv3int8/models/commonImgLabelDir/imageDir100 -n 100 -s 4 -g true
+build/dpuv3int8.exe -r tests/dpuv3int8/models/dpuv3int8_xir/resnet_v1_50_tf.xmodel -t tcmt -d tests/dpuv3int8/models/commonImgLabelDir/imageDir100 -n 100 -s 4 -g true
+build/dpuv3int8.exe -r tests/dpuv3int8/models/dpuv3int8_xir/resnet_v1_50_tf.xmodel -t tcmt -d tests/dpuv3int8/models/commonImgLabelDir/imageDir100 -n 100 -s 4 -g true -c 3
 

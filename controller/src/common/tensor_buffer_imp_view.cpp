@@ -42,12 +42,13 @@ TensorBufferExtImpView::TensorBufferExtImpView(
 
 TensorBufferExtImpView::~TensorBufferExtImpView() {
   LOG_IF(INFO, ENV_PARAM(DEBUG_TENSOR_BUFFER_ALLOCATOR) >= 3)
-      << " TensorBufferExtImpView destroyed: " << to_string();
-  ;
+      << "TensorBufferView "
+      << "@" << (void*)this << " destroyed";
+
 }
 
 TensorBuffer::location_t TensorBufferExtImpView::get_location() const {
-  return backstore_[0]->get_location();
+  return location_t::HOST_PHY; 
 }
 
 std::pair<uint64_t, size_t> TensorBufferExtImpView::data_x(
