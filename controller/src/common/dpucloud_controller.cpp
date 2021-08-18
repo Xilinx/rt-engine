@@ -588,29 +588,24 @@ void DpuCloudController::data_float2fix(int8_t* dataDst, float* dataSrc, int siz
 }
 void DpuCloudController::free_buffers(std::vector<vart::TensorBuffer*> &tbufs) {
   std::unique_lock<std::mutex> lock(hwbufio_mtx_);
-  for (unsigned ti=0; ti < tbufs.size(); ti++) {
+  for (auto tb : tbufs) {
     // free buffer if io-split disable
-    if (tbufs[ti]->get_location() == vart::TensorBuffer::location_t::HOST_VIRT) {
+    if (tb->get_location() == vart::TensorBuffer::location_t::HOST_VIRT) {
 
       for (auto it=bufs_.begin(); it != bufs_.end(); it++)
-        if (it->get() == tbufs[ti])
+        if (it->get() == tb)
         {
           bufs_.erase(it);
           break;
         }
     } else {
-      for (auto it=bufsView_.begin(); it != bufsView_.end(); it++) {
-        if (it->get() == tbufs[ti])
-        {
-           bufsView_.erase(it);
-           break;
-        }
-      }
-      auto buf = bufsView2Phy_.find(tbufs[ti]);
+      auto buf = bufsView2Phy_.find(tb);
       if (buf != bufsView2Phy_.end()) {
+        //auto tensor_sz = tbufs.size()/batch_size_;
+        //if ((ti%tensor_sz)==(tensor_sz-1)) {  
         std::unique_lock<std::mutex> lock(tbuf_mtx_);
-        auto tensor_sz = tbufs.size()/batch_size_;
-        if ((ti%tensor_sz)==(tensor_sz-1)) {  
+        auto it = tbufs2dbufs_.find(buf->second);
+        if (it != tbufs2dbufs_.end()) {
           tbufs2dbufs_.erase(buf->second);
           for (auto it=tbufs_.begin(); it != tbufs_.end(); it++) {
             if (it->get() == buf->second)
@@ -622,7 +617,14 @@ void DpuCloudController::free_buffers(std::vector<vart::TensorBuffer*> &tbufs) {
           bufsView2Phy_.erase(buf);
         }
       }  
-      tbuf2hwbufsio_.erase(tbufs[ti]);
+      tbuf2hwbufsio_.erase(tb);
+      for (auto it=bufsView_.begin(); it != bufsView_.end(); it++) {
+        if (it->get() == tb)
+        {
+           bufsView_.erase(it);
+           break;
+        }
+      }
     }
   }
 
@@ -679,6 +681,7 @@ void DpuCloudController::tensorbuffer_trans(std::vector<vart::TensorBuffer*> &in
     buffers = outputs;
     tsize = obs;
   }
+  bool tensor_find = false;
   for (unsigned i=0; i < tensors.size(); i++ ) {
     int tensor_size = tensors[i]->get_element_num()/batch_size_;
     unsigned tensor_idx=0;
@@ -726,9 +729,11 @@ void DpuCloudController::tensorbuffer_trans(std::vector<vart::TensorBuffer*> &in
         }
       } 
     }
-    if (tensor_idx == 0)
-      throw std::runtime_error("Error: invilad tensorbuffer input");
+    if (tensor_idx > 0)
+      tensor_find = true;
   }
+  if (!tensor_find)
+      throw std::runtime_error("Error: invilad tensorbuffer input");
   if (!is_input) {
       free_buffers(input_tensor_buffers);
       free_buffers(output_tensor_buffers);
