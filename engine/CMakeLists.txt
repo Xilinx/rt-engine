@@ -1,0 +1,10 @@
+
+set(ENGINE_SRCS
+  ${CMAKE_CURRENT_SOURCE_DIR}/src/engine.cpp
+  PARENT_SCOPE
+  )
+
+set(ENGINE_HDRS
+  ${CMAKE_SOURCE_DIR}/engine/src
+  PARENT_SCOPE
+  )
