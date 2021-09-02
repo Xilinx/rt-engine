@@ -1,119 +1,42 @@
 cmake_minimum_required(VERSION 3.9)
+  
+project(rt-engine)
 
-option(BUILD_EMULATION "Link Emulation Library" OFF)
+set(CMAKE_MODULE_PATH ${CMAKE_SOURCE_DIR}/cmake)
 
-if(DEFINED ENV{BUILD_VER})
-  project(rt-engine VERSION $ENV{BUILD_VER} LANGUAGES C CXX)
-else()
-  project(rt-engine VERSION 1.4.0 LANGUAGES C CXX)
-endif()
+include(setup)
 
-set(CMAKE_CXX_STANDARD 17)
-set(CMAKE_CXX_STANDARD_REQUIRED ON)
-set(CMAKE_POSITION_INDEPENDENT_CODE ON)
-add_definitions("-fpermissive" "-Wall")
-
-#set(CMAKE_VERBOSE_MAKEFILE ON)
-
-message(STATUS "Host system processor is ${CMAKE_HOST_SYSTEM_PROCESSOR}")
-message(STATUS "Target system processor is ${CMAKE_SYSTEM_PROCESSOR}")
-
-set(CMAKE_MODULE_PATH "${CMAKE_MODULE_PATH};${CMAKE_SOURCE_DIR}/cmake")
-
-set(THREADS_PREFER_PTHREAD_FLAG ON)
-find_package(Threads REQUIRED)
-find_package(Boost COMPONENTS system filesystem REQUIRED)
-find_package(jsoncpp REQUIRED)
-find_package(OpenCV REQUIRED)
-find_package(glog REQUIRED)
-#find_package(pybind11 REQUIRED)
-find_package(unilog REQUIRED)
+find_package(XRT REQUIRED HINTS /opt/xilinx/xrt)
+find_package(XRM REQUIRED)
+find_package(unilog REQUIRED) # rt-engine does not need
 find_package(target-factory REQUIRED)
 find_package(xir REQUIRED)
 find_package(vart COMPONENTS runner trace REQUIRED)
 find_package(glog REQUIRED)
-find_package(Protobuf REQUIRED) # rt-engine does not need, but this is forced upon us by target-factory
-find_package(XRM REQUIRED)
-
-find_package(XRT REQUIRED HINTS /opt/xilinx/xrt)
-if (${XRT_FOUND})
-  message(STATUS "Found XRT: ${XRT_DIR} \(found version \"${XRT_VERSION}\"\)")
-endif(${XRT_FOUND})
-
-if (BUILD_EMULATION)
-  message(STATUS "Linking XRT for Hardware Emulation")
-  set (XRT_CORE_LIBRARY XRT::xrt_hwemu)
-else()
-  set (XRT_CORE_LIBRARY XRT::xrt_core)
-endif()
-
+get_target_property(GLOG_INCLUDE_DIRS glog::glog INTERFACE_INCLUDE_DIRECTORIES)
+find_package(Protobuf REQUIRED) # rt-engine does not need
 find_path(JSONC_INCLUDE_DIRS NAMES json-c)
 find_library(JSONC_LIBRARIES NAMES json-c REQUIRED)
+find_package(Threads REQUIRED)
 
-if(TARGET jsoncpp_lib)
-  set(JSONCPP_LIBRARY_TARGET jsoncpp_lib)
-elseif(TARGET jsoncpp_static)
-  set(JSONCPP_LIBRARY_TARGET jsoncpp_static)
-else()
-  message("Can't find jsoncpp library target")
-endif()
+add_subdirectory(engine)
+add_subdirectory(runner)
+add_subdirectory(controller)
+add_subdirectory(device)
 
-file(
-  GLOB_RECURSE
-  ENGINE_SRCS
-  "engine/src/*.cpp"
-  )
-
-file(
-  GLOB_RECURSE
-  RUNNER_SRCS
-  "runner/src/*.cpp"
-  )
-
-file(
-  GLOB_RECURSE
-  DEVICE_SRCS
-  "device/src/*.cpp"
-  )
-
-file(
-  GLOB_RECURSE
-  CONTROLLER_SRCS
-  "controller/src/*.cpp"
-  )
-
-file(
-  GLOB_RECURSE
-  VITIS_SRCS
-  "vitis/src/*.cpp"
-  )
-
-##########################
-# Includes for all targets
-##########################
 include_directories(
-  ${OpenCV_INCLUDE_DIRS}
   ${XRT_INCLUDE_DIRS}
   ${XRM_INCLUDE_DIRS}
-  ${unilog_INCLUDE_DIRS}
   ${target-factory_INCLUDE_DIRS}
   ${xir_INCLUDE_DIRS}
   ${vart_INCLUDE_DIRS}
-  ${JSONCPP_INCLUDE_DIRS}
+  ${ENGINE_HDRS}
+  ${RUNNER_HDRS}
+  ${CONTROLLER_HDRS}
+  ${DEVICE_HDRS}
+  ${GLOG_INCLUDE_DIRS}
   ${JSONC_INCLUDE_DIRS}
-  ${CMAKE_SOURCE_DIR}/engine/src
-  ${CMAKE_SOURCE_DIR}/runner/src
-  ${CMAKE_SOURCE_DIR}/device/src
-  ${CMAKE_SOURCE_DIR}/controller/src
-  ${CMAKE_SOURCE_DIR}/controller/src/common
-  ${CMAKE_SOURCE_DIR}/controller/src/dpuv3me
-  ${CMAKE_SOURCE_DIR}/controller/src/dpuv4e
-  ${CMAKE_SOURCE_DIR}/controller/src/dpuv3e
-  ${CMAKE_SOURCE_DIR}/controller/src/dpuv3int8
-  ${CMAKE_SOURCE_DIR}/controller/src/ipuv1cnn
-  ${CMAKE_SOURCE_DIR}/vitis/src
   )
-        #${CMAKE_SOURCE_DIR}/tests/common
 
 add_library(
   ${PROJECT_NAME}
@@ -122,23 +45,19 @@ add_library(
   ${RUNNER_SRCS}
   ${DEVICE_SRCS}
   ${CONTROLLER_SRCS}
-  ${VITIS_SRCS}
   )
 target_link_libraries(
   ${PROJECT_NAME}
   PRIVATE
+  XRT::xrt_core
+  XRT::xilinxopencl
+  ${XRM_LIBRARIES}
   target-factory::target-factory 
-  ${Protobuf_LIBRARIES}
   vart::runner
   vart::trace
-  ${XRM_LIBRARIES}
-  ${XRT_CORE_LIBRARY}
-  XRT::xilinxopencl
-  #${XRT_OPENCL_LIBRARIES}
-  #${XRT_CORE_LIBRARIES}
   glog::glog
-  ${JSONCPP_LIBRARY_TARGET}
   ${JSONC_LIBRARIES}
+  Threads::Threads
   )
 set_target_properties(
   ${PROJECT_NAME}
@@ -147,9 +66,6 @@ set_target_properties(
   INSTALL_RPATH_USE_LINK_PATH TRUE
   )
 
-##########################
-# Install Libraries
-##########################
 install(
   TARGETS
   ${PROJECT_NAME}
@@ -158,119 +74,13 @@ install(
   DESTINATION lib
   )
 
-##########################
-# Help Other CMAKE Prjs
-##########################
-include(CMakePackageConfigHelpers)
-
-configure_file (
-  ${CMAKE_SOURCE_DIR}/cmake/config.in
-  ${CMAKE_CURRENT_BINARY_DIR}/${PROJECT_NAME}-config.cmake
-  @ONLY
-  )
-write_basic_package_version_file (
-  ${CMAKE_CURRENT_BINARY_DIR}/${PROJECT_NAME}-config-version.cmake
-  VERSION ${PROJECT_VERSION}
-  COMPATIBILITY AnyNewerVersion
-  )
-install (
-  FILES ${CMAKE_CURRENT_BINARY_DIR}/${PROJECT_NAME}-config.cmake ${CMAKE_CURRENT_BINARY_DIR}/${PROJECT_NAME}-config-version.cmake
-  COMPONENT base
-  DESTINATION share/cmake/${PROJECT_NAME}
-  )
-install(
-  EXPORT ${PROJECT_NAME}-targets
-  NAMESPACE ${PROJECT_NAME}::
-  COMPONENT base
-  DESTINATION share/cmake/${PROJECT_NAME}
-  )
-
-#########################
-# Generate Debian
-#########################
-#set(CPACK_GENERATOR "DEB")
-set(CPACK_PACKAGE_NAME "librt-engine")
-set(CPACK_DEBIAN_PACKAGE_MAINTAINER "xsun@xilinx.com")
-set(CPACK_DEB_COMPONENT_INSTALL ON)
-set(CPACK_PACKAGE_VERSION_MAJOR ${PROJECT_VERSION_MAJOR})
-set(CPACK_PACKAGE_VERSION_MINOR ${PROJECT_VERSION_MINOR})
-set(CPACK_PACKAGE_VERSION_PATCH ${PROJECT_VERSION_PATCH})
-set(CPACK_PACKAGING_INSTALL_PREFIX "/usr")
-set(CPACK_DEBIAN_ENABLE_COMPONENT_DEPENDS ON)
-set(CPACK_DEBIAN_PACKAGE_SECTION "devel")
-set(CPACK_DEBIAN_ARCHIVE_TYPE "gnutar")
-set(CPACK_DEBIAN_COMPRESSION_TYPE "gzip")
-set(CPACK_DEBIAN_PACKAGE_PRIORITY "optional")
-set(CPACK_DEBIAN_PACKAGE_DEPENDS "libvart (>=0.0.1)")
-set(CPACK_DEBIAN_FILE_NAME DEB-DEFAULT)
-if(DEFINED ENV{BUILD_NUMBER})
-  set(CPACK_DEBIAN_PACKAGE_RELEASE "r$ENV{BUILD_NUMBER}")
-endif()
-if(CMAKE_SYSTEM_PROCESSOR STREQUAL "aarch64")
-  set(CPACK_DEBIAN_PACKAGE_ARCHITECTURE "arm64")
-elseif(CMAKE_SYSTEM_PROCESSOR STREQUAL "x86_64")
-  set(CPACK_DEBIAN_PACKAGE_ARCHITECTURE "amd64")
-else()
-  set(CPACK_DEBIAN_PACKAGE_ARCHITECTURE ${CMAKE_SYSTEM_PROCESSOR})
-endif()
-set(CPACK_RPM_COMPONENT_INSTALL ON)
-set(CPACK_RPM_PACKAGE_LICENSE "Apache")
-set(CPACK_RPM_PACKAGE_GROUP "Development/Tools")
-set(CPACK_RPM_COMPRESSION_TYPE "xz")
-#set(CPACK_RPM_PACKAGE_REQUIRES "libxir >= 1.2.0, libunilog >= 1.2.0, libtarget-factory >= 1.2.0")
-set(CPACK_RPM_FILE_NAME RPM-DEFAULT)
-if(DEFINED ENV{BUILD_NUMBER})
-  set(CPACK_RPM_PACKAGE_RELEASE "r$ENV{BUILD_NUMBER}")
-endif()
-set(CPACK_RPM_PACKAGE_ARCHITECTURE ${CMAKE_SYSTEM_PROCESSOR})
-
-set(CPACK_COMPONENTS_GROUPING ALL_COMPONENTS_IN_ONE)
-
-include(CPack)
-
-cpack_add_component_group(all)
-cpack_add_component(base GROUP all)
-
-#########################
-# Testing
-#########################
-find_package(GTest)
-if(${GTest_FOUND})
+if(BUILD_TESTS)
   enable_testing()
   add_subdirectory(tests)
 endif()
 
-# This is currently broken for vart_dpuv4e
-set(TESTS "app" "dpuv3int8"  "engine"  "vart_dpuv3int8"  "vart_dpuv3me"  "vart_dpuv4e" "vart_dpuv3e" "vart_samples")
-foreach(test ${TESTS})
-  get_filename_component(exe ${test} NAME)
-  file(GLOB_RECURSE TEST_SRCS "tests/${exe}/*.cpp")
-  add_executable("${exe}.exe" ${TEST_SRCS})
-  target_link_libraries(
-    "${exe}.exe"
-    PRIVATE
-    ${PROJECT_NAME}
-    opencv_core
-    opencv_imgproc
-    opencv_highgui
-    opencv_imgcodecs
-    ${Boost_SYSTEM_LIBRARY}
-    ${Boost_FILESYSTEM_LIBRARY}
-    vart::runner
-    glog::glog
-    ${JSONC_LIBRARIES}
-    )
-  set_target_properties(
-    "${exe}.exe"
-    PROPERTIES
-    INSTALL_RPATH ${CMAKE_INSTALL_PREFIX}/lib
-    INSTALL_RPATH_USE_LINK_PATH TRUE
-    )
-  install(
-    TARGETS
-    "${exe}.exe"
-    COMPONENT tests
-    DESTINATION bin
-    )
-endforeach()
+if(UNIX)
+  include(cpackLinux)
+endif()
 
+include(helper)

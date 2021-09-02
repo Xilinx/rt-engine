@@ -176,7 +176,7 @@ void Dpuv3Int8Controller::readRegs(xclDeviceHandle xcl_handle)
 
 }
 
-static uint32_t Dpuv3Int8Controller::read32_dpu_reg(xclDeviceHandle dpu_handle, uint64_t offset) {
+uint32_t Dpuv3Int8Controller::read32_dpu_reg(xclDeviceHandle dpu_handle, uint64_t offset) {
   uint32_t val;
   xclRead(dpu_handle, XCL_ADDR_KERNEL_CTRL, offset, (void *)(&val), 4);
   return val;
@@ -794,7 +794,7 @@ void Dpuv3Int8Controller::run(const std::vector<vart::TensorBuffer*> &inputs,
 
   std::tie(data, size) = inHwTbuf->data();
 
-  if (xclUnmgdPwrite(xcl_handle, 0, data, size, inHwBuf->get_phys_addr()))
+  if (xclUnmgdPwrite(xcl_handle, 0, reinterpret_cast<void*>(data), size, inHwBuf->get_phys_addr()))
     throw std::runtime_error("Error: upload failed");
   
   auto ecmd = reinterpret_cast<ert_start_kernel_cmd*>(bo_addr);
@@ -806,7 +806,7 @@ void Dpuv3Int8Controller::run(const std::vector<vart::TensorBuffer*> &inputs,
 
   std::tie(outdata, outsize) = outHwTbuf->data();
 
-  if (xclUnmgdPread(xcl_handle, 0, outdata, outsize, outHwBuf->get_phys_addr()))
+  if (xclUnmgdPread(xcl_handle, 0, reinterpret_cast<void*>(outdata), outsize, outHwBuf->get_phys_addr()))
     throw std::runtime_error("Error: dump failed!");
   
   postprocess(output_tensor_buffers, outHwTbuf);
