@@ -31,9 +31,6 @@ namespace xir {
 class Attrs;
 }  // namespace xir
 
-class xrmCuProperty;
-class xrmCuResource;
-
 struct DeviceInfo {
   uint64_t cu_base_addr;
   uint64_t ddr_bank;
@@ -67,19 +64,6 @@ class DeviceResource {
  protected:
   std::unique_ptr<DeviceInfo> info_;
   std::array<unsigned char, sizeof(xuid_t)> uuid_;
-};
-
-class XrmResource : public DeviceResource {
- public:
-  XrmResource(std::string kernelName, std::string xclbin, xir::Attrs* attrs);
-  ~XrmResource();
-  int alloc_from_attrs(std::string kernelName, char* xclbinPath, xir::Attrs* attrs);
-  int alloc_with_deviceId(std::string kernelName, char* xclbinPath, xir::Attrs* attrs);
-  int alloc_without_deviceId(std::string kernelName, char* xclbinPath);
- private:
-  void *context_;
-  std::unique_ptr<xrmCuProperty> cu_prop_;
-  std::unique_ptr<xrmCuResource> cu_rsrc_;
 };
 
 class IpuResource : public DeviceResource {
