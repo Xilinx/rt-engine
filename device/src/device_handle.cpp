@@ -212,6 +212,10 @@ DeviceHandle::DeviceHandle(std::string kernelName, std::string xclbin, xir::Attr
   }
 
   if (type == ResourceType::XRM) {
+    const char *xclbin_path = std::getenv("XCLBIN_PATH");
+    if (xclbin_path != NULL) {
+      xclbin = std::string(xclbin_path);
+    }
     #ifdef XRM_FOUND
       resource_.reset(new XrmResource(kernelName, xclbin, attrs));
     #else
