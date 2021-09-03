@@ -124,7 +124,13 @@ private:
 } //vart namespace
 */
 
+#if defined(_WIN32)
+  #define RTE_DLLESPEC __declspec(dllexport)
+#else
+  #define RTE_DLLESPEC __attribute__((visibility("default")))
+#endif
+
 extern "C" {
-  vart::Runner* create_runner(const xir::Subgraph* subgraph);
-  vart::Runner* create_runner_with_attrs(const xir::Subgraph* subgraph, xir::Attrs* attrs);
+  RTE_DLLESPEC vart::Runner* create_runner(const xir::Subgraph* subgraph);
+  RTE_DLLESPEC vart::Runner* create_runner_with_attrs(const xir::Subgraph* subgraph, xir::Attrs* attrs);
 }

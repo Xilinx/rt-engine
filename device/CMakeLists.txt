@@ -1,8 +1,17 @@
 
+if(${XRM_FOUND})
+  message(STATUS "XRM was found")
+  set(XRM_SRCS ${CMAKE_CURRENT_SOURCE_DIR}/src/device_handle_xrm.cpp)
+  add_definitions(-DXRM_FOUND)
+else()
+  set(XRM_SRCS "")
+endif()
+
 set(DEVICE_SRCS
   ${CMAKE_CURRENT_SOURCE_DIR}/src/device_handle.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/src/device_memory.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/src/xrt_bin_stream.cpp
+  ${XRM_SRCS}
   PARENT_SCOPE
   )
 

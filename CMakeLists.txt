@@ -7,7 +7,7 @@ set(CMAKE_MODULE_PATH ${CMAKE_SOURCE_DIR}/cmake)
 include(setup)
 
 find_package(XRT REQUIRED HINTS /opt/xilinx/xrt)
-find_package(XRM REQUIRED)
+find_package(XRM)
 find_package(unilog REQUIRED) # rt-engine does not need
 find_package(target-factory REQUIRED)
 find_package(xir REQUIRED)
@@ -65,7 +65,6 @@ set_target_properties(
   INSTALL_RPATH ${CMAKE_INSTALL_PREFIX}/lib
   INSTALL_RPATH_USE_LINK_PATH TRUE
   )
-
 install(
   TARGETS
   ${PROJECT_NAME}
