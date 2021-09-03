@@ -21,6 +21,7 @@ project_name=$(basename ${script_path})
 
 # cmake args
 declare -a args
+args=(-DBUILD_TESTS=ON)
 
 # parse options
 options=$(getopt -a -n 'parse-options' -o h \
