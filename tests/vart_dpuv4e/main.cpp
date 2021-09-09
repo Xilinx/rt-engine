@@ -115,7 +115,8 @@ int main(int argc, char* argv[]) {
                               input->get_tensor()->get_shape()[0]);
    }
 
-  auto tensorr = inputs[0]->get_tensor()->get_shape()[0];
+  // unused variable
+  //auto tensorr = inputs[0]->get_tensor()->get_shape()[0];
   std::cout << std::endl << "Testing single thread..." << std::endl;
   auto t1 = std::chrono::high_resolution_clock::now();
   //std::cout<<"Loading "<<num_queries_*4<<" Images ..."<<std::endl;
@@ -143,7 +144,7 @@ int main(int argc, char* argv[]) {
         //const char *out = (const char*)outData;
         auto dims = outputs[t]->get_tensor()->get_shape();
         dims[0] = bi;
-        for (int j=1;j<dims.size();j++)
+        for (unsigned j=1;j<dims.size();j++)
           dims[j]=0;
 
         std::ofstream(output_file, mode).write((char*)outputs[t]->data(dims).first, output_tensors[t]->get_element_num()/output_tensors[t]->get_shape()[0]);

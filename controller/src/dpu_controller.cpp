@@ -285,45 +285,10 @@ XclDpuController<Dhandle, DbufIn, DbufOut>::free_tensor_buffers(std::vector<vart
 }
 
 /*
- * Sample Dpu Controller
- */
-
-SampleDpuController::SampleDpuController(std::string meta, xir::Attrs* attrs) 
-: XclDpuController<XclDeviceHandle, XclDeviceBuffer, XclDeviceBuffer>(meta, attrs) {
-}
-
-SampleDpuController::SampleDpuController(const xir::Subgraph *subgraph, xir::Attrs* attrs) 
-: XclDpuController<XclDeviceHandle, XclDeviceBuffer, XclDeviceBuffer>(subgraph, attrs) {
-}
-
-
-SampleDpuController::~SampleDpuController() {
-}
-
-void SampleDpuController::run(
-  const std::vector<vart::TensorBuffer*> &inputs, 
-  const std::vector<vart::TensorBuffer*> &outputs) {
-  XclDeviceBuffer* inbuf = dynamic_cast<XclDeviceBuffer*>(get_device_buffer(inputs[0]));
-  XclDeviceBuffer* outbuf = dynamic_cast<XclDeviceBuffer*>(get_device_buffer(outputs[0]));
-  inbuf->upload();
-  execute(inbuf, outbuf);
-  outbuf->download();
-}
-
-void SampleDpuController::execute(XclDeviceBuffer *in, XclDeviceBuffer *out) const {
-  (void)in;
-  (void)out;
-  // TODO run kernel
-}
-
-/*
  * template instantiations
  */
-template XclDpuController<XclDeviceHandle, XclDeviceBuffer, XclDeviceBuffer>::XclDpuController(std::string meta, xir::Attrs* attrs);
 template XclDpuController<XrtDeviceHandle, XrtDeviceBuffer, XrtDeviceBuffer>::XclDpuController(std::string meta, xir::Attrs* attrs);
 template XclDpuController<IpuDeviceHandle, IpuDeviceBuffer, IpuDeviceBuffer>::XclDpuController(std::string meta, xir::Attrs* attrs);
-template XclDpuController<XclDeviceHandle, XclDeviceBuffer, XclDeviceBuffer>::XclDpuController(const xir::Subgraph *subgraph, xir::Attrs* attrs);
 template XclDpuController<XrtDeviceHandle, XrtDeviceBuffer, XrtDeviceBuffer>::XclDpuController(const xir::Subgraph *subgraph, xir::Attrs* attrs);
 template XclDpuController<IpuDeviceHandle, IpuDeviceBuffer, IpuDeviceBuffer>::XclDpuController(const xir::Subgraph *subgraph, xir::Attrs* attrs);
-template DeviceBuffer* XclDpuController<XclDeviceHandle, XclDeviceBuffer, XclDeviceBuffer>::get_device_buffer(vart::TensorBuffer *tb);
 template DeviceBuffer* XclDpuController<XrtDeviceHandle, XrtDeviceBuffer, XrtDeviceBuffer>::get_device_buffer(vart::TensorBuffer *tb);

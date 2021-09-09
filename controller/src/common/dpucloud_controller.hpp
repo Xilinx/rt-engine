@@ -18,6 +18,17 @@
 #include "tensor_buffer_imp_host.hpp"
 #include "tensor_buffer_imp_view.hpp"
 #include "tensor_buffer_imp_host_phy.hpp"
+
+#if __has_include(<filesystem>)
+  #include <filesystem>
+  namespace fs = std::filesystem;
+#elif __has_include(<experimental/filesystem>)
+  #include <experimental/filesystem>
+  namespace fs = std::experimental::filesystem;
+#else
+  #error "Missing the <filesystem> header."
+#endif
+
 //
 //DEF_ENV_PARAM(DEBUG_DPU_CONTROLLER, "0")
 class DpuCloudController 

@@ -17,14 +17,8 @@
 template <typename T>
 std::shared_ptr<DpuController> DpuControllerFactory::get(std::string kernel, T subgraph, xir::Attrs* attrs) {
 
-  if ( kernel == "DPUCADF8H" || kernel == "dpdpuv3_wrapper")
-    // TODO/FIXME replace kernel name with standard name for dpuv3int8
-    // e.g., DPUABC123XYZ
+  if ( kernel == "DPUCADF8H")
   {
-    
-    if (kernel == "dpdpuv3_wrapper")
-      std::cout<<"KernelName dpdpuv3_wrapper detected, please change it to DPUCADF8H"<<std::endl;
-
     const bool DPUV3INT8_DEBUGMODE =
       std::getenv("DPUV3INT8_DEBUGMODE") ? atoi(std::getenv("DPUV3INT8_DEBUGMODE")) == 1 : false;
 
@@ -40,10 +34,6 @@ std::shared_ptr<DpuController> DpuControllerFactory::get(std::string kernel, T s
   else if (kernel == "DPUCAHX8L")
   {
     return std::make_shared<DpuV3meController>(subgraph,attrs);
-  }
-  else if (kernel == "kernelSxdnn_0")
-  {
-    return std::make_shared<SampleDpuController>(subgraph);
   }
   else if (kernel == "DPUCAHX8H")
   {

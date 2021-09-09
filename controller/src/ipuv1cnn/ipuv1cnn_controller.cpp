@@ -65,7 +65,7 @@ void Ipuv1CnnController::run(const std::vector<vart::TensorBuffer*> &inputs,
   auto execBufBOMap = contexts_[worker_id]->get_bo_addr();
 
   // Copy inputs to Device
-  for (int i = 0; i < inputs.size(); i++) {
+  for (unsigned i = 0; i < inputs.size(); i++) {
     std::memcpy(inputDeviceBuffers_[worker_id][i].get_data(), reinterpret_cast<void *>(inputs[i]->data().first), inputs[i]->data().second);
     inputDeviceBuffers_[worker_id][i].upload();
   }
@@ -78,8 +78,8 @@ void Ipuv1CnnController::run(const std::vector<vart::TensorBuffer*> &inputs,
 #define TILE_PARAM_WORD_SIZE 7
 #define LAYER_NUM_BE_LOAD 2
   uint inst[LAYER_NUM_BE_LOAD][LAYER_PARAM_WORD_SIZE] = {
-      {114, 10, 128, 112, 8, 128, 3, 3, 1, 1, 0, 0, inputDeviceBuffers_[worker_id][0].get_phys_addr(), weightsPaddr, biasesPaddr,
-          outputDeviceBuffers_[worker_id][0].get_phys_addr()},
+      {114, 10, 128, 112, 8, 128, 3, 3, 1, 1, 0, 0, (uint)inputDeviceBuffers_[worker_id][0].get_phys_addr(), (uint)weightsPaddr, (uint)biasesPaddr,
+          (uint)outputDeviceBuffers_[worker_id][0].get_phys_addr()},
       {10, 10, 128, 8, 8, 32, 3, 3, 1, 1, 0, 0, 0x10000, 0x20000, 0x30000,
           0x00000}};
   uint tile[LAYER_NUM_BE_LOAD][TILE_PARAM_WORD_SIZE] = {{2, 2, 2, 1, 1, 1, 4},
@@ -116,7 +116,7 @@ void Ipuv1CnnController::run(const std::vector<vart::TensorBuffer*> &inputs,
   }
 
   // Copy outputs from Device
-  for (int i = 0; i < outputs.size(); i++) {
+  for (unsigned i = 0; i < outputs.size(); i++) {
     outputDeviceBuffers_[worker_id][i].download();
     std::memcpy(reinterpret_cast<void *>(outputs[i]->data().first), outputDeviceBuffers_[worker_id][i].get_data(), outputs[i]->data().second);
   }

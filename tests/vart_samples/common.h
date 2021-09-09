@@ -93,7 +93,7 @@ class CpuFlatTensorBuffer : public vart::TensorBuffer {
     }
     auto dims = tensor_->get_shape();
     auto offset = 0;
-    for (auto k = 0; k < tensor_->get_shape().size(); k++) {
+    for (unsigned k = 0; k < tensor_->get_shape().size(); k++) {
       auto stride = 1;
       for (auto m = k + 1; m < tensor_->get_shape().size(); m++) {
         stride *= dims[m];

@@ -156,21 +156,6 @@ static const std::string find_kernel_name(std::string name) {
   return ret;
 }
 
-static std::vector<std::string> get_xclbins_in_dir(std::string path) {
-  if (path.find(".xclbin") != std::string::npos)
-    return {path};
-
-  std::vector<std::string> xclbinPaths;
-
-  for (const auto& file : fs::directory_iterator(path)) {
-    auto fullPath = std::string(file.path());
-    if (fullPath.find(".xclbin") != std::string::npos)
-      xclbinPaths.push_back(fullPath);
-  }
-
-  return xclbinPaths;
-}
-
 std::string KernelNameManager::getRealKernelName(std::string xclbinPath, std::string kernelName) {
   xir::XrtBinStream binstream(xclbinPath);
   auto cu_num = binstream.get_num_of_cu();
@@ -224,90 +209,6 @@ DeviceHandle::DeviceHandle(std::string kernelName, std::string xclbin, xir::Attr
   }
 
   throw std::runtime_error("Error: Unknown Resource Type Requested");
-}
-
-/*
- * XCL device handle
- */
-
-// Initialize shared state
-std::map<std::pair<xrt_device*,size_t>, size_t> XclDeviceHandle::use_count_;
-std::mutex XclDeviceHandle::use_count_mutex_;
-
-XclDeviceHandle::XclDeviceHandle(std::string kernelName, std::string xclbin, xir::Attrs* attrs)
-    : DeviceHandle(kernelName, xclbin, attrs), context_(nullptr), commands_(nullptr),
-      program_(nullptr) {
-
-  // Wait turn to run OCL Commands
-  std::lock_guard<std::mutex> lockGuard0(g_allocation_lock);
-
-  // create context
-  int err;
-  context_ =
-      clCreateContext(0, 1, &get_device_info().device_id, NULL, NULL, &err);
-  if (!context_)
-    throw std::runtime_error("Error: failed to create a compute context");
-
-  const int qprop = CL_QUEUE_OUT_OF_ORDER_EXEC_MODE_ENABLE;
-  commands_ =
-      clCreateCommandQueue(context_, get_device_info().device_id, qprop, &err);
-  if (!commands_)
-    throw std::runtime_error("Error: failed to create command queue");
-
-  if (get_device_info().cu_index == 0)
-  {
-    // read xclbin and create program
-    std::string fnm = std::string(get_device_info().xclbin_path);
-    std::ifstream stream(fnm);
-    stream.seekg(0, stream.end);
-    size_t size = stream.tellg();
-    stream.seekg(0, stream.beg);
-    std::vector<char> xclbinChar(size);
-    stream.read(xclbinChar.data(), size);
-    auto data = reinterpret_cast<const unsigned char *>(xclbinChar.data());
-
-    /*
-     * Note: the clCreateProgramWithBinary below may emit an error in 2019.x
-     * if the device is already programmed. (This is okay -- we don't want to
-     * reprogram and we can continue using the device with is current program.)
-     * Soren has fixed this in 2020.x to be more forgiving. I.e. allowing multiple
-     * calls to clCreateProgramWithBinary as long as same binary is used.
-     * https://github.com/Xilinx/XRT/pull/3379.
-     * http://jira.xilinx.com/browse/CR-1056085.
-     */
-    cl_int status = CL_SUCCESS;
-    program_ = clCreateProgramWithBinary(
-        context_, 1, &get_device_info().device_id, &size, &data, &status, &err);
-  }
-
-  {
-    auto devCU = std::make_pair(get_device_info().xdev,get_device_info().cu_index);
-    std::lock_guard<std::mutex> lockGuard(use_count_mutex_);
-    if (use_count_.find(devCU) == use_count_.end()) {
-      xrtcpp::acquire_cu_context(get_device_info().xdev, get_device_info().cu_index);
-      use_count_[devCU] = 1;
-    }
-    else
-      ++use_count_[devCU];
-  }
-}
-
-XclDeviceHandle::~XclDeviceHandle() {
-  {
-    auto devCU = std::make_pair(get_device_info().xdev,get_device_info().cu_index);
-    std::lock_guard<std::mutex> lockGuard(use_count_mutex_);
-    if (use_count_.find(devCU) != use_count_.end() && get_device_info().xdev) {
-      xrtcpp::release_cu_context(get_device_info().xdev, get_device_info().cu_index);
-      use_count_.erase(devCU);
-    }
-  }
-
-  if (program_)
-    clReleaseProgram(program_);
-  if (commands_)
-    clReleaseCommandQueue(commands_);
-  if (context_)
-    clReleaseContext(context_);
 }
 
 /*

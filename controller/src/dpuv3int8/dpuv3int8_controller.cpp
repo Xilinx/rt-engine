@@ -176,16 +176,19 @@ void Dpuv3Int8Controller::readRegs(xclDeviceHandle xcl_handle)
 
 }
 
+// xclRead is deprecated
+// Not sure what the replacement will be
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
 uint32_t Dpuv3Int8Controller::read32_dpu_reg(xclDeviceHandle dpu_handle, uint64_t offset) {
   uint32_t val;
   xclRead(dpu_handle, XCL_ADDR_KERNEL_CTRL, offset, (void *)(&val), 4);
   return val;
 }
+#pragma GCC diagnostic pop
 
 void Dpuv3Int8Controller::initializeTaskDRUVariables()
 {
-    std::cout<<"-----------------------------------------------"<<std::endl;
-
     if(xmodel_->getDruMode())
     {
       uint32_t druAddr = xmodel_->getInDdrSize();

@@ -76,22 +76,6 @@ class DeviceBuffer {
   DeviceBuffer() = delete;
 };
 
-class XclDeviceBuffer : public DeviceBuffer {
- public:
-  XclDeviceBuffer(const XclDeviceHandle *handle, vart::TensorBuffer *tbuf, unsigned bank);
-  XclDeviceBuffer(const XclDeviceHandle *handle, void *data, size_t size, unsigned bank);
-  ~XclDeviceBuffer();
-  void upload() const override;
-  void download() const override;
-  void sync_for_read(uint64_t offset, size_t size) override;
-  void sync_for_write(uint64_t offset, size_t size) override;
-  void copy_from_host(const void* buf, size_t size, size_t offset) override;
-  void copy_to_host(void* buf, size_t size, size_t offset) override;
-
- private:
-  cl_mem mem_;
-};
-
 class XrtDeviceBuffer : public DeviceBuffer {
  public:
   XrtDeviceBuffer(const XrtDeviceHandle *handle, vart::TensorBuffer *tbuf, unsigned bank);
