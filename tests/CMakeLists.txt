@@ -81,6 +81,7 @@ foreach(test ${TESTS})
     vart::runner
     glog::glog
     ${JSONC_LIBRARIES}
+    stdc++fs
     )
   set_target_properties(
     "${exe}.exe"

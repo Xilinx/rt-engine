@@ -20,14 +20,11 @@
 #include <sys/types.h>
 #include <assert.h>
 #include <ert.h>
-#include <unistd.h>
 #include <xrt.h>
 #include <algorithm>
 #include <chrono>
 #include <regex>
 #include <sstream>
-#include <sys/stat.h>
-#include <sys/types.h>
 #include <iomanip>
 #include <math.h>
 #include "engine.hpp"
@@ -35,15 +32,9 @@
 #include "xir/graph/graph.hpp"
 #include "xir/graph/subgraph.hpp"
 #include "json-c/json.h"
-
 #include "dpu_runner.hpp"
 #include "xir/tensor/tensor.hpp"
 #include "vart/tensor_buffer.hpp"
-//#include "common/graph.hpp"
-//#include "tensor_buffer_imp_host.hpp"
-//#include "tensor_buffer_imp_view.hpp"
-//#include "tensor_buffer_imp_host_phy.hpp"
-
 #include "vitis/ai/env_config.hpp"
 #include "vitis/ai/profiling.hpp"
 #include "device_handle.hpp"

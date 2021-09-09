@@ -16,7 +16,6 @@
 #include <climits>
 #include <fstream>
 #include <memory>
-#include <dirent.h>
 #include <iostream>
 #include <cstring>
 #pragma GCC diagnostic push
@@ -163,16 +162,10 @@ static std::vector<std::string> get_xclbins_in_dir(std::string path) {
 
   std::vector<std::string> xclbinPaths;
 
-  DIR *dir;
-  struct dirent *ent;
-  if ((dir = opendir(path.c_str())) != NULL) {
-    /* print all the files and directories within directory */
-    while ((ent = readdir(dir)) != NULL) {
-      std::string name(ent->d_name);
-      if (name.find(".xclbin") != std::string::npos)
-        xclbinPaths.push_back(path + "/" + name);
-    }
-    closedir(dir);
+  for (const auto& file : fs::directory_iterator(path)) {
+    auto fullPath = std::string(file.path());
+    if (fullPath.find(".xclbin") != std::string::npos)
+      xclbinPaths.push_back(fullPath);
   }
 
   return xclbinPaths;

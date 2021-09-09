@@ -20,7 +20,6 @@
 #include <sys/types.h>
 #include <assert.h>
 #include <ert.h>
-#include <unistd.h>
 #include <xrt.h>
 #include <algorithm>
 #include <chrono>
