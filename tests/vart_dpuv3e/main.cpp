@@ -118,7 +118,7 @@ int main(int argc, char* argv[]) {
 
       for (int bi = 0; bi < core_batch; bi++) {
 	dims[0]=bi;
-        for (int o = 0; o < output_tensors.size(); o++) {
+        for (unsigned o = 0; o < output_tensors.size(); o++) {
           auto output_file = "./output_th" + to_string(th) + "_o" + to_string(o) + "_b" + to_string(bi) + ".bin";
           std::ofstream(output_file, mode).write((char*)outputs[o]->data(dims).first, tensor_batch*output_tensors[o]->get_element_num()/output_tensors[o]->get_shape()[0]);
         }

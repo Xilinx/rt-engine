@@ -16,7 +16,7 @@
 #include <iostream>
 #include <fstream>
 #include <sstream>
-#include <assert.h>.
+#include <assert.h>
 #include <iomanip>
 #include <regex>
 #include "json-c/json.h"

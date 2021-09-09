@@ -75,16 +75,6 @@ void XrtBinStream::init_cu_indices() {
   });
 }
 
-static std::string to_string(const xuid_t x) {
-  char buf[sizeof(xuid_t) * 4 + 1];
-  char* p = &buf[0];
-  for (auto i = 0u; i < sizeof(xuid_t); ++i) {
-    sprintf(p, " %02x", x[i]);
-    p = p + strlen(p);
-  }
-  return std::string(buf);
-}
-
 void XrtBinStream::dump_layout() const {
   //LOG(INFO) << "uuid: " << to_string(uuid_) << "\nDSA: " << dsa_;
   for (auto i = 0; i < ip_layout_->m_count; ++i) {
@@ -126,7 +116,6 @@ void XrtBinStream::burn(int device_id) {
 }
 void XrtBinStream::burn(xclDeviceHandle handle) {
   const xclBin* blob = (const xclBin*)data_;
-  if (xclLockDevice(handle)) throw std::runtime_error("Cannot lock device");
   if (xclLoadXclBin(handle, blob)) throw std::runtime_error("Bitstream download failed !");
 }
 std::array<unsigned char, sizeof(xuid_t)> XrtBinStream::get_uuid() const {

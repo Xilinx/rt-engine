@@ -202,7 +202,8 @@ cout << inputs.size()<<endl;
                                    input->get_tensor()->get_shape()[0]);
     }
 
-  auto tensorr = inputs[0]->get_tensor()->get_shape()[0];
+  // Unused variable
+  //auto tensorr = inputs[0]->get_tensor()->get_shape()[0];
 
   std::cout << std::endl << "Testing single thread..." << std::endl;
   auto t1 = std::chrono::high_resolution_clock::now();

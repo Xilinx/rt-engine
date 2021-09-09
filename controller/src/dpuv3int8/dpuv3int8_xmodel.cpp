@@ -254,8 +254,9 @@ void Xmodel::loadParamsJson(json_object* jobj, bool isDebugMode)
     std::string keyString(key);
     if(keyString.compare("inputs") == 0)
     {
+      if (val)
       multiFormat = true;
-      assert(val);
+      else throw std::runtime_error("Error: Parsing JSON object");
     }
   }
   
@@ -268,16 +269,18 @@ void Xmodel::loadParamsJson(json_object* jobj, bool isDebugMode)
       {
         json_object_object_foreach(val, inputkey, inputval)
         {
-          assert(inputkey);
+          if(inputkey)
           inputParams_.push_back(inputLayerParams(inputval, isDebugMode, multiFormat));
-        }
+          else throw std::runtime_error("Error: Parsing json object");
+	}
       }
       if(keyString.compare("outputs") == 0)
       {
         json_object_object_foreach(val, outputkey, outputval)
         {
-          assert(outputkey);
+          if(outputkey)
           outputParams_.push_back(outputLayerParams(outputval, isDebugMode, multiFormat)); 
+          else throw std::runtime_error("Error: Parsing json object");
         }
       }
     }
@@ -343,16 +346,18 @@ void Xmodel::loadParamsSubgraph(const xir::Subgraph *subgraph, bool isDebugMode)
       {
         json_object_object_foreach(val, inputkey, inputval)
         {
-          assert(inputkey);
+          if(inputkey)
           inputParams_.push_back(inputLayerParams(inputval, isDebugMode, multiFormat));
+          else throw std::runtime_error("Error: Parsing json object");
         }
       }
       if(keyString.compare("outputs") == 0)
       {
         json_object_object_foreach(val, outputkey, outputval)
         {
-          assert(outputkey);
+          if(outputkey)
           outputParams_.push_back(outputLayerParams(outputval, isDebugMode, multiFormat)); 
+          else throw std::runtime_error("Error: Parsing json object");
         }
       }
     }

@@ -27,16 +27,6 @@
 #include <CL/opencl.h>
 #include "xir/attrs/attrs.hpp"
 
-#if __has_include(<filesystem>)
-  #include <filesystem>
-  namespace fs = std::filesystem;
-#elif __has_include(<experimental/filesystem>)
-  #include <experimental/filesystem>
-  namespace fs = std::experimental::filesystem;
-#else
-  #error "Missing the <filesystem> header."
-#endif
-
 namespace xir {
 //class Subgraph;
 class Attrs;
@@ -97,26 +87,6 @@ class DeviceHandle {
   void raw_acquire(std::string kernelName, std::string xclbin);
   std::unique_ptr<DeviceResource> resource_;
   DeviceHandle() = delete;
-};
-
-class XclDeviceHandle : public DeviceHandle {
- public:
-  XclDeviceHandle(std::string kernelName, std::string xclbin, xir::Attrs* attrs);
-  virtual ~XclDeviceHandle();
-  const cl_context& get_context() const { return context_; }
-  const cl_command_queue& get_command_queue() const { return commands_; }
-  const cl_program& get_program() const { return program_; }
-  
- private:
-  cl_context context_;
-  cl_command_queue commands_;
-  cl_program program_;
-
-  // use_count_ map used to track how many runners are assigned
-  //   to a given (xrt_device, cu_index) pair.
-  //   Because it is static, it is shared state across threads, and must be protected by a mutex
-  static std::map<std::pair<xrt_device*,size_t>, size_t> use_count_;
-  static std::mutex use_count_mutex_;
 };
 
 class XrtContext;

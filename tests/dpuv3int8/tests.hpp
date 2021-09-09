@@ -21,7 +21,6 @@
 #include <xir/graph/graph.hpp>
 #include <xir/tensor/tensor.hpp>
 
-using namespace std;
 class Test {
   virtual void run() = 0;
 };

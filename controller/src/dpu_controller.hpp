@@ -79,17 +79,3 @@ class XclDpuController : public DpuController {
 private:
   std::unique_ptr<xir::Attrs> default_attrs_;
 };
-
-class SampleDpuController 
- : public XclDpuController<XclDeviceHandle, XclDeviceBuffer, XclDeviceBuffer> {
- public:
-  SampleDpuController(std::string meta, xir::Attrs* attrs=nullptr);
-  SampleDpuController(const xir::Subgraph *subgraph, xir::Attrs* attrs=nullptr);
-  virtual ~SampleDpuController() override;
-  virtual void run(
-    const std::vector<vart::TensorBuffer*> &inputs, 
-    const std::vector<vart::TensorBuffer*> &outputs) override;
-
- private:
-  virtual void execute(XclDeviceBuffer *in, XclDeviceBuffer *out) const;
-};
