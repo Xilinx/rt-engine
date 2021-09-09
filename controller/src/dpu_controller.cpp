@@ -15,10 +15,8 @@
 #include <iostream>
 #include <fstream>
 #include <sstream>
-#include <unistd.h>
 #include <unordered_map>
 #include <cstdlib>
-//#include <cmath>
 #pragma GCC diagnostic push 
 #pragma GCC diagnostic ignored "-Wignored-qualifiers"
 #include "CL/cl_ext_xilinx.h"

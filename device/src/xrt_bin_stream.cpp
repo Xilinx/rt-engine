@@ -14,28 +14,7 @@
 
 #include "xrt_bin_stream.hpp"
 
-#include <fcntl.h>
-#include <sys/mman.h>
-#include <sys/stat.h>
-#include <sys/types.h>
-#include <unistd.h>
-#include <xclbin.h>
-#include <xrt.h>
-
-#include <cstring>
-#include <map>
-#include <numeric>
-#include <sstream>
-
 namespace xir {
-
-static size_t get_size(int fd) {
-  struct stat statbuf;
-  const auto r_stat = fstat(fd, &statbuf);
-  if (r_stat) throw std::runtime_error("fstat error");
-  if (statbuf.st_size == 0) throw std::runtime_error("must not empty file");
-  return statbuf.st_size;
-}
 
 XrtBinStream::XrtBinStream(const std::string filename) {
   init_fd(filename);
@@ -48,14 +27,22 @@ XrtBinStream::XrtBinStream(const std::string filename) {
 }
 
 XrtBinStream::~XrtBinStream() {
-  munmap(data_, get_size(fd_));
-  close(fd_);
+  delete data_;
 }
-void XrtBinStream::init_fd(const std::string filename) {
-  fd_ = open(filename.c_str(), O_RDONLY | O_CLOEXEC);
-  if (!fd_) throw std::runtime_error("open(" + filename + ") failed.");
-  data_ = mmap(NULL, get_size(fd_), PROT_READ, MAP_PRIVATE, fd_, 0);
-  if (data_ == MAP_FAILED) throw std::runtime_error("cannot mmap");
+
+void XrtBinStream::init_fd(const std::string fnm) {
+  std::ifstream stream(fnm);
+  if (!stream)
+    throw std::runtime_error("Failed to open xclbin file '" + fnm + "' for reading");
+
+  stream.seekg(0, stream.end);
+  size_t size = stream.tellg();
+  stream.seekg(0, stream.beg);
+
+  data_ = new char[size];
+
+  stream.read(data_, size);
+
 }
 void XrtBinStream::init_top() { top_ = (const axlf*)data_; }
 void XrtBinStream::init_uuid() {  //
@@ -65,12 +52,12 @@ void XrtBinStream::init_uuid() {  //
 
 void XrtBinStream::init_ip_layout() {
   auto ip = xclbin::get_axlf_section(top_, IP_LAYOUT);
-  ip_layout_ = (ip_layout*)(((char*)data_) + ip->m_sectionOffset);
+  ip_layout_ = (ip_layout*)(data_ + ip->m_sectionOffset);
 }
 
 void XrtBinStream::init_mem_topology() {
   auto topo = xclbin::get_axlf_section(top_, MEM_TOPOLOGY);
-  topology_ = (mem_topology*)(((char*)data_) + topo->m_sectionOffset);
+  topology_ = (mem_topology*)(data_+ topo->m_sectionOffset);
 }
 void XrtBinStream::init_cu_names() {
   for (auto i = 0; i < ip_layout_->m_count; ++i) {

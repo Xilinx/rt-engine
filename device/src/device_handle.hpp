@@ -17,6 +17,7 @@
 /*
  * Reference: vart/xrt-device-handle/src/xrt_device_handle_butler.hpp
  */
+#include <array>
 #include <map>
 #include <unordered_map>
 #include <mutex>
@@ -25,6 +26,16 @@
 #include <xrt.h>
 #include <CL/opencl.h>
 #include "xir/attrs/attrs.hpp"
+
+#if __has_include(<filesystem>)
+  #include <filesystem>
+  namespace fs = std::filesystem;
+#elif __has_include(<experimental/filesystem>)
+  #include <experimental/filesystem>
+  namespace fs = std::experimental::filesystem;
+#else
+  #error "Missing the <filesystem> header."
+#endif
 
 namespace xir {
 //class Subgraph;

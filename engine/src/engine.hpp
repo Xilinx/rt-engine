@@ -20,6 +20,8 @@
 #include <mutex>
 #include <thread>
 #include <vector>
+#include <string>
+#include <chrono>
 #include "blockingconcurrentqueue.hpp"
 
 class EngineThreadPool {
