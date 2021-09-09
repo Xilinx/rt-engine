@@ -16,8 +16,6 @@
 #include <iostream>
 #include <fstream>
 #include <iterator>
-#include <sys/stat.h>
-#include <sys/types.h>
 #include <assert.h>
 #include <ert.h>
 #include <xrt.h>
@@ -267,11 +265,11 @@ void DpuCloudController::init_graph(vector<unsigned> hbmw, vector<unsigned> hbmc
     std::stringstream ss;
     ss << "dump_" << std::put_time(std::localtime(&t), "%Y%m%d%H%M%S"); 
     dump_folder_ = ss.str();
-    if(mkdir(dump_folder_.c_str(),S_IRUSR | S_IWUSR | S_IXUSR | S_IRWXG | S_IRWXO))
+    if(!fs::create_directory(dump_folder_.c_str()))
       throw std::runtime_error("Error: Create dump folder error");
     for(auto i = 0;i<batch_size_;i++) {
       std::string tmp = dump_folder_ + "/E" + std::to_string(i);
-      if(mkdir(tmp.c_str(),S_IRUSR | S_IWUSR | S_IXUSR | S_IRWXG | S_IRWXO))
+      if(!fs::create_directory(tmp.c_str()))
         throw std::runtime_error("Error: Create dump sub folder error"); 
     } 
   }

@@ -15,7 +15,6 @@
 #include <assert.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <sys/stat.h>
 #include <cassert>
 #include <cmath>
 #include <cstdio>

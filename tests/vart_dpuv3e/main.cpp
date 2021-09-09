@@ -13,11 +13,8 @@
 // limitations under the License.
 
 #include <assert.h>
-#include <dirent.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <sys/stat.h>
-#include <unistd.h>
 
 #include <cassert>
 #include <cmath>
@@ -35,13 +32,20 @@
 #include <xir/graph/graph.hpp>
 #include <xir/tensor/tensor.hpp>
 #include "common.h"
+#if __has_include(<filesystem>)
+  #include <filesystem>
+  namespace fs = std::filesystem;
+#elif __has_include(<experimental/filesystem>)
+  #include <experimental/filesystem>
+  namespace fs = std::experimental::filesystem;
+#else
+  #error "Missing the <filesystem> header."
+#endif
 
 using namespace std;
 static long getFileSize(std::string filename)
 {
-    struct stat stat_buf;
-    int rc = stat(filename.c_str(), &stat_buf);
-    return rc == 0 ? stat_buf.st_size : -1;
+    return fs::file_size(filename.c_str());
 }
 
 int main(int argc, char* argv[]) {
