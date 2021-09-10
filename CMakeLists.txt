@@ -8,6 +8,10 @@ include(setup)
 
 find_package(XRT REQUIRED HINTS /opt/xilinx/xrt)
 find_package(XRM)
+if (${XRM_FOUND})
+  message(STATUS "XRM was found at ${XRM_CMAKE_DIR}")
+  add_definitions(-DXRM_FOUND)
+endif()
 find_package(unilog REQUIRED) # rt-engine does not need
 find_package(target-factory REQUIRED)
 find_package(xir REQUIRED)

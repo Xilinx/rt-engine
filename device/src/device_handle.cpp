@@ -30,6 +30,10 @@
 #include "vitis/ai/env_config.hpp"
 #include <glog/logging.h>
 
+#ifdef XRM_FOUND
+  #include "device_handle_xrm.hpp"
+#endif
+
 DEF_ENV_PARAM(DEBUG_DEVICE_HANDLE, "0")
 static std::atomic<bool> naive_resource_mgr_on_(false);
 static std::atomic<unsigned> naive_resource_mgr_cu_idx_(0);
