@@ -18,12 +18,12 @@ set(CONTROLLER_SRCS
   )
 
 set(CONTROLLER_HDRS
-  ${CMAKE_SOURCE_DIR}/controller/src
-  ${CMAKE_SOURCE_DIR}/controller/src/common
-  ${CMAKE_SOURCE_DIR}/controller/src/dpuv3me
-  ${CMAKE_SOURCE_DIR}/controller/src/dpuv4e
-  ${CMAKE_SOURCE_DIR}/controller/src/dpuv3e
-  ${CMAKE_SOURCE_DIR}/controller/src/dpuv3int8
-  ${CMAKE_SOURCE_DIR}/controller/src/ipuv1cnn
+  ${PROJECT_SOURCE_DIR}/controller/src
+  ${PROJECT_SOURCE_DIR}/controller/src/common
+  ${PROJECT_SOURCE_DIR}/controller/src/dpuv3me
+  ${PROJECT_SOURCE_DIR}/controller/src/dpuv4e
+  ${PROJECT_SOURCE_DIR}/controller/src/dpuv3e
+  ${PROJECT_SOURCE_DIR}/controller/src/dpuv3int8
+  ${PROJECT_SOURCE_DIR}/controller/src/ipuv1cnn
   PARENT_SCOPE
   )
