@@ -14,6 +14,6 @@ set(DEVICE_SRCS
   )
 
 set(DEVICE_HDRS
-  ${CMAKE_SOURCE_DIR}/device/src
+  ${PROJECT_SOURCE_DIR}/device/src
   PARENT_SCOPE
   )

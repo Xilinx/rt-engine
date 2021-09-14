@@ -6,6 +6,6 @@ set(RUNNER_SRCS
   )
 
 set(RUNNER_HDRS
-  ${CMAKE_SOURCE_DIR}/runner/src
+  ${PROJECT_SOURCE_DIR}/runner/src
   PARENT_SCOPE
   )

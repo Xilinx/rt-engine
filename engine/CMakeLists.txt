@@ -5,6 +5,6 @@ set(ENGINE_SRCS
   )
 
 set(ENGINE_HDRS
-  ${CMAKE_SOURCE_DIR}/engine/src
+  ${PROJECT_SOURCE_DIR}/engine/src
   PARENT_SCOPE
   )

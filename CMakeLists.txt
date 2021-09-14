@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 3.9)
   
 project(rt-engine)
 
-set(CMAKE_MODULE_PATH ${CMAKE_SOURCE_DIR}/cmake)
+set(CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/cmake)
 
 include(setup)
 
@@ -12,10 +12,11 @@ if (${XRM_FOUND})
   message(STATUS "XRM was found at ${XRM_CMAKE_DIR}")
   add_definitions(-DXRM_FOUND)
 endif()
-find_package(unilog REQUIRED) # rt-engine does not need
-find_package(target-factory REQUIRED)
-find_package(xir REQUIRED)
-find_package(vart COMPONENTS runner trace REQUIRED)
+if(CMAKE_PROJECT_NAME STREQUAL PROJECT_NAME)
+  find_package(target-factory REQUIRED)
+  find_package(xir REQUIRED)
+  find_package(vart COMPONENTS runner trace REQUIRED)
+endif()
 find_package(glog REQUIRED)
 get_target_property(GLOG_INCLUDE_DIRS glog::glog INTERFACE_INCLUDE_DIRECTORIES)
 find_package(Protobuf REQUIRED) # rt-engine does not need
