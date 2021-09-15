@@ -48,7 +48,9 @@ inputLayerParams::inputLayerParams(json_object* jobj, bool isDebugMode, bool mul
 {
   if(multiFormat)
   {
-    json_object* obj = json_object_object_get(jobj, "shape");
+    //json_object* obj = json_object_object_get(jobj, "shape");
+    json_object* obj = NULL;
+    json_object_object_get_ex(jobj, "shape", &obj);
     json_object* shapeVal;
     shapeVal = json_object_array_get_idx(obj, 1);
     inH_ = json_object_get_int(shapeVal);
@@ -82,7 +84,9 @@ outputLayerParams::outputLayerParams(json_object* jobj, bool isDebugMode, bool m
 {
   if(multiFormat)
   {
-    json_object* obj = json_object_object_get(jobj, "shape");
+    //json_object* obj = json_object_object_get_ex(jobj, "shape",obj);
+    json_object  *obj = NULL;
+    json_object_object_get_ex(jobj, "shape",&obj);
     json_object* shapeVal;
     shapeVal = json_object_array_get_idx(obj, 1);
     outH_ = json_object_get_int(shapeVal);
