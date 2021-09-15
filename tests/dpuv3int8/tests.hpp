@@ -96,10 +96,10 @@ class cpuUtil
 
   private:
     void writeToBinaryFile();
-    std::vector<pair<float,int>> sortArr(std::vector<float> arr, int n); 
+    std::vector<std::pair<float,int>> sortArr(std::vector<float> arr, int n); 
     void load_golden();
     void load_synset();
-    void printPredictionLabels(std::vector<std::vector<pair<float,int>>> indices, int queryNum);
+    void printPredictionLabels(std::vector<std::vector<std::pair<float,int>>> indices, int queryNum);
     std::vector<float> computeSoftmax(std::vector<int8_t> input);
     void loadImages(std::string img_dir, unsigned num_queries);
     void resizeImgs(std::vector<cv::Mat> &input_images, std::vector<cv::Mat> &resize_images, void *din_data, int image_width, int image_height, int batch_size);
@@ -107,7 +107,7 @@ class cpuUtil
 
     int top1Count_;
     int top5Count_;
-    std::vector<pair<std::string,int>> goldenLabels_;
+    std::vector<std::pair<std::string,int>> goldenLabels_;
     std::vector<std::string> synsetLabels_;
     std::vector<std::string> imgFileNames_;
     std::vector<std::string> fileNames_;

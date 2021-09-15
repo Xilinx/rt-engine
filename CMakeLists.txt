@@ -13,6 +13,7 @@ if (${XRM_FOUND})
   add_definitions(-DXRM_FOUND)
 endif()
 if(CMAKE_PROJECT_NAME STREQUAL PROJECT_NAME)
+  find_package(unilog REQUIRED)
   find_package(target-factory REQUIRED)
   find_package(xir REQUIRED)
   find_package(vart COMPONENTS runner trace REQUIRED)
@@ -35,6 +36,8 @@ include_directories(
   ${target-factory_INCLUDE_DIRS}
   ${xir_INCLUDE_DIRS}
   ${vart_INCLUDE_DIRS}
+  ${vart_INCLUDE_DIRS}/vart/experimental
+  ${vart_INCLUDE_DIRS}/vart/trace
   ${ENGINE_HDRS}
   ${RUNNER_HDRS}
   ${CONTROLLER_HDRS}
