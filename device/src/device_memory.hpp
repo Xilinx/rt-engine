@@ -15,9 +15,9 @@
 #pragma once
 
 #include "xir/tensor/tensor.hpp"
-#include "vart/runner.hpp"
-//#include "tensor_buffer.hpp"
 #include "device_handle.hpp"
+#include "vart/tensor_buffer.hpp"
+
 
 class DeviceBuffer {
  public:

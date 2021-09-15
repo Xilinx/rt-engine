@@ -38,9 +38,6 @@ DEF_ENV_PARAM(DEBUG_DEVICE_HANDLE, "0")
 static std::atomic<bool> naive_resource_mgr_on_(false);
 static std::atomic<unsigned> naive_resource_mgr_cu_idx_(0);
 
-static std::mutex g_allocation_lock;
-
-
 DeviceResource::DeviceResource(std::string kernelName, std::string xclbin, xir::Attrs* attrs) {
   // fallback unmanaged/caveman resource manager
   auto num_devices = xclProbe();
