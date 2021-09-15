@@ -13,6 +13,7 @@
 // limitations under the License.
 
 #include <vector>
+#include <cstring>
 #include <string>
 #include <iostream>
 #include <iterator>

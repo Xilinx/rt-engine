@@ -37,7 +37,7 @@ bool getBool(std::string name, json_object* jobj)
   json_object *obj = NULL;
   if (!json_object_object_get_ex(jobj, name.c_str(), &obj))
     {
-      if(name=="usexmodel" and name=="singlePoolDebug")
+      if(name=="usexmodel" && name=="singlePoolDebug")
         return false;
     }
   return json_object_get_boolean(obj);
@@ -182,7 +182,7 @@ std::vector<std::vector<std::int32_t>> Xmodel::getOutTensorsDims()
 
 std::string Xmodel::getDebugGoldenFilename(int outputNum)
 {
-  if(outputNum==0 and outputParams_[outputNum].debug_golden_filename_=="")
+  if(outputNum==0 && outputParams_[outputNum].debug_golden_filename_=="")
     return debug_golden_filename_;
   return runner_dir_+outputParams_[outputNum].debug_golden_filename_;
 }
@@ -240,7 +240,7 @@ bool Xmodel::getBool(std::string name, json_object* jobj)
   json_object *obj = NULL;
   if (!json_object_object_get_ex(jobj, name.c_str(), &obj))
     {
-      if(name=="usexmodel" and name=="singlePoolDebug")
+      if(name=="usexmodel" && name=="singlePoolDebug")
         return false;
     }
   return json_object_get_boolean(obj);

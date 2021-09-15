@@ -27,7 +27,7 @@ Dpuv3Int8DebugController::Dpuv3Int8DebugController(std::string meta) : Dpuv3Int8
   loadBinFile(xmodel_->getDebugDinFilename(), true, 0);
   for(uint32_t i=0; i<xmodel_->getOutputNum(); i++)
     loadBinFile(xmodel_->getDebugGoldenFilename(i), false, i);
-  if(not xmodel_->getSinglePoolDebug())
+  if(!xmodel_->getSinglePoolDebug())
   {
     debugDumpParams((void*)params_.data(), params_.size()*BATCH_SIZE);
     debugDumpParamsDdrFormat();
@@ -47,7 +47,7 @@ Dpuv3Int8DebugController::Dpuv3Int8DebugController(const xir::Subgraph *subgraph
   for(uint32_t i=0; i<xmodel_->getOutputNum(); i++)
     loadBinFile(xmodel_->getDebugGoldenFilename(i), false, i);
   
-  if(not xmodel_->getSinglePoolDebug())
+  if(!xmodel_->getSinglePoolDebug())
   {
     debugDumpParams((void*)params_.data(), params_.size()*BATCH_SIZE);
     debugDumpParamsDdrFormat();
@@ -131,7 +131,7 @@ void Dpuv3Int8DebugController::preprocess(vart::TensorBuffer* stdbuf, vart::Tens
 {
     if(xmodel_->getChannelAugmentationMode())
       channelAug();
-    if(not xmodel_->getDruMode())
+    if(!xmodel_->getDruMode())
     {
       batchInterleave();
       memcpy((void*)hwbuf->data().first, (void*)debugBatchInterleaved_.data(), (debugBatchInterleaved_.size()));
@@ -225,7 +225,7 @@ void Dpuv3Int8DebugController::initRunBufs(uint64_t *buf_addr, XrtDeviceBuffer* 
 {
     buf_addr[BUF_IDX_INSTR] = instr_buf_->get_phys_addr();
     
-    if(not xmodel_->getSinglePoolDebug())
+    if(!xmodel_->getSinglePoolDebug())
       buf_addr[BUF_IDX_PARAMS] = params_buf_->get_phys_addr();
     
     buf_addr[BUF_IDX_SWAP] = swap_buf->get_phys_addr();
@@ -258,7 +258,7 @@ void Dpuv3Int8DebugController::runKernel(ert_start_kernel_cmd* ecmd, uint64_t* b
   regVals.push_back({CONTROL_ADDR_BLOCK_INSTR ,(buf_addr[BUF_IDX_INSTR]) & 0xFFFFFFFF});
   regVals.push_back({CONTROL_ADDR_BLOCK_INSTR + 0x4 ,((buf_addr[BUF_IDX_INSTR]) >> 32) & 0xFFFFFFFF});
   
-  if(not xmodel_->getSinglePoolDebug())
+  if(!xmodel_->getSinglePoolDebug())
   {
     regVals.push_back({CONTROL_ADDR_BLOCK_PARAMS ,(buf_addr[BUF_IDX_PARAMS]) & 0xFFFFFFFF});
     regVals.push_back({CONTROL_ADDR_BLOCK_PARAMS + 0x4 ,((buf_addr[BUF_IDX_PARAMS]) >> 32) & 0xFFFFFFFF});
@@ -641,7 +641,7 @@ void Dpuv3Int8DebugController::channelAug()
           src_w_idx = (src_sw*w_idx)-src_pw+(std::floor(ch_idx/src_c));
           src_c_idx = ch_idx%src_c;
           
-          if(src_w_idx<0 or src_w_idx>=src_w)
+          if(src_w_idx<0 || src_w_idx>=src_w)
           {
 //            img_data_dst[bch_idx][h_idx][w_idx][ch_idx] = 0
             debugChAug_[(bch_idx*dst_h*dst_w*dst_c)+(h_idx*dst_w*dst_c)+(w_idx*dst_c)+(ch_idx)]=0;
@@ -670,7 +670,7 @@ void Dpuv3Int8DebugController::debugDumpRegVals(uint64_t* buf_addr, uint32_t* re
     debug_dumpvals_<<"CONTROL_ADDR_BLOCK_INSTR, reg: 0x"<<std::hex<<CONTROL_ADDR_BLOCK_INSTR<<" val: 0x"<<((buf_addr[BUF_IDX_INSTR]) & 0xFFFFFFFF)<<"\n";
     debug_dumpvals_<<"CONTROL_ADDR_BLOCK_INSTR + 0x4, reg: 0x"<<CONTROL_ADDR_BLOCK_INSTR + 0x4<<" val: 0x"<<(((buf_addr[BUF_IDX_INSTR]  ) >> 32) & 0xFFFFFFFF)<<"\n";
     
-    if(not xmodel_->getSinglePoolDebug())
+    if(!xmodel_->getSinglePoolDebug())
     {
       debug_dumpvals_<<"CONTROL_ADDR_BLOCK_PARAMS, reg: 0x"<<CONTROL_ADDR_BLOCK_PARAMS<<" val: 0x"<<((buf_addr[BUF_IDX_PARAMS] ) & 0xFFFFFFFF)<<"\n";
       debug_dumpvals_<<"CONTROL_ADDR_BLOCK_PARAMS + 0x4, reg: 0x"<<CONTROL_ADDR_BLOCK_PARAMS + 0x4<<" val: 0x"<<(((buf_addr[BUF_IDX_PARAMS] ) >> 32) & 0xFFFFFFFF)<<"\n";

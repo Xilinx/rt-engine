@@ -14,6 +14,8 @@
 
 #include "ipuv1cnn_controller.hpp"
 
+typedef unsigned int uint;
+
 Ipuv1CnnController::Ipuv1CnnController(const xir::Subgraph *subgraph)
   : XclDpuController<IpuDeviceHandle, IpuDeviceBuffer, IpuDeviceBuffer>(subgraph),
     inTensors_(subgraph->get_input_tensors()),

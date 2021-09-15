@@ -18,11 +18,10 @@
 #include <mutex>
 #include <list>
 #include <vector>
-#include "vart/runner.hpp"
-//#include "tensor_buffer.hpp"
+#include "xir/graph/subgraph.hpp"
 #include "device_handle.hpp"
 #include "device_memory.hpp"
-
+#include "ert.h"
 /*
  * DPU-specific hostcode
  */

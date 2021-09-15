@@ -55,7 +55,7 @@ void Dpuv3Int8Controller::initializeTensors()
 {
     const std::vector<std::int32_t> indims = { BATCH_SIZE, int32_t(xmodel_->getInH()), int32_t(xmodel_->getInW()), int32_t(xmodel_->getInCh())};
     std::vector<std::int32_t> inHwDims = { int32_t(BATCH_SIZE*xmodel_->getInH()*xmodel_->getInW()*xmodel_->getInCh())};
-    if(not xmodel_->getDruMode())
+    if(!xmodel_->getDruMode())
       inHwDims = { int32_t(xmodel_->getInH()*xmodel_->getInW()*BATCH_SIZE*ceil((float)xmodel_->getInCh()/16)*16)};
     const std::vector<std::int32_t> outHwDims = { BATCH_SIZE, 1, 1, int32_t(xmodel_->getOutDdrSize())};
    
@@ -498,7 +498,7 @@ void Dpuv3Int8Controller::channelAugmentation(std::vector<int8_t> &inputStdData,
           src_w_idx = (src_sw*w_idx)-src_pw+(std::floor(ch_idx/src_c));
           src_c_idx = ch_idx%src_c;
           
-          if(src_w_idx<0 or src_w_idx>=src_w)
+          if(src_w_idx<0 || src_w_idx>=src_w)
           {
             channelAugmentedData[(bch_idx*dst_h*dst_w*dst_c)+(h_idx*dst_w*dst_c)+(w_idx*dst_c)+(ch_idx)]=0;
           }
@@ -623,7 +623,7 @@ void Dpuv3Int8Controller::batchInterleave(std::vector<int8_t> &inputData, std::v
 
 void Dpuv3Int8Controller::preprocess(vart::TensorBuffer* stdbuf, vart::TensorBuffer* hwbuf)
 {
-    if (not xmodel_->getDruMode())
+    if (!xmodel_->getDruMode())
     {
       void* std_data = (void*)stdbuf->data().first;
       std::vector<int8_t> inputStdData(xmodel_->getInW()*xmodel_->getInH()*xmodel_->getInCh()*BATCH_SIZE,0);

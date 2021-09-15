@@ -112,7 +112,6 @@ DEF_ENV_PARAM(XRT_STAT, "0");
 /*
  * latency checking under XRT API.
 */
-#include <getopt.h>
 #include <iostream>
 #include <stdexcept>
 #include <string>
