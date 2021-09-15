@@ -63,8 +63,8 @@ public:
 protected:
 
   // Get Input/Output Tensors from subgraph
-  set<const xir::Tensor *> inTensors_;
-  set<const xir::Tensor *> outTensors_;
+  std::set<const xir::Tensor *> inTensors_;
+  std::set<const xir::Tensor *> outTensors_;
 
   // Reference to the engine
   Engine& engine_;

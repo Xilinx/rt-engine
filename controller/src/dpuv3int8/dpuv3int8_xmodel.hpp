@@ -84,8 +84,8 @@ class Xmodel {
     std::vector<std::int32_t> get_input_fix_point_values();
     std::vector<std::int32_t> get_output_fix_point_values();
 
-    const std::vector<string>& getInstr();
-    const std::vector<string>& getParams();
+    const std::vector<std::string>& getInstr();
+    const std::vector<std::string>& getParams();
 
     Xmodel(std::string meta, bool isDebugMode);
     Xmodel(const xir::Subgraph *subgraph, bool isDebugMode);        

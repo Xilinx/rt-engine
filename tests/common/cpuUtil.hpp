@@ -37,7 +37,7 @@ public:
 
 private:
 
-  std::vector<pair<float, int>> sortArr(std::vector<float> arr, int n);
+  std::vector<std::pair<float, int>> sortArr(std::vector<float> arr, int n);
 
   void load_golden();
 
@@ -45,7 +45,7 @@ private:
   void parseTop1Top5Expected(std::string accuracyCheckTop1Top5Nums);
   void parsePerformanceExpected(std::string performanceExpected);
 
-  void printPredictionLabels(std::vector<std::vector<pair<float, int>>> indices, int queryNum);
+  void printPredictionLabels(std::vector<std::vector<std::pair<float, int>>> indices, int queryNum);
 
   std::vector<float> computeSoftmax(std::vector<int8_t> input);
 
@@ -64,7 +64,7 @@ private:
   int top5Expected_;
   int performanceExpected_;
 
-  std::vector<pair<std::string, int>> goldenLabels_;
+  std::vector<std::pair<std::string, int>> goldenLabels_;
   std::vector<std::string> synsetLabels_;
   std::vector<std::string> imgFileNames_;
   std::vector<std::string> fileNames_;
