@@ -120,17 +120,17 @@ void InstrFormatConverter::loadAsmInstructionFile(std::vector<Instr> &instructio
       {
         instructions_.push_back(Instr());
         instructions_[instructions_.size()-1].instrName = field;
-        if(getline(ss, field, ' ') and isNumber(field))
+        if(getline(ss, field, ' ') && isNumber(field))
           loadInstruction(instructions_, field, 0, true); //0 indicates dpdon
-        if(getline(ss, field, ' ') and isNumber(field))
+        if(getline(ss, field, ' ') && isNumber(field))
           loadInstruction(instructions_, field, 1, true); //1 indicates dpdby
         
         int counter = 0;
         while(getline(ss,field,' '))
           {    
-            if(!isNumber(field) and field.size()!=0)
+            if(!isNumber(field) && field.size()!=0)
               fieldName = field;
-            if(isNumber(field) and field.size()!=0)
+            if(isNumber(field) && field.size()!=0)
               loadInstruction(instructions_, fieldName, std::stoi(field), false);
 
             if(field.size()!=0)
