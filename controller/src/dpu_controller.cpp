@@ -17,10 +17,6 @@
 #include <sstream>
 #include <unordered_map>
 #include <cstdlib>
-#pragma GCC diagnostic push 
-#pragma GCC diagnostic ignored "-Wignored-qualifiers"
-#include "CL/cl_ext_xilinx.h"
-#pragma GCC diagnostic pop 
 #include "xir/tensor/tensor.hpp"
 #include <xir/graph/graph.hpp>
 #include <xir/graph/subgraph.hpp>

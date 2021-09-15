@@ -168,18 +168,18 @@ XrmResource::XrmResource(std::string kernelName, std::string xclbin, xir::Attrs*
                         std::to_string(cu_rsrc_->deviceId) + ":" +
                         std::to_string(cu_rsrc_->cuId);
     info_.reset(new DeviceInfo{
-        .cu_base_addr = cu_rsrc_->baseAddr,
-        .ddr_bank = cu_rsrc_->membankId,
-        .device_index = size_t(cu_rsrc_->deviceId),
-        .cu_index = size_t(cu_rsrc_->cuId),
-        .cu_mask = (1u << cu_rsrc_->cuId),
-        .xclbin_path = cu_rsrc_->xclbinFileName,
-        .full_name = cu_full_name,
-        .device_id = nullptr,
-        .device_handle = nullptr,
-        .xdev = nullptr,
-        .uuid =&(cu_rsrc_->uuid[0]),
-        .fingerprint = 0,
+        /* cu_base_addr */  cu_rsrc_->baseAddr,
+        /* ddr_bank */      cu_rsrc_->membankId,
+        /* device_index */  size_t(cu_rsrc_->deviceId),
+        /* cu_index */      size_t(cu_rsrc_->cuId),
+        /* cu_mask */       (1u << cu_rsrc_->cuId),
+        /* xclbin_path */   cu_rsrc_->xclbinFileName,
+        /* full_name */     cu_full_name,
+        /* device_id */     nullptr,
+        /* device_handle */ nullptr,
+        /* xdev */          nullptr,
+        /* uuid */          &(cu_rsrc_->uuid[0]),
+        /* fingerprint */   0,
     });
 
     // Wait turn to run OCL Commands

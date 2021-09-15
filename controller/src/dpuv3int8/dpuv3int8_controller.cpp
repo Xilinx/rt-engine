@@ -55,7 +55,7 @@ void Dpuv3Int8Controller::initializeTensors()
 {
     const std::vector<std::int32_t> indims = { BATCH_SIZE, int32_t(xmodel_->getInH()), int32_t(xmodel_->getInW()), int32_t(xmodel_->getInCh())};
     std::vector<std::int32_t> inHwDims = { int32_t(BATCH_SIZE*xmodel_->getInH()*xmodel_->getInW()*xmodel_->getInCh())};
-    if(not xmodel_->getDruMode())
+    if(!xmodel_->getDruMode())
       inHwDims = { int32_t(xmodel_->getInH()*xmodel_->getInW()*BATCH_SIZE*ceil((float)xmodel_->getInCh()/16)*16)};
     const std::vector<std::int32_t> outHwDims = { BATCH_SIZE, 1, 1, int32_t(xmodel_->getOutDdrSize())};
    

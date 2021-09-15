@@ -99,18 +99,18 @@ DeviceResource::DeviceResource(std::string kernelName, std::string xclbin, xir::
     + std::to_string(deviceIdx) + ":" + std::to_string(cuIdx_xrt);
   uuid_ = binstream.get_uuid();
   info_.reset(new DeviceInfo{
-      .cu_base_addr = binstream.get_cu_base_addr(cuIdx),
-      .ddr_bank = 0, // TODO get actual DDR bank
-      .device_index = deviceIdx,
-      .cu_index = cuIdx_xrt,
-      .cu_mask = (1u << cuIdx_xrt),
-      .xclbin_path = xclbin,
-      .full_name = cu_full_name,
-      .device_id = 0,
-      .device_handle = nullptr,
-      .xdev = nullptr,
-      .uuid = get_uuid(),
-      .fingerprint = 0,
+      /* cu_base_addr */  binstream.get_cu_base_addr(cuIdx),
+      /* ddr_bank */      0, // TODO get actual DDR bank
+      /* device_index */  deviceIdx,
+      /* cu_index */      cuIdx_xrt,
+      /* cu_mask */       (1u << cuIdx_xrt),
+      /* xclbin_path */   xclbin,
+      /* full_name */     cu_full_name,
+      /* device_id */     0,
+      /* device_handle */ nullptr,
+      /* xdev */          nullptr,
+      /* uuid */          get_uuid(),
+      /* fingerprint */   0,
   });
 
   int err;
@@ -303,18 +303,18 @@ IpuResource::IpuResource(std::string kernelName, std::string xclbin, xir::Attrs*
          + std::to_string(deviceIdx) + ":" + std::to_string(cuIdx);
 
   info_.reset(new DeviceInfo{
-    .cu_base_addr = 0,
-    .ddr_bank = 0,
-    .device_index = deviceIdx,
-    .cu_index = cuIdx,
-    .cu_mask = (1u << cuIdx),
-    .xclbin_path = xclbin,
-    .full_name = cu_full_name,
-    .device_id = 0,
-    .device_handle = handle,
-    .xdev = nullptr,
-    .uuid = get_uuid(),
-    .fingerprint = 0,
+    /* cu_base_addr */  0,
+    /* ddr_bank */      0,
+    /* device_index */  deviceIdx,
+    /* cu_index */      cuIdx,
+    /* cu_mask */       (1u << cuIdx),
+    /* xclbin_path */   xclbin,
+    /* full_name */     cu_full_name,
+    /* device_id */     0,
+    /* device_handle */ handle,
+    /* xdev */          nullptr,
+    /* uuid */          get_uuid(),
+    /* fingerprint */   0,
   });
 }
 
