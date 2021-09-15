@@ -34,7 +34,8 @@
 #include "dpu_runner.hpp"
 #include "xir/tensor/tensor.hpp"
 #include "vart/tensor_buffer.hpp"
-#include "vart/trace/trace.hpp"
+#include "trace.hpp"
+//#include "vart/trace/trace.hpp"
 
 
 #include "vitis/ai/env_config.hpp"

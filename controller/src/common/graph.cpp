@@ -37,7 +37,8 @@
 #include "vitis/ai/env_config.hpp"
 #include "vitis/ai/profiling.hpp"
 #include "device_handle.hpp"
-#include "vart/trace/trace.hpp"
+#include "trace.hpp"
+//#include "vart/trace/trace.hpp"
 using namespace std;
 using namespace chrono;
 #pragma GCC diagnostic ignored "-Wdeprecated-declarations"

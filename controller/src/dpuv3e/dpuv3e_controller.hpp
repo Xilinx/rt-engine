@@ -28,10 +28,10 @@ class DpuV3eController
   //  const std::vector<vart::TensorBuffer*> &inputs, 
   //  const std::vector<vart::TensorBuffer*> &outputs) override;
   // virtual std::vector<vart::TensorBuffer*> get_outputs(int batchsz=-1) override;
-  // vector<std::tuple<int, int,uint64_t>>  get_dpu_reg_outside(xclDeviceHandle xcl_handle,  bool create_tb_batch, std::vector<uint64_t> &in_addrs, std::vector<uint64_t> &out_addrs, const std::vector<vart::TensorBuffer*> &inputs, const std::vector<vart::TensorBuffer*> &outputs) override;
+  // std::vector<std::tuple<int, int,uint64_t>>  get_dpu_reg_outside(xclDeviceHandle xcl_handle,  bool create_tb_batch, std::vector<uint64_t> &in_addrs, std::vector<uint64_t> &out_addrs, const std::vector<vart::TensorBuffer*> &inputs, const std::vector<vart::TensorBuffer*> &outputs) override;
  private:
-  vector<unsigned> hbmw;
-  vector<unsigned> hbmc;
-  vector<unsigned> hbmio;
+  std::vector<unsigned> hbmw;
+  std::vector<unsigned> hbmc;
+  std::vector<unsigned> hbmio;
 };
 

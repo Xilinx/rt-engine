@@ -168,6 +168,6 @@ class KernelNameManager {
     std::string getRealKernelName(std::string xclbinPath, std::string kernelName);
   private:
     KernelNameManager() {};
-    unordered_map<std::string, unsigned > xclbin2usedCuIdx;
+    std::unordered_map<std::string, unsigned > xclbin2usedCuIdx;
 };
 

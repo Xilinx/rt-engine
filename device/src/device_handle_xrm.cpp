@@ -132,8 +132,8 @@ XrmResource::XrmResource(std::string kernelName, std::string xclbin, xir::Attrs*
       xrmDisableOneDevice(context_, idx);
     }
 
-    string token;
-    istringstream tokenStream(std::getenv("XLNX_ENABLE_DEVICES"));
+    std::string token;
+    std::istringstream tokenStream(std::getenv("XLNX_ENABLE_DEVICES"));
     while (getline(tokenStream, token, ',')) {
         xrmEnableOneDevice(context_, stoi(token));
     }

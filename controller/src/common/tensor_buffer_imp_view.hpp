@@ -23,7 +23,7 @@ class TensorBufferExtImpView : public vart::TensorBuffer {
  public:
   explicit TensorBufferExtImpView(
       const xir::Tensor* tensor, size_t offset,
-      vector<vart::TensorBuffer*> backstore);
+      std::vector<vart::TensorBuffer*> backstore);
 
   TensorBufferExtImpView(const TensorBufferExtImpView&) = delete;
   TensorBufferExtImpView& operator=(const TensorBufferExtImpView& other) =
