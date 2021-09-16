@@ -80,7 +80,6 @@ DEF_ENV_PARAM(CTRLER_RUN, "0");
 DEF_ENV_PARAM(XCLEXECBUF, "0");
 DEF_ENV_PARAM(DPU_IP_COUNTER, "0");
 DEF_ENV_PARAM(DPU_DUMP_REG, "0");
-DEF_ENV_PARAM(XRT_STAT, "0");
 
 /*
  * a contiguous memory block is allocated for each requests' I/O
@@ -106,71 +105,6 @@ DEF_ENV_PARAM(XRT_STAT, "0");
 #define DPUREG_CYCLE_COUNTER 0xa8
 #define VERSION_CODE_L 0x1f0
 #define VERSION_CODE_H 0x1f4
-
-
-
-/*
- * latency checking under XRT API.
-*/
-#include <iostream>
-#include <stdexcept>
-#include <string>
-#include <cstring>
-#include <vector>
-#include <algorithm>
-#include <time.h>
-
-#include "xrt.h"
-#include "ert.h"
-
-#define	SAMPLES 10
-
-/* Full cycle of a CU cmd:
- * App -> driver -> CU -> driver -> App
- */
-struct timestamps {
-    uint64_t total;
-    uint64_t to_driver;
-    uint64_t to_cu;
-    uint64_t cu_complete;
-    uint64_t done;
-};
-
-static inline uint64_t
-tp2ns(struct timespec *tp)
-{
-    return (uint64_t)tp->tv_sec * 1000000000UL + tp->tv_nsec;
-}
-
-static void
-print_one_timestamp(timestamps& ts)
-{
-    std::cout << "Total: " << ts.total / 1000 << "us\t"
-              << "ToDriver: " << ts.to_driver / 1000 << "us\t"
-              << "ToCU: " << ts.to_cu / 1000 << "us\t"
-              << "Complete: " << ts.cu_complete / 1000 << "us\t"
-              << "Done: " << ts.done / 1000 << "us"
-              << std::endl;
-}
-
-static bool
-timestamp_comp(const timestamps& ts1, const timestamps& ts2)
-{
-    return ts1.total < ts2.total;
-}
-
-static void
-print_timestamps(std::vector<timestamps>& tslist)
-{
-    std::sort(tslist.begin(), tslist.end(), timestamp_comp);
-    int step = tslist.size() / SAMPLES;
-    if (step == 0)
-        step = 1;
-    for (unsigned int i = 0; i < tslist.size(); i += step)
-        print_one_timestamp(tslist[i]);
-}
-
-
 
 static uint32_t read32_dpu_reg(xclDeviceHandle dpu_handle, uint64_t offset) {
   uint32_t val;
@@ -510,13 +444,6 @@ auto trigger_dpu_func = [&](){
 
   auto t11 = std::chrono::high_resolution_clock::now();
 
-  std::vector<timestamps> ts_list;
-  struct timespec tp;
-  struct timestamps ts;
-
-  clock_gettime(CLOCK_MONOTONIC, &tp);
-  uint64_t start = tp2ns(&tp);
-
   // exec kernel
 #ifndef _WIN32
   vitis::ai::trace::add_trace("dpu-controller", vitis::ai::trace::func_start, core_idx);
@@ -531,22 +458,6 @@ auto trigger_dpu_func = [&](){
 #ifndef _WIN32
   vitis::ai::trace::add_trace("dpu-controller", vitis::ai::trace::func_end, core_idx);
 #endif
-  if(ENV_PARAM(XRT_STAT)){
-    clock_gettime(CLOCK_MONOTONIC, &tp);
-    uint64_t end = tp2ns(&tp);
-
-    auto c = ert_start_kernel_timestamps(ecmd);
-    ts.total = end - start;
-    ts.to_driver = c->skc_timestamps[ERT_CMD_STATE_NEW] - start;
-    ts.to_cu = c->skc_timestamps[ERT_CMD_STATE_RUNNING] -
-        c->skc_timestamps[ERT_CMD_STATE_NEW];
-    ts.cu_complete = c->skc_timestamps[ERT_CMD_STATE_COMPLETED] -
-        c->skc_timestamps[ERT_CMD_STATE_RUNNING];
-    ts.done = end - c->skc_timestamps[ERT_CMD_STATE_COMPLETED];
-    ts_list.push_back(ts);
-
-    print_timestamps(ts_list);
-  }
 
   if(ENV_PARAM(XCLEXECBUF)){
     auto t22 = std::chrono::high_resolution_clock::now();
