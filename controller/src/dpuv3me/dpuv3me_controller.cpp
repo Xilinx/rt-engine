@@ -445,7 +445,9 @@ auto trigger_dpu_func = [&](){
   auto t11 = std::chrono::high_resolution_clock::now();
 
   // exec kernel
+#ifndef _WIN32
   vitis::ai::trace::add_trace("dpu-controller", vitis::ai::trace::func_start, core_idx);
+#endif
   exec_buf_result = xclExecBuf(xcl_handle, bo_handle);
   if (exec_buf_result)
     throw std::runtime_error("Error: xclExecBuf failed");
@@ -453,7 +455,9 @@ auto trigger_dpu_func = [&](){
   // wait for kernel
   for (int wait_count=0; wait_count < 15 && xclExecWait(xcl_handle, 1000) == 0
             && ecmd->state != ERT_CMD_STATE_COMPLETED; wait_count++);
+#ifndef _WIN32
   vitis::ai::trace::add_trace("dpu-controller", vitis::ai::trace::func_end, core_idx);
+#endif
 
   if(ENV_PARAM(XCLEXECBUF)){
     auto t22 = std::chrono::high_resolution_clock::now();
@@ -502,7 +506,9 @@ auto trigger_dpu_func = [&](){
       }
     }
     auto info = model_->get_subgraph_info();
+#ifndef _WIN32
     vitis::ai::trace::add_trace("dpu-runner", info.name, batch_size_, info.workload, info.depth);
+#endif
     trigger_dpu_func();
 
     if(dump_mode_ ) {  // dump final output
@@ -559,7 +565,9 @@ auto trigger_dpu_func = [&](){
       //if(std::get<1>(layer.code_addr) > 0) {
       //  code_addr_ = std::get<0>(layer.code_addr);
        }
+#ifndef _WIN32
         vitis::ai::trace::add_trace("dpu-runner", layer.name, batch_size_, layer.workload, layer.depth);
+#endif
         trigger_dpu_func();
       }
 
