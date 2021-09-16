@@ -99,7 +99,7 @@ int main(int argc, char* argv[]) {
   int8_t * out0=new int8_t[output_tensors[0]->get_element_num()*8];
   int8_t * out1=new int8_t[output_tensors[1]->get_element_num()*8];
   int8_t * out2=new int8_t[output_tensors[2]->get_element_num()*8];
-  if (posix_memalign(&codePtr, getpagesize(), size))
+  if (rte::posix_memalign(&codePtr, rte::getpagesize(), size))
     throw std::bad_alloc();
   auto infile = ifstream(inputbin, ios::in | ios::binary);
   for (unsigned i=0; infile.read(&((char*)codePtr)[i], sizeof(int8_t)); i++);

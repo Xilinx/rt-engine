@@ -181,7 +181,7 @@ int main(int argc, char* argv[]) {
     unsigned int size = 224*224*3*4;
     int8_t* codePtr= NULL;
     float *codePtrF = new float[size/4];
-    if (posix_memalign((void**)&codePtr, getpagesize(), size*8/4))
+    if (rte::posix_memalign((void**)&codePtr, rte::getpagesize(), size*8/4))
       throw std::bad_alloc();
     std::vector<std::unique_ptr<vart::TensorBuffer> > tbufs;
 

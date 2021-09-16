@@ -221,7 +221,7 @@ XclDpuController<Dhandle, DbufIn, DbufOut>::create_tensor_buffers(
     const size_t dataSize = std::ceil(tensors[ti]->get_data_type().bit_width / 8.f);
     size_t size = tensors[ti]->get_element_num() * dataSize;
     void *data;
-    if (posix_memalign(&data, getpagesize(), size))
+    if (rte::posix_memalign(&data, rte::getpagesize(), size))
       throw std::bad_alloc();
     std::memset(data, 0, size);
     // make TensorBuffer to hold host memory

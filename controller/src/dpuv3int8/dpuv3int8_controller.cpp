@@ -17,6 +17,7 @@
 #include "dpuv3int8_controller.hpp"
 #include <mutex>
 
+
 #define BATCH_SIZE 4
 
 using namespace std;
@@ -656,7 +657,7 @@ void Dpuv3Int8Controller::preprocess(vart::TensorBuffer* stdbuf, vart::TensorBuf
         flattenedData[i]=*(int8_t *)((long long) std_data+i);
       }
   
-      std::vector<int,aligned_allocator<int>> hwDinVector(flattenedData.size()/4,0);
+      std::vector<int,rte::AlignedAllocator<int>> hwDinVector(flattenedData.size()/4,0);
   
       int j=0;
       
@@ -839,10 +840,10 @@ void Dpuv3Int8Controller::run(const std::vector<vart::TensorBuffer*> &inputs,
   }
 }
 
-std::vector<int32_t, aligned_allocator<int32_t>> Dpuv3Int8Controller::load(std::string filename)
+std::vector<int32_t, rte::AlignedAllocator<int32_t>> Dpuv3Int8Controller::load(std::string filename)
 {
 
-    std::vector<int32_t, aligned_allocator<int32_t>> tmp;
+    std::vector<int32_t, rte::AlignedAllocator<int32_t>> tmp;
     std::ifstream   ifile;
     std::string     line;
     
@@ -855,9 +856,9 @@ std::vector<int32_t, aligned_allocator<int32_t>> Dpuv3Int8Controller::load(std::
     return tmp;
 }
 
-std::vector<int32_t, aligned_allocator<int32_t>> Dpuv3Int8Controller::load(std::vector<string> svals)
+std::vector<int32_t, rte::AlignedAllocator<int32_t>> Dpuv3Int8Controller::load(std::vector<string> svals)
 {
-  std::vector<int32_t, aligned_allocator<int32_t>> tmp;
+  std::vector<int32_t, rte::AlignedAllocator<int32_t>> tmp;
 
   for (auto& val : svals) {
     tmp.push_back((int32_t)std::strtol(val.c_str(), nullptr, 16));

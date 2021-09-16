@@ -23,6 +23,7 @@
 #include <xir/graph/graph.hpp>
 #include <xir/tensor/tensor.hpp>
 #include "XirKeys.hpp"
+#include "common/alignment.hpp"
 
 /* This class is meant to provide preprocessing and postprocessing utilities to Inference class */
 class cpuUtil {
