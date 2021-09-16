@@ -36,7 +36,9 @@
 #include "vitis/ai/env_config.hpp"
 #include "vitis/ai/profiling.hpp"
 #include "device_handle.hpp"
+#ifndef _WIN32
 #include "trace.hpp"
+#endif
 //#include "vart/trace/trace.hpp"
 
 using namespace std;
@@ -123,11 +125,13 @@ void DpuCloudController::init_profiler() {
   auto cu_full_name = dev_info.full_name;
   uint64_t cu_fingerprint = dev_info.fingerprint;
   size_t cu_batch = batch_size_;
+#ifndef _WIN32
   vitis::ai::trace::add_info("dpu-controller",
     TRACE_VAR(cu_device_id), TRACE_VAR(cu_core_id),
     TRACE_VAR(cu_batch), TRACE_VAR(cu_name),
     TRACE_VAR(cu_full_name),
     TRACE_VAR(cu_fingerprint));
+#endif
 }
 
 DpuCloudController::~DpuCloudController() {
@@ -887,8 +891,6 @@ void DpuCloudController::dpu_trigger_run(ert_start_kernel_cmd* ecmd, xclDeviceHa
       }
       ecmd->count = 1 + p;
 
-      vitis::ai::trace::add_trace("dpu-controller", vitis::ai::trace::func_start, core_idx);
-
       exec_buf_result = xclExecBuf(xcl_handle, bo_handle);
       if (exec_buf_result)
         throw std::runtime_error("Error: xclExecBuf failed");
@@ -896,8 +898,6 @@ void DpuCloudController::dpu_trigger_run(ert_start_kernel_cmd* ecmd, xclDeviceHa
       // wait for kernel
       for (int wait_count=0; wait_count < 15 && xclExecWait(xcl_handle, 1000) == 0
               && ecmd->state != ERT_CMD_STATE_COMPLETED; wait_count++);
-
-      vitis::ai::trace::add_trace("dpu-controller", vitis::ai::trace::func_end, core_idx);
 
       if (ecmd->state != ERT_CMD_STATE_COMPLETED) {
         std::cout << "LOAD START:" << read32_dpu_reg(xcl_handle, cu_base_addr + DPUREG_LOAD_START) << std::endl;
@@ -948,8 +948,9 @@ void DpuCloudController::dpu_trigger_run(ert_start_kernel_cmd* ecmd, xclDeviceHa
   }
   ecmd->count = 1 + p;
 
+#ifndef _WIN32
   vitis::ai::trace::add_trace("dpu-controller", vitis::ai::trace::func_start, core_idx);
-
+#endif
   // exec kernel
   exec_buf_result = xclExecBuf(xcl_handle, bo_handle);
   if (exec_buf_result)
@@ -959,8 +960,9 @@ void DpuCloudController::dpu_trigger_run(ert_start_kernel_cmd* ecmd, xclDeviceHa
   for (int wait_count=0; wait_count < 15 && xclExecWait(xcl_handle, 1000) == 0
           && ecmd->state != ERT_CMD_STATE_COMPLETED; wait_count++);
 
+#ifndef _WIN32
 vitis::ai::trace::add_trace("dpu-controller", vitis::ai::trace::func_end, core_idx);
-
+#endif
   if (ecmd->state != ERT_CMD_STATE_COMPLETED) {
     std::cout << "Error: CU timeout " << std::endl;
 
@@ -1104,7 +1106,9 @@ void DpuCloudController::run(const std::vector<vart::TensorBuffer*> &inputs,
     }
 
     auto info = model_->get_subgraph_info();
+#ifndef _WIN32
     vitis::ai::trace::add_trace("dpu-runner", info.name, batch_size_, info.workload, info.depth);
+#endif
     dpu_trigger_run(ecmd,xcl_handle, bo_handle, xdpu_total_dpureg_map_io);
 
     if(dump_mode_ ) {  // dump final output
@@ -1162,7 +1166,9 @@ void DpuCloudController::run(const std::vector<vart::TensorBuffer*> &inputs,
           }
         }
 
+#ifndef _WIN32
         vitis::ai::trace::add_trace("dpu-runner", layer.name, batch_size_, layer.workload, layer.depth);
+#endif
         dpu_trigger_run(ecmd,xcl_handle, bo_handle, xdpu_total_dpureg_map_io);
       }
 
