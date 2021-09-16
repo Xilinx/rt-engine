@@ -289,7 +289,7 @@ void DpuXmodel::init_graph(const xir::Subgraph* subgraph) {
         //// reg0
         if (parameter_size) {
           void *reg0Ptr = NULL; 
-          if (posix_memalign(&reg0Ptr, getpagesize(), parameter_size))
+          if (rte::posix_memalign(&reg0Ptr, rte::getpagesize(), parameter_size))
             throw std::bad_alloc();
           for (unsigned i=0; i < parameter_size; i++) ((char*)reg0Ptr)[i] = parameter_value[i];
           xdpu_parameter_map.emplace_back(std::make_tuple((char*)reg0Ptr, parameter_size,reg_id));
@@ -358,7 +358,7 @@ void DpuXmodel::init_graph(const xir::Subgraph* subgraph) {
     auto& mc_code = subgraph_->get_attr<std::vector<char>>("mc_code");
     unsigned size = mc_code.size();
     void *codePtr = NULL;
-    if (posix_memalign(&codePtr, getpagesize(), size))
+    if (rte::posix_memalign(&codePtr, rte::getpagesize(), size))
       throw std::bad_alloc();
     for (unsigned i=0; i < size; i++) ((char*)codePtr)[i] = mc_code[i];
     xdpu_code_map.emplace(std::make_pair((char*)codePtr, std::make_pair(size,0)));
@@ -367,7 +367,7 @@ void DpuXmodel::init_graph(const xir::Subgraph* subgraph) {
       if (mc_code_preload.size() > 0) {
         unsigned size_pre = mc_code_preload.size();
         void *codePtr_pre = NULL;
-        if (posix_memalign(&codePtr_pre, getpagesize(), size_pre))
+        if (rte::posix_memalign(&codePtr_pre, rte::getpagesize(), size_pre))
           throw std::bad_alloc();
         for (unsigned i=0; i < size_pre; i++) ((char*)codePtr_pre)[i] = mc_code_preload[i];
         xdpu_code_map.emplace(std::make_pair((char*)codePtr_pre, std::make_pair(size_pre,1)));
@@ -388,7 +388,7 @@ void DpuXmodel::init_graph(const xir::Subgraph* subgraph) {
 
         void *codePtr = NULL;
         auto codeSize = mc_code.size(); 
-        if (posix_memalign(&codePtr, getpagesize(), codeSize))
+        if (rte::posix_memalign(&codePtr, rte::getpagesize(), codeSize))
           throw std::bad_alloc(); 
         std::copy(mc_code.begin(), mc_code.end(),  (char*)codePtr); 
         xdpu_code_map.emplace(std::make_pair((char*)codePtr, std::make_pair(codeSize,0)));
@@ -398,7 +398,7 @@ void DpuXmodel::init_graph(const xir::Subgraph* subgraph) {
             unsigned size_pre = mc_code.size();
             void *codePtr_pre = NULL;
             //unsigned size = mc_code.size();
-            if (posix_memalign(&codePtr_pre, getpagesize(), size_pre))
+            if (rte::posix_memalign(&codePtr_pre, rte::getpagesize(), size_pre))
               throw std::bad_alloc();
             for (unsigned i=0; i < size_pre; i++) ((char*)codePtr_pre)[i] = mc_code_preload[i];
             //xdpu_code_map.emplace(std::make_pair((char*)codePtr_pre, std::make_pair(size_pre,1)));

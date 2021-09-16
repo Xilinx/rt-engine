@@ -202,7 +202,7 @@ std::tuple<uint64_t,int32_t,std::string> DpuV3meController::alloc_and_fill_devic
   void *codePtr = NULL;
   std::tuple<uint64_t,int32_t,std::string> data;
   unsigned size = code.size();
-  if (posix_memalign(&codePtr, getpagesize(), size)) throw std::bad_alloc();
+  if (rte::posix_memalign(&codePtr, rte::getpagesize(), size)) throw std::bad_alloc();
 
   for (unsigned i=0; i < size; i++){
     ((char*)codePtr)[i] = code[i];

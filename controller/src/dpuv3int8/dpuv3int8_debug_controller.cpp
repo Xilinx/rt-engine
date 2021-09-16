@@ -145,7 +145,7 @@ void Dpuv3Int8DebugController::preprocess(vart::TensorBuffer* stdbuf, vart::Tens
         flattenedData[i]=*(int8_t *)((long long) std_data+i);
       }
   
-      std::vector<int,aligned_allocator<int>> hwDinVector(flattenedData.size()/4,0);
+      std::vector<int,rte::AlignedAllocator<int>> hwDinVector(flattenedData.size()/4,0);
   
       int j=0;
       

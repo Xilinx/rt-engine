@@ -22,6 +22,7 @@
 #include "device_handle.hpp"
 #include "device_memory.hpp"
 #include "ert.h"
+#include "common/alignment.hpp"
 /*
  * DPU-specific hostcode
  */

@@ -106,7 +106,7 @@ cout << input_tensors[0] -> get_element_num() << endl;
   auto out_dims2 = output_tensors[2]->get_shape();
   auto in_dims = input_tensors[0]->get_shape();
   in_dims[0]= out_dims0[0] = out_dims1[0] = out_dims2[0] = 8;
-  if (posix_memalign(&codePtr, getpagesize(), size))
+  if (rte::posix_memalign(&codePtr, rte::getpagesize(), size))
     throw std::bad_alloc();
   auto infile = ifstream(inputbin, ios::in | ios::binary);
   for (unsigned i=0; infile.read(&((char*)codePtr)[i], sizeof(int8_t)); i++);

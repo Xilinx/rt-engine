@@ -27,6 +27,7 @@
 #include <vector>
 #include <chrono>
 
+#include "common/alignment.hpp"
 #include <vart/runner.hpp>
 #include <vart/runner_ext.hpp>
 #include <xir/graph/graph.hpp>
@@ -89,7 +90,7 @@ int main(int argc, char* argv[]) {
       void *codePtr = NULL;
       std::string inputbin = input_file;
       unsigned int size = getFileSize(inputbin);
-      if (posix_memalign(&codePtr, getpagesize(), size * core_batch))
+      if (rte::posix_memalign(&codePtr, rte::getpagesize(), size * core_batch))
         throw std::bad_alloc();
       auto infile = ifstream(inputbin, ios::in | ios::binary);
       for (unsigned i=0; infile.read(&((char*)codePtr)[i], sizeof(int8_t)); i++);

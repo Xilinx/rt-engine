@@ -158,7 +158,7 @@ std::vector<vart::TensorBuffer*> DpuCloudController::init_tensor_buffer(std::vec
       const size_t dataSize = 1;//vart::size_of(tensors[ti]->get_data_type());
       size_t size = tensors[ti]->get_element_num() * dataSize/batch_size_;
       void *data;
-      if (posix_memalign(&data, getpagesize(), size*batchSupport))
+      if (rte::posix_memalign(&data, rte::getpagesize(), size*batchSupport))
         throw std::runtime_error("Error: not enough virtual addre on host");
       auto dims = tensors[ti]->get_shape();
       dims[0] = batchSupport;
@@ -187,7 +187,7 @@ std::vector<const xir::Tensor*> DpuCloudController::init_tensor(std::vector<cons
       const size_t dataSize = 1;//vart::size_of(tensors[ti]->get_data_type());
       size_t size = tensors[ti]->get_element_num() * dataSize/batch_size_;
       void *data;
-      if (posix_memalign(&data, getpagesize(), size*batchSupport))
+      if (rte::posix_memalign(&data, rte::getpagesize(), size*batchSupport))
         throw std::runtime_error("Error: not enough virtual addre on host");
       auto dims = tensors[ti]->get_shape();
       dims[0] = batchSupport;
