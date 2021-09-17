@@ -59,7 +59,6 @@ install(
   TARGETS
   run_rtengine_tests
   EXPORT ${PROJECT_NAME}-targets
-  COMPONENT base
   DESTINATION bin
   )
 
@@ -92,7 +91,6 @@ foreach(test ${TESTS})
   install(
     TARGETS
     "${exe}.exe"
-    COMPONENT tests
     DESTINATION bin
     )
 endforeach()
