@@ -81,7 +81,6 @@ install(
   RUNTIME DESTINATION bin
   ARCHIVE DESTINATION lib
   LIBRARY DESTINATION lib)
-  )
 
 if(BUILD_TESTS)
   enable_testing()
