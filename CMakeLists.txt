@@ -66,7 +66,6 @@ target_link_libraries(
   glog::glog
   ${JSONC_LIBRARIES}
   Threads::Threads
-  stdc++fs
   )
 set_target_properties(
   ${PROJECT_NAME}

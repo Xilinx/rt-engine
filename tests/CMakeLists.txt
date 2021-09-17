@@ -40,7 +40,6 @@ target_link_libraries(
   xir::xir
   GTest::GTest
   GTest::Main
-  stdc++fs
   )
 
 set_target_properties(
@@ -80,7 +79,6 @@ foreach(test ${TESTS})
     vart::runner
     glog::glog
     ${JSONC_LIBRARIES}
-    stdc++fs
     )
   set_target_properties(
     "${exe}.exe"
