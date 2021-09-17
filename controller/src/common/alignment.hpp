@@ -18,11 +18,21 @@
 #include <memory>
 #include <cstdlib>
 
-constexpr size_t PAGE_SIZE = 4096;
+#ifndef _WIN32
+  # include <unistd.h>
+#endif
 
 namespace rte {
 
-inline size_t getpagesize() {return PAGE_SIZE;}
+constexpr size_t PAGE_SIZE = 4096;
+
+inline size_t getpagesize() {
+#ifndef _WIN32
+  return ::getpagesize();
+#else
+  return PAGE_SIZE;
+#endif
+}
 
 inline int
 posix_memalign(void **memptr, size_t alignment, size_t size)
@@ -92,5 +102,10 @@ public:
     }
   }
 };
+
+template <typename T>
+bool operator==(const AlignedAllocator<T>& a1, const AlignedAllocator<T>& a2) {
+  return true;
+}
 
 } // rte

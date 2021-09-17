@@ -18,13 +18,7 @@
 #include <memory>
 #include <iostream>
 #include <cstring>
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wignored-qualifiers"
-#pragma GCC diagnostic pop
  
-#include <experimental/xrt-next.h>
-
-#include "experimental/xrt++.hpp"
 #include "xrt_bin_stream.hpp"
 #include "device_handle.hpp"
 #include "vitis/ai/env_config.hpp"
