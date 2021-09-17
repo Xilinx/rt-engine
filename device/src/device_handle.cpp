@@ -53,7 +53,11 @@ DeviceResource::DeviceResource(std::string kernelName, std::string xclbin, xir::
   if (cuIdx == 0) {
     binstream.burn(handle); // only program if you're the first CU
     for (size_t cucnt = 0; cucnt < binstream.get_num_of_cu(); cucnt++) {
+      #ifndef _WIN32
       cuIdx_xrt = xclIPName2Index(handle, binstream.get_cu(cucnt).c_str());
+      #else
+      cuIdx_xrt = 0; // API is not supported on windows
+      #endif 
       cuIdxMap.emplace(cuIdx_xrt, cucnt); 
     }
   }
@@ -78,7 +82,11 @@ DeviceResource::DeviceResource(std::string kernelName, std::string xclbin, xir::
     //seed to make sure rand() is differnet in differnet process 
     srand((int)time(0));
     if (cuIdx > (binstream.get_num_of_cu()-1)) cuIdx = rand()%binstream.get_num_of_cu(); 
+    #ifndef _WIN32
     cuIdx_xrt = xclIPName2Index(handle, binstream.get_cu(cuIdx).c_str());
+    #else
+    cuIdx_xrt = 0; // API is not supported on windows
+    #endif 
   }
   xclClose(handle);
   naive_resource_mgr_on_ = true;
