@@ -64,9 +64,9 @@ class XclDpuController : public DpuController {
 
  protected:
   virtual std::vector<vart::TensorBuffer*> create_tensor_buffers(
-    const std::vector<const xir::Tensor*> &tensors, bool isInput, int ddrBank=-1);
+    const std::vector<const xir::Tensor*> &tensors, bool isInput, int ddrBank=-1, bool isPhy=true);
   virtual std::vector<vart::TensorBuffer*> create_tensor_buffers(
-    const std::vector<const xir::Tensor*> &tensors, bool isInput, std::vector<int> ddrBanks);
+    const std::vector<const xir::Tensor*> &tensors, bool isInput, std::vector<int> ddrBanks, bool isPhy=true);
   virtual void free_tensor_buffers(std::vector<vart::TensorBuffer*>&);
   DeviceBuffer *get_device_buffer(vart::TensorBuffer *tb);
   std::vector<DeviceBuffer *>get_device_buffers(vart::TensorBuffer *tb);

@@ -27,6 +27,7 @@
 #include "vitis/ai/target_factory.hpp"
 #include "vitis/ai/env_config.hpp"
 #include "tensor_buffer_imp_host_phy.hpp"
+#include "tensor_buffer_imp_host.hpp"
 
 DEF_ENV_PARAM(DEBUG_DPU_CONTROLLER, "0")
 
@@ -206,14 +207,14 @@ XclDpuController<Dhandle, DbufIn, DbufOut>::get_outputs(int batchsz) {
 template <class Dhandle, class DbufIn, class DbufOut>
 std::vector<vart::TensorBuffer*> 
 XclDpuController<Dhandle, DbufIn, DbufOut>::create_tensor_buffers(
-  const std::vector<const xir::Tensor*> &tensors, bool isInput, int ddrBank) {
-  return create_tensor_buffers(tensors, isInput, std::vector<int>(1,ddrBank));
+  const std::vector<const xir::Tensor*> &tensors, bool isInput, int ddrBank, bool isPhy) {
+  return create_tensor_buffers(tensors, isInput, std::vector<int>(1,ddrBank),  isPhy);
 }
 
 template <class Dhandle, class DbufIn, class DbufOut>
 std::vector<vart::TensorBuffer*>
 XclDpuController<Dhandle, DbufIn, DbufOut>::create_tensor_buffers(
-  const std::vector<const xir::Tensor*> &tensors, bool isInput, std::vector<int> ddrBanks) {
+  const std::vector<const xir::Tensor*> &tensors, bool isInput, std::vector<int> ddrBanks, bool isPhy) {
   std::vector<vart::TensorBuffer*> tbufs;
   for (unsigned ti=0; ti < tensors.size(); ti++)
   {
@@ -225,6 +226,9 @@ XclDpuController<Dhandle, DbufIn, DbufOut>::create_tensor_buffers(
       throw std::bad_alloc();
     std::memset(data, 0, size);
     // make TensorBuffer to hold host memory
+
+    if(isPhy)
+    {
     std::unique_ptr<vart::rt_engine::TensorBufferExtImpHostPhy> tbuf(
       new vart::rt_engine::TensorBufferExtImpHostPhy(data, tensors[ti]));
     tbufs.emplace_back(tbuf.get());
@@ -257,6 +261,15 @@ XclDpuController<Dhandle, DbufIn, DbufOut>::create_tensor_buffers(
       tbufs2dbufs_.emplace(tbuf.get(), std::move(dbufs));
       tbufs_.emplace_back(std::move(tbuf));
     }
+  }
+  else
+  {
+    std::unique_ptr<vart::TensorBufferExtImpHost> tbuf(
+      new vart::TensorBufferExtImpHost(data, tensors[ti]));
+    tbufs.emplace_back(tbuf.get());
+    tbufs_.emplace_back(std::move(tbuf));
+
+  }
   }
 
   return tbufs;

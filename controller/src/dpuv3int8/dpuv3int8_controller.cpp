@@ -410,7 +410,7 @@ std::vector<vart::TensorBuffer*>
 Dpuv3Int8Controller::get_inputs(int batchsz) {
   if (batchsz != -1)
     throw std::runtime_error("Error: custom batch size not supported for this DPU");
-  auto stdBufs = create_tensor_buffers(get_input_tensors(), /*isInput*/true);
+  auto stdBufs = create_tensor_buffers(get_input_tensors(), /*isInput*/true, -1, false);
   auto hwBufs = create_hw_buffers(stdBufs, /*isInput*/true);
   return stdBufs;
 }
@@ -419,7 +419,8 @@ std::vector<vart::TensorBuffer*>
 Dpuv3Int8Controller::get_outputs(int batchsz) {
   if (batchsz != -1)
     throw std::runtime_error("Error: custom batch size not supported for this DPU");
-  auto stdBufs = create_tensor_buffers(get_output_tensors(), /*isInput*/false);
+  
+  auto stdBufs = create_tensor_buffers(get_output_tensors(), /*isInput*/false, -1, false);
   auto hwBufs = create_hw_buffers(stdBufs, /*isInput*/false);
   return stdBufs;
 
