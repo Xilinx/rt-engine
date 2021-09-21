@@ -14,8 +14,6 @@
 
 class InstrFormatConverter
 {
-  public:
-    void convertAsmToDdrFormat(std::string instrfname, std::string instrfilename);
  
   private:
     struct Instr {
@@ -25,7 +23,6 @@ class InstrFormatConverter
       
     bool isNumber(const std::string &s);
     std::string prepend(std::string hexString, int length);
-    std::string hexOf(unsigned __int128 value);
     void loadAsmInstructionFile(std::vector<Instr> &instructions_, std::string instrfname);
     void loadInstruction(std::vector<Instr> &instructions, std::string fieldName, int value, bool isDpdonDpdby);
     

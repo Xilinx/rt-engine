@@ -250,7 +250,6 @@ bool Xmodel::getBool(std::string name, json_object* jobj)
 void Xmodel::loadParamsJson(json_object* jobj, bool isDebugMode)
 {
   instrFormatConverter_.reset(new InstrFormatConverter());
-  instrFormatConverter_->convertAsmToDdrFormat(instr_asm_filename_, instr_filename_);
   
   bool multiFormat = false;
   json_object_object_foreach(jobj, key, val) 
