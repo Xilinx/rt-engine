@@ -427,10 +427,24 @@ Xmodel::Xmodel(const xir::Subgraph *subgraph, bool isDebugMode)
     input_fix_point_values_.push_back(in_tensor->get_attr<std::int32_t>("fix_point"));
 
   }
+  
+  output_fix_point_values_.clear();
+  output_fix_point_values_.resize(getOutputNum());
+  output_scales_.clear();
+  output_scales_.resize(getOutputNum());
+
   for(auto &out_tensor : output_tensors)
   {
-    output_scales_.push_back(pow(2,(-1)*out_tensor->get_attr<std::int32_t>("fix_point")));
-    output_fix_point_values_.push_back(out_tensor->get_attr<std::int32_t>("fix_point"));
+    std::string outName = out_tensor->get_name();
+    for(uint32_t i=0; i<getOutputNum(); i++)
+    {
+       if(outName==getOutTensorsNames()[i])
+       {  
+           output_scales_[i]=pow(2,(-1)*out_tensor->get_attr<std::int32_t>("fix_point"));
+          output_fix_point_values_[i] = out_tensor->get_attr<std::int32_t>("fix_point");
+
+       }
+    }
 
   }
 }
