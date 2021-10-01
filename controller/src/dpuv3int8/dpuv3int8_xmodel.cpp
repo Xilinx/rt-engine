@@ -46,12 +46,16 @@ bool getBool(std::string name, json_object* jobj)
 
 inputLayerParams::inputLayerParams(json_object* jobj, bool isDebugMode, bool multiFormat)
 {
+  
+  int batchSizeXmodelCompiledWith = 4;
+  
   if(multiFormat)
   {
-    //json_object* obj = json_object_object_get(jobj, "shape");
     json_object* obj = NULL;
     json_object_object_get_ex(jobj, "shape", &obj);
     json_object* shapeVal;
+    shapeVal = json_object_array_get_idx(obj, 0);
+    batchSizeXmodelCompiledWith = json_object_get_int(shapeVal);
     shapeVal = json_object_array_get_idx(obj, 1);
     inH_ = json_object_get_int(shapeVal);
     shapeVal = json_object_array_get_idx(obj, 2);
@@ -65,7 +69,28 @@ inputLayerParams::inputLayerParams(json_object* jobj, bool isDebugMode, bool mul
     inH_ = getValue("inH", jobj);
     inCh_ = getValue("inCh", jobj);
   }
-  inDdrSize_ = getValue("inDDRSize", jobj);
+  
+  if(batchSizeXmodelCompiledWith==4)
+  {
+    inDdrSize_ = getValue("inDDRSize", jobj);
+  }
+  else if(batchSizeXmodelCompiledWith<4 and batchSizeXmodelCompiledWith>0)
+  {
+     std::cout<<"Xmodel compiled with batchSize: "<<batchSizeXmodelCompiledWith<<std::endl;
+     
+     inDdrSize_ = getValue("inDDRSize", jobj);
+     if(batchSizeXmodelCompiledWith==1)
+       inDdrSize_ = inDdrSize_*4;
+     else if(batchSizeXmodelCompiledWith==2)
+       inDdrSize_ = inDdrSize_*2;
+     else if(batchSizeXmodelCompiledWith==3)
+       inDdrSize_ = (inDdrSize_/3)*4;
+  }
+  else
+  {
+     std::cout<<"Xmodel compiled with batchSize: "<<batchSizeXmodelCompiledWith<<std::endl;
+     throw std::runtime_error("Error: batchSizes other than 1,2,3,4 are not supported for this IP, please cosnider re-compiling the xmodel with one of these batch sizes - either 1 or 2 or 3 or 4");
+  }
   padRgt_ = getValue("padRt", jobj);
 
   dru_mode_ = isDebugMode ? false:getBool("druMode", jobj);
