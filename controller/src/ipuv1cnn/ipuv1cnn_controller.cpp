@@ -14,6 +14,8 @@
 
 #include "ipuv1cnn_controller.hpp"
 
+#include <algorithm>
+
 typedef unsigned int uint;
 
 Ipuv1CnnController::Ipuv1CnnController(const xir::Subgraph *subgraph)
@@ -40,22 +42,19 @@ Ipuv1CnnController::Ipuv1CnnController(const xir::Subgraph *subgraph)
       outputDeviceBuffers_[i].emplace_back(handle_.get(), outTensor->get_data_size(), XCL_BO_FLAGS_HOST_ONLY);
   }
 
-  // TODO: Get params from an XMODEL
+  // Load Params
+  std::vector<int> paramsVec;
+  auto params = subgraph->get_attr<std::vector<std::string>>("params");
+  std::for_each(params.begin(), params.end(), [&](std::string& s){paramsVec.emplace_back(std::stol(s, nullptr, 16));});
+
+  // TODO: Stop using weights_ and biases_
   // Load Weights
-  const char* weightsPath = std::getenv("XLNX_WEIGHTS");
-  std::ifstream ifs0(weightsPath);
-  std::istream_iterator<int> ibegin0(ifs0), iend0;
-  std::vector<int> weightsVec(ibegin0, iend0);
-  weights_ = std::make_unique<IpuDeviceBuffer>(handle_.get(), weightsVec.size()*4, XCL_BO_FLAGS_HOST_ONLY);
-  std::memcpy(weights_->get_data(), weightsVec.data(), weightsVec.size()*4);
+  weights_ = std::make_unique<IpuDeviceBuffer>(handle_.get(), 147456, XCL_BO_FLAGS_HOST_ONLY);
+  std::memcpy(weights_->get_data(), paramsVec.data(), 147456);
 
   // Load Biases
-  const char* biasesPath = std::getenv("XLNX_BIASES");
-  std::ifstream ifs1(biasesPath);
-  std::istream_iterator<int> ibegin1(ifs1), iend1;
-  std::vector<int> biasesVec(ibegin1, iend1);
-  biases_ = std::make_unique<IpuDeviceBuffer>(handle_.get(), biasesVec.size()*4, XCL_BO_FLAGS_HOST_ONLY);
-  std::memcpy(biases_->get_data(), biasesVec.data(), biasesVec.size()*4);
+  biases_ = std::make_unique<IpuDeviceBuffer>(handle_.get(), 256, XCL_BO_FLAGS_HOST_ONLY);
+  std::memcpy(biases_->get_data(), paramsVec.data()+(147456/sizeof(int)), 256);
 }
 
 void Ipuv1CnnController::run(const std::vector<vart::TensorBuffer*> &inputs,
