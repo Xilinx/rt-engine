@@ -86,8 +86,8 @@ if(BUILD_TESTS)
   add_subdirectory(tests)
 endif()
 
+include(helper)
+
 if(UNIX)
   include(cpackLinux)
 endif()
-
-include(helper)
