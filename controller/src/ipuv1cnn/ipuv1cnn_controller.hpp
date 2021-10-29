@@ -80,12 +80,12 @@ protected:
   std::vector<std::vector<IpuDeviceBuffer>> inputDeviceBuffers_;
   std::vector<std::vector<IpuDeviceBuffer>> outputDeviceBuffers_;
 
-  // Create Device Buffers for instructions and model parameters
-  std::unique_ptr<IpuDeviceBuffer> weights_;
-  std::unique_ptr<IpuDeviceBuffer> biases_;
+  // Create Device Buffers for instructions and model parameters and ddr spill
+  std::unique_ptr<IpuDeviceBuffer> parameters_;
+  std::unique_ptr<IpuDeviceBuffer> instructions_;
+  std::unique_ptr<IpuDeviceBuffer> intermediate_;
 
-  //std::unique_ptr<IpuDeviceBuffer> instructions_;
-  //std::unique_ptr<IpuDeviceBuffer> parameters_;
-
+  size_t numInstructions_;
+  
 
 };

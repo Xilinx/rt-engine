@@ -42,19 +42,34 @@ Ipuv1CnnController::Ipuv1CnnController(const xir::Subgraph *subgraph)
       outputDeviceBuffers_[i].emplace_back(handle_.get(), outTensor->get_data_size(), XCL_BO_FLAGS_HOST_ONLY);
   }
 
-  // Load Params
+  // Load Parameters
   std::vector<int> paramsVec;
   auto params = subgraph->get_attr<std::vector<std::string>>("params");
   std::for_each(params.begin(), params.end(), [&](std::string& s){paramsVec.emplace_back(std::stol(s, nullptr, 16));});
+  parameters_ = std::make_unique<IpuDeviceBuffer>(handle_.get(), 4*paramsVec.size(), XCL_BO_FLAGS_HOST_ONLY);
+  std::memcpy(parameters_->get_data(), paramsVec.data(), 4*paramsVec.size());
+  parameters_->upload();
 
-  // TODO: Stop using weights_ and biases_
-  // Load Weights
-  weights_ = std::make_unique<IpuDeviceBuffer>(handle_.get(), 147456, XCL_BO_FLAGS_HOST_ONLY);
-  std::memcpy(weights_->get_data(), paramsVec.data(), 147456);
+  //std::ofstream params_output_file("params.txt");
+  //std::ostream_iterator<int> p_output_iterator(params_output_file, "\n");
+  //std::copy(paramsVec.begin(), paramsVec.end(), p_output_iterator);
 
-  // Load Biases
-  biases_ = std::make_unique<IpuDeviceBuffer>(handle_.get(), 256, XCL_BO_FLAGS_HOST_ONLY);
-  std::memcpy(biases_->get_data(), paramsVec.data()+(147456/sizeof(int)), 256);
+  // Load Instructions
+  std::vector<int> instrVec;
+  auto instrs = subgraph->get_attr<std::vector<std::string>>("mc_code");
+  std::for_each(instrs.begin(), instrs.end(), [&](std::string& s){instrVec.emplace_back(std::stol(s, nullptr, 16));});
+  instructions_ = std::make_unique<IpuDeviceBuffer>(handle_.get(), 4*instrVec.size(), XCL_BO_FLAGS_HOST_ONLY);
+  std::memcpy(instructions_->get_data(), instrVec.data(), 4*instrVec.size());
+  instructions_->upload();
+  numInstructions_ = instrVec.size();
+  
+  //std::ofstream instr_output_file("instr.txt");
+  //std::ostream_iterator<int> i_output_iterator(instr_output_file, "\n");
+  //std::copy(instrVec.begin(), instrVec.end(), i_output_iterator);
+
+  // Initialize DDR Buffer for activation spill
+  auto interSize = subgraph->get_attr<std::int32_t>("inter_size");
+  intermediate_ = std::make_unique<IpuDeviceBuffer>(handle_.get(), interSize, XCL_BO_FLAGS_HOST_ONLY);
 }
 
 void Ipuv1CnnController::run(const std::vector<vart::TensorBuffer*> &inputs,
@@ -72,41 +87,31 @@ void Ipuv1CnnController::run(const std::vector<vart::TensorBuffer*> &inputs,
   }
 
   // Send convolution params via ERT command queue
-  auto weightsPaddr = weights_->get_phys_addr();
-  auto biasesPaddr = biases_->get_phys_addr();
-
-#define LAYER_PARAM_WORD_SIZE 16
-#define TILE_PARAM_WORD_SIZE 7
-#define LAYER_NUM_BE_LOAD 2
-  uint inst[LAYER_NUM_BE_LOAD][LAYER_PARAM_WORD_SIZE] = {
-      {114, 10, 128, 112, 8, 128, 3, 3, 1, 1, 0, 0, (uint)inputDeviceBuffers_[worker_id][0].get_phys_addr(), (uint)weightsPaddr, (uint)biasesPaddr,
-          (uint)outputDeviceBuffers_[worker_id][0].get_phys_addr()},
-      {10, 10, 128, 8, 8, 32, 3, 3, 1, 1, 0, 0, 0x10000, 0x20000, 0x30000,
-          0x00000}};
-  uint tile[LAYER_NUM_BE_LOAD][TILE_PARAM_WORD_SIZE] = {{2, 2, 2, 1, 1, 1, 4},
-                                                        {2, 2, 2, 1, 1, 1, 4}};
-
-  uint layer_num = 1U; // must <= LAYER_NUM_BE_LOAD;
-  int inst_word_size = layer_num * (LAYER_PARAM_WORD_SIZE + TILE_PARAM_WORD_SIZE);
+  auto inputPaddr = inputDeviceBuffers_[worker_id][0].get_phys_addr();   // Hardcoded to input 0, only single input supported
+  auto outputPaddr = outputDeviceBuffers_[worker_id][0].get_phys_addr(); // Hardcoded to output 0, only single output supported
+  auto parametersPaddr = parameters_->get_phys_addr();
+  auto instructionsPaddr = instructions_->get_phys_addr();
+  auto intermediatePaddr = intermediate_->get_phys_addr();
 
   {
     auto cmdp = reinterpret_cast<ert_start_kernel_cmd *>(execBufBOMap);
     memset(cmdp, 0, 4096);
     cmdp->state = ERT_CMD_STATE_NEW;
     cmdp->opcode = ERT_START_CU;
-    cmdp->count = inst_word_size +2; // +1 for cu_mask, +1 for header
+    cmdp->count = 12; // +1 for cu_mask, +10 for addresses, +1 for instr size
     cmdp->cu_mask = 1;
     int idx_p = 0;
-    cmdp->data[idx_p++] = inst_word_size;   // total amount of data sent
-    for (uint i = 0; i < layer_num; i++) {
-      for (uint j = 0; j < LAYER_PARAM_WORD_SIZE; j++) {
-        cmdp->data[idx_p++] = inst[i][j];
-      }
-      for (uint j = 0; j < TILE_PARAM_WORD_SIZE; j++) {
-        cmdp->data[idx_p++] = tile[i][j];
-      }
-      printf("At the end idx_p = %d inst_word_size = %d \n", idx_p, inst_word_size);
-    }
+    cmdp->data[idx_p++] = inputPaddr & 0xFFFFFFFF;   // ifm_lo
+    cmdp->data[idx_p++] = inputPaddr >> 32;   // ifm_hi
+    cmdp->data[idx_p++] = parametersPaddr & 0xFFFFFFFF;   // param_lo
+    cmdp->data[idx_p++] = parametersPaddr >> 32;   // param_hi
+    cmdp->data[idx_p++] = outputPaddr & 0xFFFFFFFF;   // ofm_lo
+    cmdp->data[idx_p++] = outputPaddr >> 32;   // ofm_hi
+    cmdp->data[idx_p++] = intermediatePaddr & 0xFFFFFFFF;   // inter_lo
+    cmdp->data[idx_p++] = intermediatePaddr >> 32;   // inter_hi
+    cmdp->data[idx_p++] = instructionsPaddr & 0xFFFFFFFF;   // instr_lo
+    cmdp->data[idx_p++] = instructionsPaddr >> 32;   // instr_hi
+    cmdp->data[idx_p++] = numInstructions_;
 
     printf("In %s sending ERT_START_CU command\n", __func__);
     xclExecBuf(handle, execBufBO);
