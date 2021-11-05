@@ -74,7 +74,7 @@ inputLayerParams::inputLayerParams(json_object* jobj, bool isDebugMode, bool mul
   {
     inDdrSize_ = getValue("inDDRSize", jobj);
   }
-  else if(batchSizeXmodelCompiledWith<4 and batchSizeXmodelCompiledWith>0)
+  else if(batchSizeXmodelCompiledWith<4 && batchSizeXmodelCompiledWith>0)
   {
      std::cout<<"Xmodel compiled with batchSize: "<<batchSizeXmodelCompiledWith<<std::endl;
      
