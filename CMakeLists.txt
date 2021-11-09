@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.9)
   
-project(rt-engine)
+project(rt-engine VERSION 1.4.0)
 
 set(CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/cmake)
 
