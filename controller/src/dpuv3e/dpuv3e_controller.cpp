@@ -167,7 +167,7 @@ DpuV3eController::DpuV3eController(const xir::Subgraph *subgraph, xir::Attrs* at
         hbmw.push_back(7);
       }
     }
-    else if (dsa.find("u280") != std::string::npos) {
+    else if ((dsa.find("u280") != std::string::npos) || (dsa.find("u55c") != std::string::npos)) {
       if (cu_index == 0) {
         hbmio.push_back(0);
         hbmio.push_back(19);
