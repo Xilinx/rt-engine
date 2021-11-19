@@ -112,5 +112,9 @@ class DpuCloudController
  private:
   int flag;
   void init_profiler();
+  std::unordered_map<int, xir::Tensor*> tensors_map_;
+  //std::unordered_map<string, xir::Tensor*> tensor_no_batch_map_;
+  std::list<std::unique_ptr<xir::Tensor>> tensors_;
+  //std::list<std::unique_ptr<xir::Tensor>> tensor_no_batch_;
 };
 

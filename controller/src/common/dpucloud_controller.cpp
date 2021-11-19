@@ -135,6 +135,17 @@ void DpuCloudController::init_profiler() {
 }
 
 DpuCloudController::~DpuCloudController() {
+  auto iter = xdpu_workspace_dpu.begin();
+  if (iter != xdpu_workspace_dpu.end()) {
+   for (unsigned i=0;i<iter->second.size(); i++) {
+     auto buf = (iter->second)[i];
+     rte::aligned_ptr_deleter pDel;
+     pDel(reinterpret_cast<void*>(buf->data().first));
+
+     //free(reinterpret_cast<void*>(buf->data().first));
+   }
+  
+  }
 }
 std::vector<unsigned> DpuCloudController::get_hbmw() {
   vector<unsigned> hbm;
@@ -160,16 +171,15 @@ std::vector<vart::TensorBuffer*> DpuCloudController::init_tensor_buffer(std::vec
     {
       // allocate aligned host memory
       const size_t dataSize = 1;//vart::size_of(tensors[ti]->get_data_type());
-      size_t size = tensors[ti]->get_element_num() * dataSize/batch_size_;
+      size_t size = tensors[ti]->get_element_num() * dataSize;
       void *data;
-      if (rte::posix_memalign(&data, rte::getpagesize(), size*batchSupport))
+      if (rte::posix_memalign(&data, rte::getpagesize(), size))
         throw std::runtime_error("Error: not enough virtual addre on host");
-      auto dims = tensors[ti]->get_shape();
-      dims[0] = batchSupport;
-      xir::Tensor *tensor = xir::Tensor::create(tensors[ti]->get_name(), dims, tensors[ti]->get_data_type()).release();
-
+//      auto dims = tensors[ti]->get_shape();
+//      dims[0] = batchSupport;
+//      xir::Tensor *tensor = xir::Tensor::create(tensors[ti]->get_name(), dims, tensors[ti]->get_data_type()).release();
       std::unique_ptr<vart::TensorBufferExtImpHost> tbuf(
-        new vart::TensorBufferExtImpHost(data, tensor));
+        new vart::TensorBufferExtImpHost(data, tensors[ti]));
       tbufs.emplace_back(tbuf.get());
       {
         std::unique_lock<std::mutex> lock(hwbufio_mtx_);
@@ -339,9 +349,19 @@ void DpuCloudController::init_graph(vector<unsigned> hbmw, vector<unsigned> hbmc
       }
     }
   }
+  auto iter = xdpu_total_reg_map.begin();
+  while(iter !=xdpu_total_reg_map.end()) {
+
+    const std::vector<std::int32_t> dims = { 1,  iter->second};
+    xir::Tensor *tensor = xir::Tensor::create("inout", dims, xir::DataType{xir::DataType::INT, 8}).release();
+    tensors_map_.emplace(iter->first,tensor);
+    tensors_.emplace_back(std::move(tensor));
+    iter++;
+
+  }
   if (model_->get_xdpu_workspace_reg_map().size()>0) {
     for(auto workspace : model_->get_xdpu_workspace_reg_map()) {
-       auto buf = create_tensor_buffers_hbm(get_merged_io_tensors(workspace.second),false, get_hbmio(),1);
+       auto buf = create_tensor_buffers_hbm(get_merged_io_tensors(workspace.first),false, get_hbmio(),1);
        if (!buf.empty()) {
          xdpu_workspace_dpu.emplace(workspace.first,buf);
        }
@@ -372,11 +392,16 @@ DpuCloudController::get_output_tensors() const {
 }
 
 std::vector<const xir::Tensor*> 
-DpuCloudController::get_merged_io_tensors(int size) const {
-  const std::vector<std::int32_t> dims = { 1,  size};
-  xir::Tensor *tensor = xir::Tensor::create("inout", dims, xir::DataType{xir::DataType::INT, 8}).release();
-  //static xir::Tensor tensor("inout", dims, xir::Tensor::DataType::INT8); 
+DpuCloudController::get_merged_io_tensors(int reg_id) const {
+  auto it= tensors_map_.find(reg_id);
+  xir::Tensor* tensor;
+  if (it != tensors_map_.end()) {
+    tensor = it->second;
+  } else {
+    throw std::runtime_error("Error: invilad reg index tensor");
+  }
   return std::vector<const xir::Tensor*>(batch_size_, tensor);
+
 }
 
 std::vector<vart::TensorBuffer*> DpuCloudController::get_inputs(int batchsz) {
@@ -384,15 +409,19 @@ std::vector<vart::TensorBuffer*> DpuCloudController::get_inputs(int batchsz) {
   // E.g., batchsz=1 for MLperf Server Scenario
   if (model_->get_input_regid() == model_->get_output_regid()) {
     int input_bz = (model_->get_input_tensors())[0]->get_shape()[0]/batch_size_;
-    if (batchsz == -1)
+    if (batchsz == -1) {
     // for default defination
-      return init_tensor_buffer(model_->get_input_tensors(),batch_size_*input_bz);
-    else if (batchsz == 1)
+      auto tensors = model_->get_input_tensors();
+      return init_tensor_buffer(tensors, batch_size_*input_bz);
+    } else if (batchsz == 1) {
     // for mlperf defination
-      return init_tensor_buffer(model_->get_input_tensors(),batchsz*input_bz,batch_size_);
-    else
+      auto tensors = model_->get_graph_input_tensors();
+      return init_tensor_buffer(tensors, batchsz*input_bz,batch_size_);
+    } else {
     // for other user-requested batchsz
-      return init_tensor_buffer(model_->get_input_tensors(),batchsz*input_bz);
+      auto tensors = model_->get_input_tensors();
+      return init_tensor_buffer(tensors,batchsz*input_bz);
+    }
   } else {
     auto hbmio = get_hbmio();
     return get_outputs_inner(hbmio, true, batchsz);
@@ -469,7 +498,7 @@ std::vector<vart::TensorBuffer*> DpuCloudController::create_tensorbuffer_for_bat
       if ((iter->first != model_->get_input_regid())&& (iter->first != model_->get_output_regid())) { 
         //for xmodel 1.3 with io-split 
         //can be removed in the future
-        auto buf = create_tensor_buffers_hbm(get_merged_io_tensors(iter->second),false, get_hbmio(),1);
+        auto buf = create_tensor_buffers_hbm(get_merged_io_tensors(iter->first),false, get_hbmio(),1);
         if (!buf.empty()) {
           hwbuf.emplace(std::make_pair(iter->first,buf));
           iter++;
@@ -487,15 +516,20 @@ std::vector<vart::TensorBuffer*> DpuCloudController::create_tensorbuffer_for_bat
               continue;
             }
           }
-          auto bufPhy = create_tensor_buffers_hbm(get_merged_io_tensors(iter->second),false, hbm,1);
+          auto bufPhy = create_tensor_buffers_hbm(get_merged_io_tensors(iter->first),false, hbm,1);
           for (int i =0; i < tensor_batch; i++) { 
             for (unsigned int ts=0;ts< tensors.size(); ts++) {
-              auto dims = tensors[ts]->get_shape();
-              dims[0] = dims[0]/tensor_batch;
+              //auto dims = tensors[ts]->get_shape();
+              //dims[0] = dims[0]/tensor_batch;
               if (isTensorsBatch) { // if create tensorbuffers in batch, tensor->get_shape()[0] is 1
+                xir::Tensor *tensor;//
+	        if (isInputs)	
+		  tensor = const_cast<xir::Tensor*>(model_->get_graph_input_tensors()[ts]);
+		else
+		  tensor = const_cast<xir::Tensor*>(model_->get_graph_output_tensors()[ts]);
                 std::vector<vart::TensorBuffer*> bufPhy_single;
                 bufPhy_single.emplace_back(bufPhy[i]);
-                xir::Tensor *tensor = xir::Tensor::create(tensors[ts]->get_name(), dims, tensors[ts]->get_data_type()).release();
+                //xir::Tensor *tensor = xir::Tensor::create(tensors[ts]->get_name(), dims, tensors[ts]->get_data_type()).release();
                 std::unique_ptr<vart::TensorBufferExtImpView> buf(
                   new vart::TensorBufferExtImpView(tensor, tensor_offset[ts], bufPhy_single));
                 tbufs.emplace_back(buf.get());
@@ -518,11 +552,13 @@ std::vector<vart::TensorBuffer*> DpuCloudController::create_tensorbuffer_for_bat
           hwbuf.emplace(std::make_pair(iter->first, bufPhy)); 
           iter++;
         } else {  // for condition that io-split disable 
-          auto buf = create_tensor_buffers_hbm(get_merged_io_tensors(iter->second),false, hbm,1);
+          auto buf = create_tensor_buffers_hbm(get_merged_io_tensors(iter->first),false, hbm,1);
           if (!isTensorsBatch) {
-            tbufs = init_tensor_buffer(tensors,batch_size_*output_bz);
+            auto tensors_out = model_->get_output_tensors();
+            tbufs = init_tensor_buffer(tensors_out,batch_size_*output_bz);
           } else {
-            tbufs = init_tensor_buffer(tensors,(model_->get_output_tensors())[0]->get_shape()[0],batch_size_);
+            auto tensors_out = model_->get_graph_output_tensors();
+            tbufs = init_tensor_buffer(tensors_out,(model_->get_output_tensors())[0]->get_shape()[0],batch_size_);
           }
           if (!buf.empty()) {
             hwbuf.emplace(std::make_pair(iter->first,buf));
@@ -589,8 +625,12 @@ void DpuCloudController::free_buffers(std::vector<vart::TensorBuffer*> &tbufs) {
       for (auto it=bufs_.begin(); it != bufs_.end(); it++)
         if (it->get() == tb)
         {
-          bufs_.erase(it);
-          break;
+	   rte::aligned_ptr_deleter pDel;
+           pDel(reinterpret_cast<void*>(it->get()->data().first));
+
+	   //free(reinterpret_cast<void*>(it->get()->data().first));
+           bufs_.erase(it);
+           break;
         }
     } else {
       auto buf = bufsView2Phy_.find(tb);
@@ -604,14 +644,23 @@ void DpuCloudController::free_buffers(std::vector<vart::TensorBuffer*> &tbufs) {
           for (auto it=tbufs_.begin(); it != tbufs_.end(); it++) {
             if (it->get() == buf->second)
             {
+               rte::aligned_ptr_deleter pDel;  
+               pDel(reinterpret_cast<void*>(it->get()->data().first));
+	       //free(reinterpret_cast<void*>(it->get()->data().first));
                tbufs_.erase(it);
                break;
             }
           }
           bufsView2Phy_.erase(buf);
         }
-      }  
-      tbuf2hwbufsio_.erase(tb);
+      } 
+      auto it = tbuf2hwbufsio_.find(tb);
+      if (it != tbuf2hwbufsio_.end()) {
+        auto hwbufs = it->second;
+        hwbufs.clear();
+        tbuf2hwbufsio_.erase(tb);
+      }
+ 
       for (auto it=bufsView_.begin(); it != bufsView_.end(); it++) {
         if (it->get() == tb)
         {
