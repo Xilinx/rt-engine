@@ -85,7 +85,20 @@ DpuXmodel::DpuXmodel(const std::string meta): dump_mode_(false),debug_mode_(fals
 }
 
 DpuXmodel::~DpuXmodel() {
+  auto iter = xdpu_code_map.begin();
+  if (iter != xdpu_code_map.end()) {
+    rte::aligned_ptr_deleter pDel;
+    pDel(reinterpret_cast<void*>(iter->first));
+    //free(iter->first);
+    iter++;
+  }
+  for (unsigned int i=0; i<xdpu_parameter_map.size();i++) {
+    rte::aligned_ptr_deleter pDel;
+    pDel(reinterpret_cast<void*>(std::get<0>(xdpu_parameter_map[i])));
+    //free(std::get<0>(xdpu_parameter_map[i]));
+  }
 }
+
 void DpuXmodel::init(const xir::Subgraph *subgraph)  {
   if (subgraph->has_attr("device")&&(subgraph->get_attr<std::string>("device")=="DPU")) {
     init_graph(subgraph);
@@ -155,34 +168,62 @@ static const xir::Tensor* find_tensor(const xir::Tensor* in_tensor, const xir::S
   return out;
 
 }
+std::vector<const xir::Tensor*> DpuXmodel::get_graph_input_tensors() {
+  auto ret = std::vector<const xir::Tensor*>();
+  ret.reserve(graph_intensors_.size());
+  std::transform(graph_intensors_.begin(), graph_intensors_.end(), std::back_inserter(ret),
+                 [](auto& tensor) { return tensor.get(); });
+  return ret;
+}
+std::vector<const xir::Tensor*> DpuXmodel::get_graph_output_tensors() {
+  auto ret = std::vector<const xir::Tensor*>();
+  ret.reserve(graph_outtensors_.size());
+  std::transform(graph_outtensors_.begin(), graph_outtensors_.end(), std::back_inserter(ret),
+                 [](auto& tensor) { return tensor.get(); });
+  return ret;
+}
+std::vector<const xir::Tensor*> DpuXmodel::get_input_tensors() {
+  auto ret = std::vector<const xir::Tensor*>();
+  ret.reserve(intensors_.size());
+  std::transform(intensors_.begin(), intensors_.end(), std::back_inserter(ret),
+                 [](auto& tensor) { return tensor.get(); });
+  return ret;
+}
+std::vector<const xir::Tensor*> DpuXmodel::get_output_tensors() {
+  auto ret = std::vector<const xir::Tensor*>();
+  ret.reserve(intensors_.size());
+  std::transform(outtensors_.begin(), outtensors_.end(), std::back_inserter(ret),
+                 [](auto& tensor) { return tensor.get(); });
+  return ret;
+}
 void DpuXmodel::init_vitis_tensors(int batch_size, size_t device_index) {
-  vitis_input_tensors_.clear();
-  vitis_output_tensors_.clear();
-  for (auto tensor : input_tensors_) {
+  for (unsigned int i=0; i< graph_intensors_.size(); i++) {
+      auto tensor = graph_intensors_[i].get();
       auto dims = tensor->get_shape();
       dims[0] = batch_size*dims[0];
       auto vitis_tensor = xir::Tensor::create(tensor->get_name(), dims,
-                                                  tensor->get_data_type()).release();
+                                                  tensor->get_data_type());
       auto attrs = tensor->get_attrs();
        if (!attrs->has_attr("__device_id__")) {
           attrs->set_attr<size_t>("__device_id__", device_index);
         }
 
       vitis_tensor->set_attrs(std::move(attrs));
-      vitis_input_tensors_.emplace_back(vitis_tensor);
+      intensors_.emplace_back(std::move(vitis_tensor));
   }
-  for (auto tensor : output_tensors_) {
+  for (unsigned int i=0; i< graph_outtensors_.size(); i++) {
+      auto tensor = graph_outtensors_[i].get();
       auto dims = tensor->get_shape();
       dims[0] = batch_size*dims[0];
       auto vitis_tensor = xir::Tensor::create(tensor->get_name(), dims,
-                                                  tensor->get_data_type()).release();
+                                                  tensor->get_data_type());
       auto attrs = tensor->get_attrs();
       //auto attrs = tensor->get_attrs();
        if (!attrs->has_attr("__device_id__")) {
           attrs->set_attr<size_t>("__device_id__", device_index);
         }
       vitis_tensor->set_attrs(std::move(attrs));
-      vitis_output_tensors_.emplace_back(vitis_tensor);
+      outtensors_.emplace_back(std::move(vitis_tensor));
   }
 }
 void DpuXmodel::init_graph(const xir::Subgraph* subgraph) {
@@ -319,10 +360,13 @@ void DpuXmodel::init_graph(const xir::Subgraph* subgraph) {
     layer.inputs.emplace_back(address_info(ddr_addr, 
       in_tensor->get_data_size(), layer_info::name_map(out->get_name()),out->get_attr<std::int32_t>("reg_id"))); 
     auto attrs = out->get_attrs(); 
-    xir::Tensor *tensor = xir::Tensor::create(in_tensor->get_name(), dims, in_tensor->get_data_type()).release();
+    auto tensor = xir::Tensor::create(in_tensor->get_name(), dims, in_tensor->get_data_type());
+    //auto tensor = xir::Tensor::create(in_tensor->get_name(), dims, in_tensor->get_data_type());
+
     tensor->set_attrs(std::move(attrs));
     input_regid = out->get_attr<std::int32_t>("reg_id");
-    input_tensors_.emplace_back(tensor);
+    graph_intensors_.emplace_back(std::move(tensor));
+    //tensors_.emplace_back(std::move(tensor));
     //xdpu_total_in_size += tensor->get_element_num(); 
 
   }
@@ -341,11 +385,11 @@ void DpuXmodel::init_graph(const xir::Subgraph* subgraph) {
     layer.outputs.emplace_back(std::make_tuple(ddr_addr, 
         out_tensor->get_data_size(), layer_info::name_map(out->get_name()),out->get_attr<std::int32_t>("reg_id")));
     auto attrs = out->get_attrs();
-    xir::Tensor *tensor = xir::Tensor::create(out_tensor->get_name(), dims, out_tensor->get_data_type()).release();
+    auto tensor = xir::Tensor::create(out_tensor->get_name(), dims, out_tensor->get_data_type());
     tensor->set_attrs(std::move(attrs));
     //auto tensor = out;
     output_regid = out->get_attr<std::int32_t>("reg_id");
-    output_tensors_.emplace_back(tensor);
+    graph_outtensors_.emplace_back(std::move(tensor));
     //xdpu_total_out_size += tensor->get_element_num(); 
 
   }
