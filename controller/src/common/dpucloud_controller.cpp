@@ -651,8 +651,8 @@ void DpuCloudController::free_buffers(std::vector<vart::TensorBuffer*> &tbufs) {
                break;
             }
           }
-          bufsView2Phy_.erase(buf);
         }
+        bufsView2Phy_.erase(buf);
       } 
       auto it = tbuf2hwbufsio_.find(tb);
       if (it != tbuf2hwbufsio_.end()) {
