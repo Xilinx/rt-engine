@@ -87,11 +87,15 @@ DpuXmodel::DpuXmodel(const std::string meta): dump_mode_(false),debug_mode_(fals
 DpuXmodel::~DpuXmodel() {
   auto iter = xdpu_code_map.begin();
   if (iter != xdpu_code_map.end()) {
-    free(iter->first);
+    rte::aligned_ptr_deleter pDel;
+    pDel(reinterpret_cast<void*>(iter->first));
+    //free(iter->first);
     iter++;
   }
   for (unsigned int i=0; i<xdpu_parameter_map.size();i++) {
-    free(std::get<0>(xdpu_parameter_map[i]));
+    rte::aligned_ptr_deleter pDel;
+    pDel(reinterpret_cast<void*>(std::get<0>(xdpu_parameter_map[i])));
+    //free(std::get<0>(xdpu_parameter_map[i]));
   }
 }
 
