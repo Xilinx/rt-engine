@@ -18,8 +18,77 @@
 #include "tensor_buffer_imp_host.hpp"
 #include "tensor_buffer_imp_view.hpp"
 #include "tensor_buffer_imp_host_phy.hpp"
+#include <queue>
 //
 //DEF_ENV_PARAM(DEBUG_DPU_CONTROLLER, "0")
+//
+//
+class tensorbufferPool {
+ public:
+  static tensorbufferPool& Instance() {
+    static tensorbufferPool pool(8);
+    return pool;
+  }
+  std::pair<vector<vart::TensorBuffer*>,vector<vart::TensorBuffer*>> get(std::string model) {
+    auto iter = queues.find(model);
+    if (iter != queues.end()) {
+      auto queue = iter->second;
+      while(queue.empty()) {
+      }
+      auto ptr = queue.front();
+      queue.pop();
+      return ptr;
+    } else {
+      throw std::runtime_error("No queue available!");
+    }
+
+  }
+  explicit tensorbufferPool(const size_t pool_size) : size_(pool_size) {
+    //cache_ = new vart::TensorBuffer[size_];
+    //for (size_t i=0; i<size_; i++) {
+    //  queue_.push(&cache_[i]);
+    //}
+   
+  }
+  ~tensorbufferPool() {
+    //if(cahche_) {
+    //  delete cache_;
+    //  cache_ = nullptr;
+    //}
+    //for (auto &ptr : extended_cache_) {
+    //  delete ptr;
+    //}
+
+  }
+  void extend (std::string model, std::pair<std::vector<vart::TensorBuffer*>, std::vector<vart::TensorBuffer*>> buf) {
+      //extended_cache_.push_back(bufin);
+      //extended_cache_.push_back(bufout);
+    auto iter = queues.find(model);
+    if (iter != queues.end()) {
+      auto queue = iter->second;
+      queue.push(buf);
+      queues.emplace(model,queue);
+    } else {
+      std::queue<std::pair<vector<vart::TensorBuffer*>,vector<vart::TensorBuffer*>>> queue;
+      queue.push(buf);
+      queues.emplace(model,queue);
+    }
+  }
+  bool check(std::string dm5) {
+    auto iter = queues.find(dm5);
+    if (iter != queues.end())
+      return true;
+    else
+      return false;
+  }
+
+  private:
+    //std::queue<std::pair<vector<vart::TensorBuffer*>,vector<vart::TensorBuffer*>>> queue_;
+    std::unordered_map<std::string,std::queue<std::pair<vector<vart::TensorBuffer*>,vector<vart::TensorBuffer*>>>> queues;
+    //vart::TensorBuffer* cache_ = nullptr;
+    //std::list<vector<vart::TensorBuffer*>> extended_cache_;
+    const size_t size_;
+};
 class DpuCloudController 
 : public XclDpuController<XrtDeviceHandle, XrtDeviceBuffer, XrtDeviceBuffer> {
  public:
@@ -101,5 +170,7 @@ class DpuCloudController
  private:
   int flag;
   void init_profiler();
+  std::string md5;
+  bool share;
 };
 
