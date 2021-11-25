@@ -18,6 +18,8 @@
 #include <opencv2/opencv.hpp>
 #include "json-c/json.h"
 #include <vart/runner.hpp>
+#include "common/alignment.hpp"
+
 
 using namespace std;
 

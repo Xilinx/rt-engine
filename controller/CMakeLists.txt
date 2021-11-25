@@ -1,0 +1,29 @@
+
+set(CONTROLLER_SRCS
+  ${CMAKE_CURRENT_SOURCE_DIR}/src/dpu_controller.cpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/src/common/dpucloud_controller.cpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/src/common/graph.cpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/src/common/tensor_buffer_imp_host.cpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/src/common/tensor_buffer_imp_host_phy.cpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/src/common/tensor_buffer_imp_view.cpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/src/dpuv3e/dpuv3e_controller.cpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/src/dpuv3int8/dpuv3int8_controller.cpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/src/dpuv3int8/dpuv3int8_debug_controller.cpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/src/dpuv3int8/dpuv3int8_instr_format_conversion.cpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/src/dpuv3int8/dpuv3int8_xmodel.cpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/src/dpuv3me/dpuv3me_controller.cpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/src/dpuv4e/dpuv4e_controller.cpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/src/ipuv1cnn/ipuv1cnn_controller.cpp
+  PARENT_SCOPE
+  )
+
+set(CONTROLLER_HDRS
+  ${PROJECT_SOURCE_DIR}/controller/src
+  ${PROJECT_SOURCE_DIR}/controller/src/common
+  ${PROJECT_SOURCE_DIR}/controller/src/dpuv3me
+  ${PROJECT_SOURCE_DIR}/controller/src/dpuv4e
+  ${PROJECT_SOURCE_DIR}/controller/src/dpuv3e
+  ${PROJECT_SOURCE_DIR}/controller/src/dpuv3int8
+  ${PROJECT_SOURCE_DIR}/controller/src/ipuv1cnn
+  PARENT_SCOPE
+  )

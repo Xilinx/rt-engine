@@ -13,11 +13,8 @@
 // limitations under the License.
 
 #include <assert.h>
-#include <dirent.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <sys/stat.h>
-#include <unistd.h>
 
 #include <cassert>
 #include <cmath>
@@ -30,18 +27,26 @@
 #include <vector>
 #include <chrono>
 
+#include "common/alignment.hpp"
 #include <vart/runner.hpp>
 #include <vart/runner_ext.hpp>
 #include <xir/graph/graph.hpp>
 #include <xir/tensor/tensor.hpp>
 #include "common.h"
+#if __has_include(<filesystem>)
+  #include <filesystem>
+  namespace fs = std::filesystem;
+#elif __has_include(<experimental/filesystem>)
+  #include <experimental/filesystem>
+  namespace fs = std::experimental::filesystem;
+#else
+  #error "Missing the <filesystem> header."
+#endif
 
 using namespace std;
 static long getFileSize(std::string filename)
 {
-    struct stat stat_buf;
-    int rc = stat(filename.c_str(), &stat_buf);
-    return rc == 0 ? stat_buf.st_size : -1;
+    return fs::file_size(filename.c_str());
 }
 
 int main(int argc, char* argv[]) {
@@ -85,7 +90,7 @@ int main(int argc, char* argv[]) {
       void *codePtr = NULL;
       std::string inputbin = input_file;
       unsigned int size = getFileSize(inputbin);
-      if (posix_memalign(&codePtr, getpagesize(), size * core_batch))
+      if (rte::posix_memalign(&codePtr, rte::getpagesize(), size * core_batch))
         throw std::bad_alloc();
       auto infile = ifstream(inputbin, ios::in | ios::binary);
       for (unsigned i=0; infile.read(&((char*)codePtr)[i], sizeof(int8_t)); i++);
@@ -114,7 +119,7 @@ int main(int argc, char* argv[]) {
 
       for (int bi = 0; bi < core_batch; bi++) {
 	dims[0]=bi;
-        for (int o = 0; o < output_tensors.size(); o++) {
+        for (unsigned o = 0; o < output_tensors.size(); o++) {
           auto output_file = "./output_th" + to_string(th) + "_o" + to_string(o) + "_b" + to_string(bi) + ".bin";
           std::ofstream(output_file, mode).write((char*)outputs[o]->data(dims).first, tensor_batch*output_tensors[o]->get_element_num()/output_tensors[o]->get_shape()[0]);
         }

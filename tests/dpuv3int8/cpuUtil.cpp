@@ -279,8 +279,8 @@ void cpuUtil::loadImages( std::string img_dir, unsigned num_queries){
   int image_height = inH;
   int image_channels = inCh;
   int imgSize = image_width*image_height*image_channels*batch_size;
-  void *din_data;
-  int checkSize = posix_memalign(&din_data, 4096, imgSize);
+  void *din_data = nullptr;
+  int checkSize = rte::posix_memalign(&din_data, 4096, imgSize);
   if(checkSize!=0)
     std::cout<<"Error loading images"<<std::endl;
 

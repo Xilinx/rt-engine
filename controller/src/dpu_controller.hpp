@@ -18,11 +18,11 @@
 #include <mutex>
 #include <list>
 #include <vector>
-#include "vart/runner.hpp"
-//#include "tensor_buffer.hpp"
+#include "xir/graph/subgraph.hpp"
 #include "device_handle.hpp"
 #include "device_memory.hpp"
-
+#include "ert.h"
+#include "common/alignment.hpp"
 /*
  * DPU-specific hostcode
  */
@@ -64,9 +64,9 @@ class XclDpuController : public DpuController {
 
  protected:
   virtual std::vector<vart::TensorBuffer*> create_tensor_buffers(
-    const std::vector<const xir::Tensor*> &tensors, bool isInput, int ddrBank=-1);
+    const std::vector<const xir::Tensor*> &tensors, bool isInput, int ddrBank=-1, bool isPhy=true);
   virtual std::vector<vart::TensorBuffer*> create_tensor_buffers(
-    const std::vector<const xir::Tensor*> &tensors, bool isInput, std::vector<int> ddrBanks);
+    const std::vector<const xir::Tensor*> &tensors, bool isInput, std::vector<int> ddrBanks, bool isPhy=true);
   virtual void free_tensor_buffers(std::vector<vart::TensorBuffer*>&);
   DeviceBuffer *get_device_buffer(vart::TensorBuffer *tb);
   std::vector<DeviceBuffer *>get_device_buffers(vart::TensorBuffer *tb);
@@ -78,18 +78,4 @@ class XclDpuController : public DpuController {
   std::mutex tbuf_mtx_;
 private:
   std::unique_ptr<xir::Attrs> default_attrs_;
-};
-
-class SampleDpuController 
- : public XclDpuController<XclDeviceHandle, XclDeviceBuffer, XclDeviceBuffer> {
- public:
-  SampleDpuController(std::string meta, xir::Attrs* attrs=nullptr);
-  SampleDpuController(const xir::Subgraph *subgraph, xir::Attrs* attrs=nullptr);
-  virtual ~SampleDpuController() override;
-  virtual void run(
-    const std::vector<vart::TensorBuffer*> &inputs, 
-    const std::vector<vart::TensorBuffer*> &outputs) override;
-
- private:
-  virtual void execute(XclDeviceBuffer *in, XclDeviceBuffer *out) const;
 };

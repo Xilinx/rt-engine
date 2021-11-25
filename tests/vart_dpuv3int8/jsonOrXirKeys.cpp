@@ -63,8 +63,9 @@ void jsonOrXirKeys::loadFromJson(json_object* jobj)
     std::string keyString(key);
     if(keyString.compare("inputs") == 0)
     {
-      multiFormat = true;
-      assert(val);
+      if(val)
+        multiFormat = true;
+      else throw std::runtime_error("Error: Parsing JSON object");
     }
   }
 
@@ -88,30 +89,40 @@ void jsonOrXirKeys::loadFromJson(json_object* jobj)
       {
         json_object_object_foreach(val, inputkey, inputval)
         {
-          assert(inputkey);
-          json_object* obj = json_object_object_get(inputval, "shape");
-          json_object* shapeVal;
-          shapeVal = json_object_array_get_idx(obj, 1);
-          inH_ = json_object_get_int(shapeVal);
-          shapeVal = json_object_array_get_idx(obj, 2);
-          inW_ = json_object_get_int(shapeVal);
-          shapeVal = json_object_array_get_idx(obj, 3);
-          inCh_ = json_object_get_int(shapeVal);
+          if (inputkey) {
+            json_object* obj= NULL;
+            json_object_object_get_ex(inputval, "shape", &obj);
+            json_object* shapeVal;
+            shapeVal = json_object_array_get_idx(obj, 1);
+            inH_ = json_object_get_int(shapeVal);
+            shapeVal = json_object_array_get_idx(obj, 2);
+            inW_ = json_object_get_int(shapeVal);
+            shapeVal = json_object_array_get_idx(obj, 3);
+            inCh_ = json_object_get_int(shapeVal);
+          }
+	  else {
+	    throw std::runtime_error("Error: Parsing JSON object");
+          }
         }
       }
       if(keyString.compare("outputs") == 0)
       {
         json_object_object_foreach(val, outputkey, outputval)
         {
-          assert(outputkey);
-          json_object* obj = json_object_object_get(outputval, "shape");
-          json_object* shapeVal;
-          shapeVal = json_object_array_get_idx(obj, 1);
-          outH_ = json_object_get_int(shapeVal);
-          shapeVal = json_object_array_get_idx(obj, 2);
-          outW_ = json_object_get_int(shapeVal);
-          shapeVal = json_object_array_get_idx(obj, 3);
-          outCh_ = json_object_get_int(shapeVal);
+          if (outputkey) {
+            json_object* obj = NULL;
+            json_object_object_get_ex(outputval, "shape", &obj);
+            json_object* shapeVal;
+            shapeVal = json_object_array_get_idx(obj, 1);
+            outH_ = json_object_get_int(shapeVal);
+            shapeVal = json_object_array_get_idx(obj, 2);
+            outW_ = json_object_get_int(shapeVal);
+            shapeVal = json_object_array_get_idx(obj, 3);
+            outCh_ = json_object_get_int(shapeVal);
+          }
+	  else {
+	    throw std::runtime_error("Error: Parsing JSON object");
+          }
         }
       }
     }
@@ -152,31 +163,40 @@ void jsonOrXirKeys::loadFromXmodel(std::string xmodelFname)
       {
         json_object_object_foreach(val, inputkey, inputval)
         {
-          assert(inputkey);
-          json_object* obj = json_object_object_get(inputval, "shape");
-          json_object* shapeVal;
-          shapeVal = json_object_array_get_idx(obj, 1);
-          inH_ = json_object_get_int(shapeVal);
-          shapeVal = json_object_array_get_idx(obj, 2);
-          inW_ = json_object_get_int(shapeVal);
-          shapeVal = json_object_array_get_idx(obj, 3);
-          inCh_ = json_object_get_int(shapeVal);
+          if (inputkey) {
+            json_object* obj = NULL;
+            json_object_object_get_ex(inputval, "shape", &obj);
+            json_object* shapeVal;
+            shapeVal = json_object_array_get_idx(obj, 1);
+            inH_ = json_object_get_int(shapeVal);
+            shapeVal = json_object_array_get_idx(obj, 2);
+            inW_ = json_object_get_int(shapeVal);
+            shapeVal = json_object_array_get_idx(obj, 3);
+            inCh_ = json_object_get_int(shapeVal);
+          }
+	  else {
+	    throw std::runtime_error("Error: Parsing JSON object");
+          }
         }
       }
       if(keyString.compare("outputs") == 0)
       {
         json_object_object_foreach(val, outputkey, outputval)
         {
-          assert(outputkey);
-          json_object* obj = json_object_object_get(outputval, "shape");
-          json_object* shapeVal;
-          shapeVal = json_object_array_get_idx(obj, 1);
-          outH_ = json_object_get_int(shapeVal);
-          shapeVal = json_object_array_get_idx(obj, 2);
-          outW_ = json_object_get_int(shapeVal);
-          shapeVal = json_object_array_get_idx(obj, 3);
-          outCh_ = json_object_get_int(shapeVal);
-         
+          if (outputkey) {
+            json_object* obj = NULL;
+            json_object_object_get_ex(outputval, "shape", &obj);
+            json_object* shapeVal;
+            shapeVal = json_object_array_get_idx(obj, 1);
+            outH_ = json_object_get_int(shapeVal);
+            shapeVal = json_object_array_get_idx(obj, 2);
+            outW_ = json_object_get_int(shapeVal);
+            shapeVal = json_object_array_get_idx(obj, 3);
+            outCh_ = json_object_get_int(shapeVal);
+          }
+	  else {
+	    throw std::runtime_error("Error: Parsing JSON object");
+          }
         }
       }
     }

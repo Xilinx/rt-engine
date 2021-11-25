@@ -15,14 +15,8 @@
 #include <iostream>
 #include <fstream>
 #include <sstream>
-#include <unistd.h>
 #include <unordered_map>
 #include <cstdlib>
-//#include <cmath>
-#pragma GCC diagnostic push 
-#pragma GCC diagnostic ignored "-Wignored-qualifiers"
-#include "CL/cl_ext_xilinx.h"
-#pragma GCC diagnostic pop 
 #include "xir/tensor/tensor.hpp"
 #include <xir/graph/graph.hpp>
 #include <xir/graph/subgraph.hpp>
@@ -33,6 +27,7 @@
 #include "vitis/ai/target_factory.hpp"
 #include "vitis/ai/env_config.hpp"
 #include "tensor_buffer_imp_host_phy.hpp"
+#include "tensor_buffer_imp_host.hpp"
 
 DEF_ENV_PARAM(DEBUG_DPU_CONTROLLER, "0")
 
@@ -212,14 +207,14 @@ XclDpuController<Dhandle, DbufIn, DbufOut>::get_outputs(int batchsz) {
 template <class Dhandle, class DbufIn, class DbufOut>
 std::vector<vart::TensorBuffer*> 
 XclDpuController<Dhandle, DbufIn, DbufOut>::create_tensor_buffers(
-  const std::vector<const xir::Tensor*> &tensors, bool isInput, int ddrBank) {
-  return create_tensor_buffers(tensors, isInput, std::vector<int>(1,ddrBank));
+  const std::vector<const xir::Tensor*> &tensors, bool isInput, int ddrBank, bool isPhy) {
+  return create_tensor_buffers(tensors, isInput, std::vector<int>(1,ddrBank),  isPhy);
 }
 
 template <class Dhandle, class DbufIn, class DbufOut>
 std::vector<vart::TensorBuffer*>
 XclDpuController<Dhandle, DbufIn, DbufOut>::create_tensor_buffers(
-  const std::vector<const xir::Tensor*> &tensors, bool isInput, std::vector<int> ddrBanks) {
+  const std::vector<const xir::Tensor*> &tensors, bool isInput, std::vector<int> ddrBanks, bool isPhy) {
   std::vector<vart::TensorBuffer*> tbufs;
   for (unsigned ti=0; ti < tensors.size(); ti++)
   {
@@ -227,10 +222,13 @@ XclDpuController<Dhandle, DbufIn, DbufOut>::create_tensor_buffers(
     const size_t dataSize = std::ceil(tensors[ti]->get_data_type().bit_width / 8.f);
     size_t size = tensors[ti]->get_element_num() * dataSize;
     void *data;
-    if (posix_memalign(&data, getpagesize(), size))
+    if (rte::posix_memalign(&data, rte::getpagesize(), size))
       throw std::bad_alloc();
     std::memset(data, 0, size);
     // make TensorBuffer to hold host memory
+
+    if(isPhy)
+    {
     std::unique_ptr<vart::rt_engine::TensorBufferExtImpHostPhy> tbuf(
       new vart::rt_engine::TensorBufferExtImpHostPhy(data, tensors[ti]));
     tbufs.emplace_back(tbuf.get());
@@ -264,6 +262,15 @@ XclDpuController<Dhandle, DbufIn, DbufOut>::create_tensor_buffers(
       tbufs_.emplace_back(std::move(tbuf));
     }
   }
+  else
+  {
+    std::unique_ptr<vart::TensorBufferExtImpHost> tbuf(
+      new vart::TensorBufferExtImpHost(data, tensors[ti]));
+    tbufs.emplace_back(tbuf.get());
+    tbufs_.emplace_back(std::move(tbuf));
+
+  }
+  }
 
   return tbufs;
 }
@@ -278,8 +285,9 @@ XclDpuController<Dhandle, DbufIn, DbufOut>::free_tensor_buffers(std::vector<vart
 
     for (auto it=tbufs_.begin(); it != tbufs_.end(); it++)
       if (it->get() == tbufs[ti])
-      {
-        free(reinterpret_cast<void*>(it->get()->data().first));
+      { 
+        rte::aligned_ptr_deleter pDel;  
+        pDel(reinterpret_cast<void*>(it->get()->data().first));
         tbufs_.erase(it);
         break;
       }
@@ -287,45 +295,10 @@ XclDpuController<Dhandle, DbufIn, DbufOut>::free_tensor_buffers(std::vector<vart
 }
 
 /*
- * Sample Dpu Controller
- */
-
-SampleDpuController::SampleDpuController(std::string meta, xir::Attrs* attrs) 
-: XclDpuController<XclDeviceHandle, XclDeviceBuffer, XclDeviceBuffer>(meta, attrs) {
-}
-
-SampleDpuController::SampleDpuController(const xir::Subgraph *subgraph, xir::Attrs* attrs) 
-: XclDpuController<XclDeviceHandle, XclDeviceBuffer, XclDeviceBuffer>(subgraph, attrs) {
-}
-
-
-SampleDpuController::~SampleDpuController() {
-}
-
-void SampleDpuController::run(
-  const std::vector<vart::TensorBuffer*> &inputs, 
-  const std::vector<vart::TensorBuffer*> &outputs) {
-  XclDeviceBuffer* inbuf = dynamic_cast<XclDeviceBuffer*>(get_device_buffer(inputs[0]));
-  XclDeviceBuffer* outbuf = dynamic_cast<XclDeviceBuffer*>(get_device_buffer(outputs[0]));
-  inbuf->upload();
-  execute(inbuf, outbuf);
-  outbuf->download();
-}
-
-void SampleDpuController::execute(XclDeviceBuffer *in, XclDeviceBuffer *out) const {
-  (void)in;
-  (void)out;
-  // TODO run kernel
-}
-
-/*
  * template instantiations
  */
-template XclDpuController<XclDeviceHandle, XclDeviceBuffer, XclDeviceBuffer>::XclDpuController(std::string meta, xir::Attrs* attrs);
 template XclDpuController<XrtDeviceHandle, XrtDeviceBuffer, XrtDeviceBuffer>::XclDpuController(std::string meta, xir::Attrs* attrs);
 template XclDpuController<IpuDeviceHandle, IpuDeviceBuffer, IpuDeviceBuffer>::XclDpuController(std::string meta, xir::Attrs* attrs);
-template XclDpuController<XclDeviceHandle, XclDeviceBuffer, XclDeviceBuffer>::XclDpuController(const xir::Subgraph *subgraph, xir::Attrs* attrs);
 template XclDpuController<XrtDeviceHandle, XrtDeviceBuffer, XrtDeviceBuffer>::XclDpuController(const xir::Subgraph *subgraph, xir::Attrs* attrs);
 template XclDpuController<IpuDeviceHandle, IpuDeviceBuffer, IpuDeviceBuffer>::XclDpuController(const xir::Subgraph *subgraph, xir::Attrs* attrs);
-template DeviceBuffer* XclDpuController<XclDeviceHandle, XclDeviceBuffer, XclDeviceBuffer>::get_device_buffer(vart::TensorBuffer *tb);
 template DeviceBuffer* XclDpuController<XrtDeviceHandle, XrtDeviceBuffer, XrtDeviceBuffer>::get_device_buffer(vart::TensorBuffer *tb);

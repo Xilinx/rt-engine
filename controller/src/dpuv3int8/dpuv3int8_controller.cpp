@@ -17,6 +17,7 @@
 #include "dpuv3int8_controller.hpp"
 #include <mutex>
 
+
 #define BATCH_SIZE 4
 
 using namespace std;
@@ -53,19 +54,10 @@ Dpuv3Int8Controller::Dpuv3Int8Controller(const xir::Subgraph *subgraph) : XclDpu
 
 void Dpuv3Int8Controller::initializeTensors()
 {
-    //const std::vector<std::int32_t> indims = { BATCH_SIZE, int32_t(xmodel_->getInW()), int32_t(xmodel_->getInH()), int32_t(xmodel_->getInCh())};
     const std::vector<std::int32_t> indims = { BATCH_SIZE, int32_t(xmodel_->getInH()), int32_t(xmodel_->getInW()), int32_t(xmodel_->getInCh())};
-   
-    //std::vector<std::int32_t> inHwDims = { int32_t(BATCH_SIZE*xmodel_->getInW()*xmodel_->getInH()*xmodel_->getInCh())};
     std::vector<std::int32_t> inHwDims = { int32_t(BATCH_SIZE*xmodel_->getInH()*xmodel_->getInW()*xmodel_->getInCh())};
-   
-    if(not xmodel_->getDruMode())
-    {  
-       //inHwDims = { int32_t(xmodel_->getInW()*xmodel_->getInH()*BATCH_SIZE*ceil((float)xmodel_->getInCh()/16)*16)};
-       inHwDims = { int32_t(xmodel_->getInH()*xmodel_->getInW()*BATCH_SIZE*ceil((float)xmodel_->getInCh()/16)*16)};
-   
-    }
-
+    if(!xmodel_->getDruMode())
+      inHwDims = { int32_t(xmodel_->getInH()*xmodel_->getInW()*BATCH_SIZE*ceil((float)xmodel_->getInCh()/16)*16)};
     const std::vector<std::int32_t> outHwDims = { BATCH_SIZE, 1, 1, int32_t(xmodel_->getOutDdrSize())};
    
     xir::Tensor *in_t = xir::Tensor::create(xmodel_->getInTensorsNames()[0], indims, xir::DataType{xir::DataType::XINT, 8}).release();
@@ -79,9 +71,7 @@ void Dpuv3Int8Controller::initializeTensors()
     
     for(uint32_t k=0; k<xmodel_->getOutputNum(); k++)
     {
-      
       std::vector<std::int32_t> outputdims = { BATCH_SIZE, xmodel_->getOutTensorsDims()[k][1], xmodel_->getOutTensorsDims()[k][0], xmodel_->getOutTensorsDims()[k][2]};
-      
       xir::Tensor *outputOp = xir::Tensor::create(xmodel_->getOutTensorsNames()[k], outputdims, xir::DataType{xir::DataType::XINT, 8}).release();
       std::unique_ptr<xir::Tensor> outtensor;
       outtensor.reset(outputOp);
@@ -187,16 +177,19 @@ void Dpuv3Int8Controller::readRegs(xclDeviceHandle xcl_handle)
 
 }
 
-static uint32_t Dpuv3Int8Controller::read32_dpu_reg(xclDeviceHandle dpu_handle, uint64_t offset) {
+// xclRead is deprecated
+// Not sure what the replacement will be
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
+uint32_t Dpuv3Int8Controller::read32_dpu_reg(xclDeviceHandle dpu_handle, uint64_t offset) {
   uint32_t val;
   xclRead(dpu_handle, XCL_ADDR_KERNEL_CTRL, offset, (void *)(&val), 4);
   return val;
 }
+#pragma GCC diagnostic pop
 
 void Dpuv3Int8Controller::initializeTaskDRUVariables()
 {
-    std::cout<<"-----------------------------------------------"<<std::endl;
-
     if(xmodel_->getDruMode())
     {
       uint32_t druAddr = xmodel_->getInDdrSize();
@@ -417,7 +410,7 @@ std::vector<vart::TensorBuffer*>
 Dpuv3Int8Controller::get_inputs(int batchsz) {
   if (batchsz != -1)
     throw std::runtime_error("Error: custom batch size not supported for this DPU");
-  auto stdBufs = create_tensor_buffers(get_input_tensors(), /*isInput*/true);
+  auto stdBufs = create_tensor_buffers(get_input_tensors(), /*isInput*/true, -1, false);
   auto hwBufs = create_hw_buffers(stdBufs, /*isInput*/true);
   return stdBufs;
 }
@@ -426,7 +419,8 @@ std::vector<vart::TensorBuffer*>
 Dpuv3Int8Controller::get_outputs(int batchsz) {
   if (batchsz != -1)
     throw std::runtime_error("Error: custom batch size not supported for this DPU");
-  auto stdBufs = create_tensor_buffers(get_output_tensors(), /*isInput*/false);
+  
+  auto stdBufs = create_tensor_buffers(get_output_tensors(), /*isInput*/false, -1, false);
   auto hwBufs = create_hw_buffers(stdBufs, /*isInput*/false);
   return stdBufs;
 
@@ -506,7 +500,7 @@ void Dpuv3Int8Controller::channelAugmentation(std::vector<int8_t> &inputStdData,
           src_w_idx = (src_sw*w_idx)-src_pw+(std::floor(ch_idx/src_c));
           src_c_idx = ch_idx%src_c;
           
-          if(src_w_idx<0 or src_w_idx>=src_w)
+          if(src_w_idx<0 || src_w_idx>=src_w)
           {
             channelAugmentedData[(bch_idx*dst_h*dst_w*dst_c)+(h_idx*dst_w*dst_c)+(w_idx*dst_c)+(ch_idx)]=0;
           }
@@ -631,7 +625,7 @@ void Dpuv3Int8Controller::batchInterleave(std::vector<int8_t> &inputData, std::v
 
 void Dpuv3Int8Controller::preprocess(vart::TensorBuffer* stdbuf, vart::TensorBuffer* hwbuf)
 {
-    if (not xmodel_->getDruMode())
+    if (!xmodel_->getDruMode())
     {
       void* std_data = (void*)stdbuf->data().first;
       std::vector<int8_t> inputStdData(xmodel_->getInW()*xmodel_->getInH()*xmodel_->getInCh()*BATCH_SIZE,0);
@@ -664,7 +658,7 @@ void Dpuv3Int8Controller::preprocess(vart::TensorBuffer* stdbuf, vart::TensorBuf
         flattenedData[i]=*(int8_t *)((long long) std_data+i);
       }
   
-      std::vector<int,aligned_allocator<int>> hwDinVector(flattenedData.size()/4,0);
+      std::vector<int,rte::AlignedAllocator<int>> hwDinVector(flattenedData.size()/4,0);
   
       int j=0;
       
@@ -805,7 +799,7 @@ void Dpuv3Int8Controller::run(const std::vector<vart::TensorBuffer*> &inputs,
 
   std::tie(data, size) = inHwTbuf->data();
 
-  if (xclUnmgdPwrite(xcl_handle, 0, data, size, inHwBuf->get_phys_addr()))
+  if (xclUnmgdPwrite(xcl_handle, 0, reinterpret_cast<void*>(data), size, inHwBuf->get_phys_addr()))
     throw std::runtime_error("Error: upload failed");
   
   auto ecmd = reinterpret_cast<ert_start_kernel_cmd*>(bo_addr);
@@ -817,7 +811,7 @@ void Dpuv3Int8Controller::run(const std::vector<vart::TensorBuffer*> &inputs,
 
   std::tie(outdata, outsize) = outHwTbuf->data();
 
-  if (xclUnmgdPread(xcl_handle, 0, outdata, outsize, outHwBuf->get_phys_addr()))
+  if (xclUnmgdPread(xcl_handle, 0, reinterpret_cast<void*>(outdata), outsize, outHwBuf->get_phys_addr()))
     throw std::runtime_error("Error: dump failed!");
   
   postprocess(output_tensor_buffers, outHwTbuf);
@@ -847,10 +841,10 @@ void Dpuv3Int8Controller::run(const std::vector<vart::TensorBuffer*> &inputs,
   }
 }
 
-std::vector<int32_t, aligned_allocator<int32_t>> Dpuv3Int8Controller::load(std::string filename)
+std::vector<int32_t, rte::AlignedAllocator<int32_t>> Dpuv3Int8Controller::load(std::string filename)
 {
 
-    std::vector<int32_t, aligned_allocator<int32_t>> tmp;
+    std::vector<int32_t, rte::AlignedAllocator<int32_t>> tmp;
     std::ifstream   ifile;
     std::string     line;
     
@@ -863,9 +857,9 @@ std::vector<int32_t, aligned_allocator<int32_t>> Dpuv3Int8Controller::load(std::
     return tmp;
 }
 
-std::vector<int32_t, aligned_allocator<int32_t>> Dpuv3Int8Controller::load(std::vector<string> svals)
+std::vector<int32_t, rte::AlignedAllocator<int32_t>> Dpuv3Int8Controller::load(std::vector<string> svals)
 {
-  std::vector<int32_t, aligned_allocator<int32_t>> tmp;
+  std::vector<int32_t, rte::AlignedAllocator<int32_t>> tmp;
 
   for (auto& val : svals) {
     tmp.push_back((int32_t)std::strtol(val.c_str(), nullptr, 16));

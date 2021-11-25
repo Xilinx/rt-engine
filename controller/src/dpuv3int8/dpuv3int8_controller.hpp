@@ -16,15 +16,13 @@
 #include <iostream>
 #include <fstream>
 #include <sstream>
-#include <bits/stdc++.h>
-
+#include <assert.h>
+#include <iomanip>
+#include <regex>
 #include "json-c/json.h"
-#include "experimental/xrtexec.hpp"
-
 #include <xir/graph/graph.hpp>
 #include <xir/graph/subgraph.hpp>
 #include <xir/util/tool_function.hpp>
-
 #include "dpu_controller.hpp"
 #include "dpuv3int8_regmap.hpp"
 #include "dpuv3int8_instr_format_conversion.hpp"
@@ -32,26 +30,6 @@
 #include "dpu_runner.hpp"
 
 #define REG_NUM                         31
-
-template <typename T>
-struct aligned_allocator
-{
-    using value_type = T;
-    T *allocate(std::size_t num)
-    {
-        void *ptr = nullptr;
-        //not use 4096 but use getpagesize instead
-        //similar to http://xcdl190260/aaronn/rt-engine/blob/master/controller/src/dpu_controller.cpp#L102
-        if (posix_memalign(&ptr, 4096, num * sizeof(T)))
-            throw std::bad_alloc();
-        return reinterpret_cast<T *>(ptr);
-    }
-    void deallocate(T *p, std::size_t num)
-    {
-        free(p);
-    }
-};
-
 
 class Dpuv3Int8Controller : public XclDpuController<XrtDeviceHandle, XrtDeviceBuffer, XrtDeviceBuffer> {
  public:
@@ -78,7 +56,7 @@ class Dpuv3Int8Controller : public XclDpuController<XrtDeviceHandle, XrtDeviceBu
   std::unique_ptr<Xmodel> xmodel_;
   std::unique_ptr<XrtDeviceBuffer> instr_buf_;
   std::unique_ptr<XrtDeviceBuffer> params_buf_;
-  std::vector<int,aligned_allocator<int>> params_;
+  std::vector<int,rte::AlignedAllocator<int>> params_;
 
  private:
   virtual void channelAugmentation(std::vector<int8_t> &inputStdData, std::vector<int8_t> &channelAugmentedData, std::vector<int> &channelAugShape);
@@ -104,7 +82,7 @@ class Dpuv3Int8Controller : public XclDpuController<XrtDeviceHandle, XrtDeviceBu
   std::unique_ptr<xir::Tensor> druSrc_tensor_;
   std::unique_ptr<xir::Tensor> druDst_tensor_;
 
-  std::vector<int,aligned_allocator<int>> instr_;
+  std::vector<int,rte::AlignedAllocator<int>> instr_;
   std::vector<std::unique_ptr<XrtContext>> contexts_;
   std::vector<std::vector<vart::TensorBuffer*>> inputsTBfs_;
   std::vector<std::vector<vart::TensorBuffer*>> outputsTBfs_;
@@ -119,8 +97,8 @@ class Dpuv3Int8Controller : public XclDpuController<XrtDeviceHandle, XrtDeviceBu
 
   uint32_t reg_val[REG_NUM];
 
-  static std::vector<int32_t, aligned_allocator<int32_t>> load(std::string filename);
-  static std::vector<int32_t, aligned_allocator<int32_t>> load(std::vector<std::string> svals);
+  static std::vector<int32_t, rte::AlignedAllocator<int32_t>> load(std::string filename);
+  static std::vector<int32_t, rte::AlignedAllocator<int32_t>> load(std::vector<std::string> svals);
 
   cl_mem regMap_;
 

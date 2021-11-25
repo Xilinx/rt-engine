@@ -30,51 +30,49 @@ class tensorbufferPool {
     return pool;
   }
   std::pair<vector<vart::TensorBuffer*>,vector<vart::TensorBuffer*>> get(std::string model) {
-    auto iter = queues.find(model);
-    if (iter != queues.end()) {
-      auto queue = iter->second;
-      while(queue.empty()) {
+    std::pair<vector<vart::TensorBuffer*>,vector<vart::TensorBuffer*>> rtn;
+    int found = 0;
+    while(!found) {
+      {
+        std::unique_lock<std::mutex> lock(lock_);
+        auto iter = queues.find(model);
+        if (iter != queues.end()) {
+          auto& queue = iter->second;
+          if(queue.size() == 0) {
+            continue;
+          }
+          
+          rtn = queue.front();
+          queue.pop();
+	  found=1;
+        } else {
+          throw std::runtime_error("Error: no queue founded");
+        }
       }
-      auto ptr = queue.front();
-      queue.pop();
-      return ptr;
-    } else {
-      throw std::runtime_error("No queue available!");
     }
-
+    return rtn;
   }
   explicit tensorbufferPool(const size_t pool_size) : size_(pool_size) {
-    //cache_ = new vart::TensorBuffer[size_];
-    //for (size_t i=0; i<size_; i++) {
-    //  queue_.push(&cache_[i]);
-    //}
    
   }
   ~tensorbufferPool() {
-    //if(cahche_) {
-    //  delete cache_;
-    //  cache_ = nullptr;
-    //}
-    //for (auto &ptr : extended_cache_) {
-    //  delete ptr;
-    //}
 
   }
   void extend (std::string model, std::pair<std::vector<vart::TensorBuffer*>, std::vector<vart::TensorBuffer*>> buf) {
-      //extended_cache_.push_back(bufin);
-      //extended_cache_.push_back(bufout);
+    std::unique_lock<std::mutex> lock(lock_);
     auto iter = queues.find(model);
     if (iter != queues.end()) {
-      auto queue = iter->second;
+      auto& queue = iter->second;
       queue.push(buf);
       queues.emplace(model,queue);
     } else {
       std::queue<std::pair<vector<vart::TensorBuffer*>,vector<vart::TensorBuffer*>>> queue;
       queue.push(buf);
       queues.emplace(model,queue);
-    }
+    } 
   }
   bool check(std::string dm5) {
+    std::unique_lock<std::mutex> lock(lock_);
     auto iter = queues.find(dm5);
     if (iter != queues.end())
       return true;
@@ -83,53 +81,64 @@ class tensorbufferPool {
   }
 
   private:
-    //std::queue<std::pair<vector<vart::TensorBuffer*>,vector<vart::TensorBuffer*>>> queue_;
     std::unordered_map<std::string,std::queue<std::pair<vector<vart::TensorBuffer*>,vector<vart::TensorBuffer*>>>> queues;
-    //vart::TensorBuffer* cache_ = nullptr;
-    //std::list<vector<vart::TensorBuffer*>> extended_cache_;
+    std::mutex lock_;
     const size_t size_;
 };
-class DpuCloudController 
+
+#if __has_include(<filesystem>)
+  #include <filesystem>
+  namespace fs = std::filesystem;
+#elif __has_include(<experimental/filesystem>)
+  #include <experimental/filesystem>
+  namespace fs = std::experimental::filesystem;
+#else
+  #error "Missing the <filesystem> header."
+#endif
+
+//
+//DEF_ENV_PARAM(DEBUG_DPU_CONTROLLER, "0")
+class DpuCloudController
 : public XclDpuController<XrtDeviceHandle, XrtDeviceBuffer, XrtDeviceBuffer> {
  public:
   DpuCloudController(std::string meta, xir::Attrs* attrs);
   DpuCloudController(const xir::Subgraph *subgraph, xir::Attrs* attrs);
   virtual ~DpuCloudController() override;
   virtual void run(
-    const std::vector<vart::TensorBuffer*> &inputs, 
+    const std::vector<vart::TensorBuffer*> &inputs,
     const std::vector<vart::TensorBuffer*> &outputs) override;
-  virtual std::vector<const xir::Tensor*> get_input_tensors() const override; 
-  virtual std::vector<const xir::Tensor*> get_output_tensors() const override; 
-  virtual std::vector<vart::TensorBuffer*> get_inputs(int batchsz=-1) override; 
-  virtual std::vector<vart::TensorBuffer*> get_outputs(int batchsz=-1) override; 
-  virtual std::vector<vart::TensorBuffer*> get_outputs_inner(vector<unsigned> hbm,bool isInputs, int batchsz=-1) ; 
-  vector<float> get_input_scale() override; 
-  vector<float> get_output_scale() override; 
-  //float get_input_scale(xir::Tensor* tensor); 
-  float get_output_scale(xir::Tensor* tensor); 
+  virtual std::vector<const xir::Tensor*> get_input_tensors() const override;
+  virtual std::vector<const xir::Tensor*> get_output_tensors() const override;
+  virtual std::vector<vart::TensorBuffer*> get_inputs(int batchsz=-1) override;
+  virtual std::vector<vart::TensorBuffer*> get_outputs(int batchsz=-1) override;
+  virtual std::vector<vart::TensorBuffer*> get_outputs_inner(std::vector<unsigned> hbm,bool isInputs, int batchsz=-1) ;
+  std::vector<float> get_input_scale() override;
+  std::vector<float> get_output_scale() override;
+  //float get_input_scale(xir::Tensor* tensor);
+  float get_output_scale(xir::Tensor* tensor);
   virtual std::vector<unsigned> get_hbmw();
   virtual std::vector<unsigned> get_hbmc();
   virtual std::vector<unsigned> get_hbmio();
   virtual std::vector<vart::TensorBuffer*> create_tensor_buffers_hbm(
-    const std::vector<const xir::Tensor*> &tensors, bool isInput, vector<unsigned> ddrBank,int batch_size);
+    const std::vector<const xir::Tensor*> &tensors, bool isInput, std::vector<unsigned> ddrBank,int batch_size);
 
   //virtual void init(const std::string &meta);
   //virtual void init(const xir::Subgraph* subgraph);
-  virtual void init_graph(vector<unsigned> hbmw, vector<unsigned> hbmc, xir::Attrs* attrs);
+  virtual void init_graph(std::vector<unsigned> hbmw, std::vector<unsigned> hbmc, xir::Attrs* attrs);
   virtual std::vector<const xir::Tensor*> get_merged_io_tensors(int size) const;
   virtual std::vector<vart::TensorBuffer*> init_tensor_buffer(std::vector<const xir::Tensor*> tensors, int batchSupport, unsigned runEngine=1);
   virtual std::vector<const xir::Tensor*> init_tensor(std::vector<const xir::Tensor*> tensors, int batchSupport, unsigned runEngine=1);
   virtual bool check_tensorbuffer_outside(const std::vector<vart::TensorBuffer*> &outputs);
   virtual void free_buffers(std::vector<vart::TensorBuffer*> &tbufs);
   virtual void tensorbuffer_trans(std::vector<vart::TensorBuffer*> &input_tensor_buffers, std::vector<vart::TensorBuffer*> &output_tensor_buffers, const std::vector<vart::TensorBuffer*> &inputs, const std::vector<vart::TensorBuffer*> &outputs, bool is_input);
-  virtual vector<std::tuple<int, int,uint64_t>>  get_dpu_reg_inside(bool create_tb_batch, std::vector<uint64_t> &in_addrs, std::vector<uint64_t> &out_addrs, std::vector<vart::TensorBuffer*> &output_tensor_buffers, std::vector<vart::TensorBuffer*> &input_tensor_buffers );
-  vector<std::tuple<int, int,uint64_t>> get_dpu_reg_outside(bool create_tb_batch, std::vector<uint64_t> &in_addrs, std::vector<uint64_t> &out_addrs, const std::vector<vart::TensorBuffer*> &inputs, const std::vector<vart::TensorBuffer*> &outputs);
-  vector<std::tuple<int, int,uint64_t>> get_dpu_reg_outside_hbm(bool create_tb_batch, std::vector<uint64_t> &in_addrs, std::vector<uint64_t> &out_addrs, const std::vector<vart::TensorBuffer*> &inputs, const std::vector<vart::TensorBuffer*> &outputs);
-  std::vector<vart::TensorBuffer*> create_tensorbuffer_for_batch(vector<unsigned> hbm, bool isInputs, std::vector<const xir::Tensor*> tensors, std::vector<int> tensor_offset, int output_bz, bool isTensorsBatch);
-  void dpu_trigger_run(ert_start_kernel_cmd* ecmd, xclDeviceHandle xcl_handle, xclBufferHandle bo_handle, vector<std::tuple<int, int,uint64_t>> xdpu_total_dpureg_map2);
-  xclBufferHandle get_xrt_bo(void* data, int size, vector<unsigned> hbm);
+  virtual std::vector<std::tuple<int, int,uint64_t>>  get_dpu_reg_inside(bool create_tb_batch, std::vector<uint64_t> &in_addrs, std::vector<uint64_t> &out_addrs, std::vector<vart::TensorBuffer*> &output_tensor_buffers, std::vector<vart::TensorBuffer*> &input_tensor_buffers );
+  std::vector<std::tuple<int, int,uint64_t>> get_dpu_reg_outside(bool create_tb_batch, std::vector<uint64_t> &in_addrs, std::vector<uint64_t> &out_addrs, const std::vector<vart::TensorBuffer*> &inputs, const std::vector<vart::TensorBuffer*> &outputs);
+  std::vector<std::tuple<int, int,uint64_t>> get_dpu_reg_outside_hbm(bool create_tb_batch, std::vector<uint64_t> &in_addrs, std::vector<uint64_t> &out_addrs, const std::vector<vart::TensorBuffer*> &inputs, const std::vector<vart::TensorBuffer*> &outputs);
+  std::vector<vart::TensorBuffer*> create_tensorbuffer_for_batch(std::vector<unsigned> hbm, bool isInputs, std::vector<const xir::Tensor*> tensors, std::vector<int> tensor_offset, int output_bz, bool isTensorsBatch);
+  void dpu_trigger_run(ert_start_kernel_cmd* ecmd, xclDeviceHandle xcl_handle, xclBufferHandle bo_handle, std::vector<std::tuple<int, int,uint64_t>> xdpu_total_dpureg_map2);
+  xclBufferHandle get_xrt_bo(void* data, int size, std::vector<unsigned> hbm);
   xclBufferHandle get_xrt_bo(void* data, int size, unsigned hbm);
-  std::unordered_map<vart::TensorBuffer*, std::unordered_map<int,vector<vart::TensorBuffer*>>> tbuf2hwbufsio_;
+  std::unordered_map<vart::TensorBuffer*, std::unordered_map<int, std::vector<vart::TensorBuffer*>>> tbuf2hwbufsio_;
   std::mutex hwbufio_mtx_;
   std::list<std::unique_ptr<vart::TensorBuffer>> bufs_;
   std::unordered_map<vart::TensorBuffer*, vart::TensorBuffer*> bufsView2Phy_;
@@ -153,9 +162,9 @@ class DpuCloudController
   std::vector<float> input_scales_;
   std::vector<float> output_scales_;
   size_t getInputBufferSize();
-  vector<int32_t> getInputOffsets();
+  std::vector<int32_t> getInputOffsets();
   size_t getOutputBufferSize();
-  vector<int32_t> getOutputOffsets();
+  std::vector<int32_t> getOutputOffsets();
   void data_float2fix(int8_t* dataDst, float* dataSrc, int size, float scale);
   void data_fix2float(float* dataDst, int8_t* dataSrc, int size, float scale);
   bool dump_mode_;
@@ -165,12 +174,16 @@ class DpuCloudController
   int batch_size_;
   std::unordered_map<std::string, std::pair<uint64_t,int32_t>> layer_debug_mode;
   std::unordered_map<std::string, std::pair<uint64_t,int32_t>> layer_debug_mode_preload;
-  std::unordered_map<int, std::vector<vart::TensorBuffer*>> xdpu_workspace_dpu; 
+  std::unordered_map<int, std::vector<vart::TensorBuffer*>> xdpu_workspace_dpu;
   std::shared_ptr<DpuXmodel> model_;
  private:
   int flag;
   void init_profiler();
   std::string md5;
   bool share;
+  std::unordered_map<int, xir::Tensor*> tensors_map_;
+  //std::unordered_map<string, xir::Tensor*> tensor_no_batch_map_;
+  std::list<std::unique_ptr<xir::Tensor>> tensors_;
+  //std::list<std::unique_ptr<xir::Tensor>> tensor_no_batch_;
 };
 

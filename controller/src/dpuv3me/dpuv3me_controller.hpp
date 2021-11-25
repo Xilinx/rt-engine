@@ -31,5 +31,5 @@ class DpuV3meController
  private:
   std::tuple<uint64_t,int32_t,std::string> alloc_and_fill_device_memory(xclDeviceHandle handle, std::vector<char> code);
   int dpu_hbm_start;
-  vector<unsigned> hbm;
+  std::vector<unsigned> hbm;
 };

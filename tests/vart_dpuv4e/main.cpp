@@ -13,11 +13,8 @@
 // limitations under the License.
 
 #include <assert.h>
-#include <dirent.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <sys/stat.h>
-#include <unistd.h>
 
 #include <cassert>
 #include <cmath>
@@ -30,19 +27,31 @@
 #include <vector>
 #include <chrono>
 
+#include "common/alignment.hpp"
 #include <vart/runner.hpp>
 #include <vart/runner_ext.hpp>
 #include <xir/graph/graph.hpp>
 #include <xir/tensor/tensor.hpp>
 #include "common.h"
-/* header file OpenCV for image processing */
+
+#if __has_include(<filesystem>)
+  #include <filesystem>
+  namespace fs = std::filesystem;
+#elif __has_include(<experimental/filesystem>)
+  #include <experimental/filesystem>
+  namespace fs = std::experimental::filesystem;
+#else
+  #error "Missing the <filesystem> header."
+#endif
+
 using namespace std;
 static long getFileSize(std::string filename)
 {
-    struct stat stat_buf;
-    int rc = stat(filename.c_str(), &stat_buf);
-    return rc == 0 ? stat_buf.st_size : -1;
+    return fs::file_size(filename.c_str());
 }
+
+/* header file OpenCV for image processing */
+using namespace std;
 
 /**
  * @brief Entry for runing ResNet50 neural network
@@ -93,7 +102,7 @@ int main(int argc, char* argv[]) {
   void *codePtr = NULL;
   std::string inputbin = "./tests/app/models/v4e_resnet50/input.bin";
   unsigned int size = getFileSize(inputbin);
-  if (posix_memalign(&codePtr, getpagesize(), size*8))
+  if (rte::posix_memalign(&codePtr, rte::getpagesize(), size*8))
     throw std::bad_alloc();
   auto infile = ifstream(inputbin, ios::in | ios::binary);
   for (unsigned i=0; infile.read(&((char*)codePtr)[i], sizeof(int8_t)); i++);
@@ -107,7 +116,8 @@ int main(int argc, char* argv[]) {
                               input->get_tensor()->get_shape()[0]);
    }
 
-  auto tensorr = inputs[0]->get_tensor()->get_shape()[0];
+  // unused variable
+  //auto tensorr = inputs[0]->get_tensor()->get_shape()[0];
   std::cout << std::endl << "Testing single thread..." << std::endl;
   auto t1 = std::chrono::high_resolution_clock::now();
   //std::cout<<"Loading "<<num_queries_*4<<" Images ..."<<std::endl;
@@ -135,7 +145,7 @@ int main(int argc, char* argv[]) {
         //const char *out = (const char*)outData;
         auto dims = outputs[t]->get_tensor()->get_shape();
         dims[0] = bi;
-        for (int j=1;j<dims.size();j++)
+        for (unsigned j=1;j<dims.size();j++)
           dims[j]=0;
 
         std::ofstream(output_file, mode).write((char*)outputs[t]->data(dims).first, output_tensors[t]->get_element_num()/output_tensors[t]->get_shape()[0]);

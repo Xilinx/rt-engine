@@ -37,7 +37,7 @@ bool getBool(std::string name, json_object* jobj)
   json_object *obj = NULL;
   if (!json_object_object_get_ex(jobj, name.c_str(), &obj))
     {
-      if(name=="usexmodel" and name=="singlePoolDebug")
+      if(name=="usexmodel" && name=="singlePoolDebug")
         return false;
     }
   return json_object_get_boolean(obj);
@@ -46,10 +46,16 @@ bool getBool(std::string name, json_object* jobj)
 
 inputLayerParams::inputLayerParams(json_object* jobj, bool isDebugMode, bool multiFormat)
 {
+  
+  int batchSizeXmodelCompiledWith = 4;
+  
   if(multiFormat)
   {
-    json_object* obj = json_object_object_get(jobj, "shape");
+    json_object* obj = NULL;
+    json_object_object_get_ex(jobj, "shape", &obj);
     json_object* shapeVal;
+    shapeVal = json_object_array_get_idx(obj, 0);
+    batchSizeXmodelCompiledWith = json_object_get_int(shapeVal);
     shapeVal = json_object_array_get_idx(obj, 1);
     inH_ = json_object_get_int(shapeVal);
     shapeVal = json_object_array_get_idx(obj, 2);
@@ -63,7 +69,28 @@ inputLayerParams::inputLayerParams(json_object* jobj, bool isDebugMode, bool mul
     inH_ = getValue("inH", jobj);
     inCh_ = getValue("inCh", jobj);
   }
-  inDdrSize_ = getValue("inDDRSize", jobj);
+  
+  if(batchSizeXmodelCompiledWith==4)
+  {
+    inDdrSize_ = getValue("inDDRSize", jobj);
+  }
+  else if(batchSizeXmodelCompiledWith<4 && batchSizeXmodelCompiledWith>0)
+  {
+     std::cout<<"Xmodel compiled with batchSize: "<<batchSizeXmodelCompiledWith<<std::endl;
+     
+     inDdrSize_ = getValue("inDDRSize", jobj);
+     if(batchSizeXmodelCompiledWith==1)
+       inDdrSize_ = inDdrSize_*4;
+     else if(batchSizeXmodelCompiledWith==2)
+       inDdrSize_ = inDdrSize_*2;
+     else if(batchSizeXmodelCompiledWith==3)
+       inDdrSize_ = (inDdrSize_/3)*4;
+  }
+  else
+  {
+     std::cout<<"Xmodel compiled with batchSize: "<<batchSizeXmodelCompiledWith<<std::endl;
+     throw std::runtime_error("Error: batchSizes other than 1,2,3,4 are not supported for this IP, please cosnider re-compiling the xmodel with one of these batch sizes - either 1 or 2 or 3 or 4");
+  }
   padRgt_ = getValue("padRt", jobj);
 
   dru_mode_ = isDebugMode ? false:getBool("druMode", jobj);
@@ -82,7 +109,9 @@ outputLayerParams::outputLayerParams(json_object* jobj, bool isDebugMode, bool m
 {
   if(multiFormat)
   {
-    json_object* obj = json_object_object_get(jobj, "shape");
+    //json_object* obj = json_object_object_get_ex(jobj, "shape",obj);
+    json_object  *obj = NULL;
+    json_object_object_get_ex(jobj, "shape",&obj);
     json_object* shapeVal;
     shapeVal = json_object_array_get_idx(obj, 1);
     outH_ = json_object_get_int(shapeVal);
@@ -178,7 +207,7 @@ std::vector<std::vector<std::int32_t>> Xmodel::getOutTensorsDims()
 
 std::string Xmodel::getDebugGoldenFilename(int outputNum)
 {
-  if(outputNum==0 and outputParams_[outputNum].debug_golden_filename_=="")
+  if(outputNum==0 && outputParams_[outputNum].debug_golden_filename_=="")
     return debug_golden_filename_;
   return runner_dir_+outputParams_[outputNum].debug_golden_filename_;
 }
@@ -236,7 +265,7 @@ bool Xmodel::getBool(std::string name, json_object* jobj)
   json_object *obj = NULL;
   if (!json_object_object_get_ex(jobj, name.c_str(), &obj))
     {
-      if(name=="usexmodel" and name=="singlePoolDebug")
+      if(name=="usexmodel" && name=="singlePoolDebug")
         return false;
     }
   return json_object_get_boolean(obj);
@@ -246,7 +275,6 @@ bool Xmodel::getBool(std::string name, json_object* jobj)
 void Xmodel::loadParamsJson(json_object* jobj, bool isDebugMode)
 {
   instrFormatConverter_.reset(new InstrFormatConverter());
-  instrFormatConverter_->convertAsmToDdrFormat(instr_asm_filename_, instr_filename_);
   
   bool multiFormat = false;
   json_object_object_foreach(jobj, key, val) 
@@ -254,8 +282,9 @@ void Xmodel::loadParamsJson(json_object* jobj, bool isDebugMode)
     std::string keyString(key);
     if(keyString.compare("inputs") == 0)
     {
+      if (val)
       multiFormat = true;
-      assert(val);
+      else throw std::runtime_error("Error: Parsing JSON object");
     }
   }
   
@@ -268,16 +297,18 @@ void Xmodel::loadParamsJson(json_object* jobj, bool isDebugMode)
       {
         json_object_object_foreach(val, inputkey, inputval)
         {
-          assert(inputkey);
+          if(inputkey)
           inputParams_.push_back(inputLayerParams(inputval, isDebugMode, multiFormat));
-        }
+          else throw std::runtime_error("Error: Parsing json object");
+	}
       }
       if(keyString.compare("outputs") == 0)
       {
         json_object_object_foreach(val, outputkey, outputval)
         {
-          assert(outputkey);
+          if(outputkey)
           outputParams_.push_back(outputLayerParams(outputval, isDebugMode, multiFormat)); 
+          else throw std::runtime_error("Error: Parsing json object");
         }
       }
     }
@@ -343,16 +374,18 @@ void Xmodel::loadParamsSubgraph(const xir::Subgraph *subgraph, bool isDebugMode)
       {
         json_object_object_foreach(val, inputkey, inputval)
         {
-          assert(inputkey);
+          if(inputkey)
           inputParams_.push_back(inputLayerParams(inputval, isDebugMode, multiFormat));
+          else throw std::runtime_error("Error: Parsing json object");
         }
       }
       if(keyString.compare("outputs") == 0)
       {
         json_object_object_foreach(val, outputkey, outputval)
         {
-          assert(outputkey);
+          if(outputkey)
           outputParams_.push_back(outputLayerParams(outputval, isDebugMode, multiFormat)); 
+          else throw std::runtime_error("Error: Parsing json object");
         }
       }
     }
@@ -419,10 +452,24 @@ Xmodel::Xmodel(const xir::Subgraph *subgraph, bool isDebugMode)
     input_fix_point_values_.push_back(in_tensor->get_attr<std::int32_t>("fix_point"));
 
   }
+  
+  output_fix_point_values_.clear();
+  output_fix_point_values_.resize(getOutputNum());
+  output_scales_.clear();
+  output_scales_.resize(getOutputNum());
+
   for(auto &out_tensor : output_tensors)
   {
-    output_scales_.push_back(pow(2,(-1)*out_tensor->get_attr<std::int32_t>("fix_point")));
-    output_fix_point_values_.push_back(out_tensor->get_attr<std::int32_t>("fix_point"));
+    std::string outName = out_tensor->get_name();
+    for(uint32_t i=0; i<getOutputNum(); i++)
+    {
+       if(outName==getOutTensorsNames()[i])
+       {  
+           output_scales_[i]=pow(2,(-1)*out_tensor->get_attr<std::int32_t>("fix_point"));
+          output_fix_point_values_[i] = out_tensor->get_attr<std::int32_t>("fix_point");
+
+       }
+    }
 
   }
 }

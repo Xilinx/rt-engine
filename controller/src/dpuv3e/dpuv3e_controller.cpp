@@ -16,18 +16,13 @@
 #include <iostream>
 #include <fstream>
 #include <iterator>
-#include <sys/stat.h>
-#include <sys/types.h>
 #include <assert.h>
 #include <ert.h>
-#include <unistd.h>
 #include <xrt.h>
 #include <algorithm>
 #include <chrono>
 #include <regex>
 #include <sstream>
-#include <sys/stat.h>
-#include <sys/types.h>
 #include <iomanip>
 #include <math.h>
 #include "engine.hpp"
@@ -172,7 +167,7 @@ DpuV3eController::DpuV3eController(const xir::Subgraph *subgraph, xir::Attrs* at
         hbmw.push_back(7);
       }
     }
-    else if (dsa.find("u280") != std::string::npos) {
+    else if ((dsa.find("u280") != std::string::npos) || (dsa.find("u55c") != std::string::npos)) {
       if (cu_index == 0) {
         hbmio.push_back(0);
         hbmio.push_back(19);

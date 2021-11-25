@@ -21,6 +21,7 @@ project_name=$(basename ${script_path})
 
 # cmake args
 declare -a args
+args=(-DBUILD_TESTS=ON)
 
 # parse options
 options=$(getopt -a -n 'parse-options' -o h \
@@ -112,8 +113,8 @@ else
     echo cmake "${args[@]}" "$script_path"
     cmake "${args[@]}" "$script_path"
     make -j
-    ${build_only:=false} || make install
-    ${build_package:=false} && make package
+    ${build_only:=false} ||sudo  make install
+    ${build_package:=false} &&sudo  make package
 fi
 
 exit 0

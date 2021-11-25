@@ -13,6 +13,7 @@
 // limitations under the License.
 
 #include <vector>
+#include <cstring>
 #include <string>
 #include <iostream>
 #include <iterator>
@@ -63,8 +64,8 @@ public:
 protected:
 
   // Get Input/Output Tensors from subgraph
-  set<const xir::Tensor *> inTensors_;
-  set<const xir::Tensor *> outTensors_;
+  std::set<const xir::Tensor *> inTensors_;
+  std::set<const xir::Tensor *> outTensors_;
 
   // Reference to the engine
   Engine& engine_;
@@ -79,12 +80,12 @@ protected:
   std::vector<std::vector<IpuDeviceBuffer>> inputDeviceBuffers_;
   std::vector<std::vector<IpuDeviceBuffer>> outputDeviceBuffers_;
 
-  // Create Device Buffers for instructions and model parameters
-  std::unique_ptr<IpuDeviceBuffer> weights_;
-  std::unique_ptr<IpuDeviceBuffer> biases_;
+  // Create Device Buffers for instructions and model parameters and ddr spill
+  std::unique_ptr<IpuDeviceBuffer> parameters_;
+  std::unique_ptr<IpuDeviceBuffer> instructions_;
+  std::unique_ptr<IpuDeviceBuffer> intermediate_;
 
-  //std::unique_ptr<IpuDeviceBuffer> instructions_;
-  //std::unique_ptr<IpuDeviceBuffer> parameters_;
-
+  size_t numInstructions_;
+  
 
 };

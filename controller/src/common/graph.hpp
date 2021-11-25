@@ -31,12 +31,6 @@ class DpuXmodel  {
   std::vector<std::int32_t> get_output_offset() {
     return xdpu_io_output_offset;
   }
-  std::vector<const xir::Tensor*> get_input_tensors() {
-    return vitis_input_tensors_;
-  }
-  std::vector<const xir::Tensor*> get_output_tensors() {
-    return vitis_output_tensors_;
-  }
   void init_vitis_tensors(int batch_size, size_t device_index);
   /**
    * layer information
@@ -125,6 +119,10 @@ class DpuXmodel  {
   const xir::Subgraph* get_subgraph() {
     return subgraph_;
   }
+  std::vector<const xir::Tensor*> get_graph_input_tensors();
+  std::vector<const xir::Tensor*> get_graph_output_tensors();
+  std::vector<const xir::Tensor*> get_output_tensors();
+  std::vector<const xir::Tensor*> get_input_tensors();
   int32_t get_total_out_size() { return xdpu_total_out_size;}
   int32_t get_total_in_size() { return xdpu_total_in_size;}
   std::vector<layer_info> dbg_layers_;
@@ -152,10 +150,14 @@ class DpuXmodel  {
 
   std::vector<std::vector<std::int32_t>> input_dims;
   std::vector<std::vector<std::int32_t>> output_dims;
-  std::vector<const xir::Tensor*> input_tensors_;
-  std::vector<const xir::Tensor*> output_tensors_;
-  std::vector<const xir::Tensor*> vitis_input_tensors_;
-  std::vector<const xir::Tensor*> vitis_output_tensors_;
+  //std::vector<const xir::Tensor*> input_tensors_;
+  //std::vector<const xir::Tensor*> output_tensors_;
+  //std::vector<const xir::Tensor*> vitis_input_tensors_;
+  //std::vector<const xir::Tensor*> vitis_output_tensors_;
+  std::vector<std::unique_ptr<xir::Tensor>> intensors_;
+  std::vector<std::unique_ptr<xir::Tensor>> outtensors_;
+  std::vector<std::unique_ptr<xir::Tensor>> graph_intensors_;
+  std::vector<std::unique_ptr<xir::Tensor>> graph_outtensors_;
   std::vector<std::int32_t> xdpu_io_input_offset;
   std::vector<std::int32_t> xdpu_io_output_offset;
   std::vector<std::pair<int32_t, int32_t>> xdpu_workspace_reg_map;
@@ -166,5 +168,7 @@ class DpuXmodel  {
   std::unordered_map<char*, std::pair<int32_t,int>> xdpu_code_map;
   subg_info subgraph_info;
   const xir::Subgraph *subgraph_;
+  std::list<std::unique_ptr<xir::Tensor>> tensors_;
+  
 };
 

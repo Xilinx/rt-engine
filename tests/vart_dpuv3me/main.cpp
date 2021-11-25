@@ -13,11 +13,8 @@
 // limitations under the License.
 
 #include <assert.h>
-#include <dirent.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <sys/stat.h>
-#include <unistd.h>
 
 #include <cassert>
 #include <cmath>
@@ -187,7 +184,7 @@ int main(int argc, char* argv[]) {
   unsigned int size = 224*224*3*4;
   int8_t* codePtr= NULL;
   float *codePtrF = new float[size/4];
-  if (posix_memalign((void**)&codePtr, getpagesize(), size*8/4))
+  if (rte::posix_memalign((void**)&codePtr, rte::getpagesize(), size*8/4))
     throw std::bad_alloc();
   std::vector<std::unique_ptr<vart::TensorBuffer> > tbufs;
 
@@ -205,7 +202,8 @@ cout << inputs.size()<<endl;
                                    input->get_tensor()->get_shape()[0]);
     }
 
-  auto tensorr = inputs[0]->get_tensor()->get_shape()[0];
+  // Unused variable
+  //auto tensorr = inputs[0]->get_tensor()->get_shape()[0];
 
   std::cout << std::endl << "Testing single thread..." << std::endl;
   auto t1 = std::chrono::high_resolution_clock::now();

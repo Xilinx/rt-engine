@@ -19,6 +19,11 @@
 #include <array>
 #include <string>
 #include <vector>
+#include <cstring>
+#include <numeric>
+#include <sstream>
+#include <fstream>
+
 namespace xir {
 class XrtBinStream {
  public:
@@ -46,8 +51,7 @@ class XrtBinStream {
   void init_cu_indices();
 
  private:
-  int fd_;
-  void* data_;
+  char* data_;
   const axlf* top_;
   xuid_t uuid_;
   ip_layout* ip_layout_;

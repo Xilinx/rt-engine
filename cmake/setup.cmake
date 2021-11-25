@@ -1,0 +1,23 @@
+
+if(DEFINED ENV{BUILD_VER})
+  set(PROJECT_VERSION $ENV{BUILD_VER})
+else()
+  set(PROJECT_VERSION 9.9.9)
+endif()
+
+set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+set(THREADS_PREFER_PTHREAD_FLAG ON)
+
+if (MSVC)
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /Zc:__cplusplus")
+else(MSVC)
+  set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -Wall -Werror -ggdb -O0 -fno-inline")
+  set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -O3 -Wall -Werror")
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -Werror")
+  set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wall -Werror")
+  set(CMAKE_EXE "${CMAKE_C_FLAGS} -Wall -Werror")
+  set(CMAKE_SHARED_LINKER_FLAGS  "${CMAKE_SHARED_LINKER_FLAGS} -Wl,--no-undefined")
+endif(MSVC)
+
+option(BUILD_TESTS "Build Test Cases" OFF)

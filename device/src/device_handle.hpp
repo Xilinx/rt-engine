@@ -17,6 +17,7 @@
 /*
  * Reference: vart/xrt-device-handle/src/xrt_device_handle_butler.hpp
  */
+#include <array>
 #include <map>
 #include <unordered_map>
 #include <mutex>
@@ -30,9 +31,6 @@ namespace xir {
 //class Subgraph;
 class Attrs;
 }  // namespace xir
-
-class xrmCuProperty;
-class xrmCuResource;
 
 struct DeviceInfo {
   uint64_t cu_base_addr;
@@ -69,19 +67,6 @@ class DeviceResource {
   std::array<unsigned char, sizeof(xuid_t)> uuid_;
 };
 
-class XrmResource : public DeviceResource {
- public:
-  XrmResource(std::string kernelName, std::string xclbin, xir::Attrs* attrs);
-  ~XrmResource();
-  int alloc_from_attrs(std::string kernelName, char* xclbinPath, xir::Attrs* attrs);
-  int alloc_with_deviceId(std::string kernelName, char* xclbinPath, xir::Attrs* attrs);
-  int alloc_without_deviceId(std::string kernelName, char* xclbinPath);
- private:
-  void *context_;
-  std::unique_ptr<xrmCuProperty> cu_prop_;
-  std::unique_ptr<xrmCuResource> cu_rsrc_;
-};
-
 class IpuResource : public DeviceResource {
 public:
   IpuResource(std::string kernelName, std::string xclbin, xir::Attrs* attrs);
@@ -102,26 +87,6 @@ class DeviceHandle {
   void raw_acquire(std::string kernelName, std::string xclbin);
   std::unique_ptr<DeviceResource> resource_;
   DeviceHandle() = delete;
-};
-
-class XclDeviceHandle : public DeviceHandle {
- public:
-  XclDeviceHandle(std::string kernelName, std::string xclbin, xir::Attrs* attrs);
-  virtual ~XclDeviceHandle();
-  const cl_context& get_context() const { return context_; }
-  const cl_command_queue& get_command_queue() const { return commands_; }
-  const cl_program& get_program() const { return program_; }
-  
- private:
-  cl_context context_;
-  cl_command_queue commands_;
-  cl_program program_;
-
-  // use_count_ map used to track how many runners are assigned
-  //   to a given (xrt_device, cu_index) pair.
-  //   Because it is static, it is shared state across threads, and must be protected by a mutex
-  static std::map<std::pair<xrt_device*,size_t>, size_t> use_count_;
-  static std::mutex use_count_mutex_;
 };
 
 class XrtContext;
@@ -203,6 +168,6 @@ class KernelNameManager {
     std::string getRealKernelName(std::string xclbinPath, std::string kernelName);
   private:
     KernelNameManager() {};
-    unordered_map<std::string, unsigned > xclbin2usedCuIdx;
+    std::unordered_map<std::string, unsigned > xclbin2usedCuIdx;
 };
 

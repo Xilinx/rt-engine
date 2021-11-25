@@ -14,14 +14,10 @@
 
 #pragma once
 
-#pragma GCC diagnostic push 
-#pragma GCC diagnostic ignored "-Wignored-qualifiers"
-#include "CL/cl_ext_xilinx.h"
-#pragma GCC diagnostic pop 
 #include "xir/tensor/tensor.hpp"
-#include "vart/runner.hpp"
-//#include "tensor_buffer.hpp"
 #include "device_handle.hpp"
+#include "vart/tensor_buffer.hpp"
+
 
 class DeviceBuffer {
  public:
@@ -74,22 +70,6 @@ class DeviceBuffer {
 
  private:
   DeviceBuffer() = delete;
-};
-
-class XclDeviceBuffer : public DeviceBuffer {
- public:
-  XclDeviceBuffer(const XclDeviceHandle *handle, vart::TensorBuffer *tbuf, unsigned bank);
-  XclDeviceBuffer(const XclDeviceHandle *handle, void *data, size_t size, unsigned bank);
-  ~XclDeviceBuffer();
-  void upload() const override;
-  void download() const override;
-  void sync_for_read(uint64_t offset, size_t size) override;
-  void sync_for_write(uint64_t offset, size_t size) override;
-  void copy_from_host(const void* buf, size_t size, size_t offset) override;
-  void copy_to_host(void* buf, size_t size, size_t offset) override;
-
- private:
-  cl_mem mem_;
 };
 
 class XrtDeviceBuffer : public DeviceBuffer {
