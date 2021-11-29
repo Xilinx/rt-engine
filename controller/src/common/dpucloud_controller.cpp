@@ -384,11 +384,11 @@ void DpuCloudController::init_graph(vector<unsigned> hbmw, vector<unsigned> hbmc
   }
   model_->init_vitis_tensors(batch_size_, handle_->get_device_info().device_index);
   program_once_complete = 0;
-  tensorbufferPool& pool = tensorbufferPool::Instance();
-  for (int b=0; b<8; b++) {
+  //tensorbufferPool& pool = tensorbufferPool::Instance();
+  for (int b=0; b<12; b++) {
     auto inputs = get_inputs(1);
     auto outputs = get_outputs(1);
-    pool.extend(md5,std::make_pair(inputs,outputs));
+    pool.extend(std::make_pair(inputs,outputs));
   }
 
 }
@@ -725,11 +725,12 @@ bool DpuCloudController::check_tensorbuffer_outside(const std::vector<vart::Tens
   }
   return create_tb_outside;
 }
-void DpuCloudController::tensorbuffer_trans(std::vector<vart::TensorBuffer*> &input_tensor_buffers, std::vector<vart::TensorBuffer*> &output_tensor_buffers, const std::vector<vart::TensorBuffer*> &inputs, const std::vector<vart::TensorBuffer*> &outputs, bool is_input) {
+uint32_t DpuCloudController::tensorbuffer_trans(std::vector<vart::TensorBuffer*> &input_tensor_buffers, std::vector<vart::TensorBuffer*> &output_tensor_buffers, const std::vector<vart::TensorBuffer*> &inputs, const std::vector<vart::TensorBuffer*> &outputs, bool is_input, uint32_t buf_id) {
   int ibs = inputs[0]->get_tensor()->get_shape()[0]*batch_size_/model_->get_input_tensors()[0]->get_shape()[0];
   int obs = outputs[0]->get_tensor()->get_shape()[0]*batch_size_/model_->get_output_tensors()[0]->get_shape()[0];
   // check if tensorbuffer store batch inputs/outputs
   int inputBs = batch_size_;
+  uint32_t id=0;
   if ((inputs.size()/model_->get_input_tensors().size())>1)
     inputBs = inputs.size()/model_->get_input_tensors().size();
   else
@@ -737,9 +738,10 @@ void DpuCloudController::tensorbuffer_trans(std::vector<vart::TensorBuffer*> &in
   auto tensors = get_input_tensors();
   int tsize = ibs;
   std::vector<vart::TensorBuffer*> buffers_from, buffers_to, buffers;
-  tensorbufferPool& pool = tensorbufferPool::Instance();
+  //tensorbufferPool& pool = tensorbufferPool::Instance();
   if (is_input) {
-    auto bufs = pool.get(md5);
+    id = pool.get();
+    auto bufs = pool.get_buffer(id);
     input_tensor_buffers = bufs.first;
     output_tensor_buffers = bufs.second;
     //input_tensor_buffers = get_inputs(1);
@@ -806,8 +808,10 @@ void DpuCloudController::tensorbuffer_trans(std::vector<vart::TensorBuffer*> &in
   if (!is_input) {
       //free_buffers(input_tensor_buffers);
       //free_buffers(output_tensor_buffers);
-      pool.extend(md5,std::make_pair(input_tensor_buffers,output_tensor_buffers));
+      //pool.extend(md5,std::make_pair(input_tensor_buffers,output_tensor_buffers));
+      pool.free_id(buf_id);
   }
+  return id;
 
 }
 vector<std::tuple<int, int,uint64_t>>  DpuCloudController::get_dpu_reg_inside(bool create_tb_batch, std::vector<uint64_t> &in_addrs, std::vector<uint64_t> &out_addrs, std::vector<vart::TensorBuffer*> &output_tensor_buffers, std::vector<vart::TensorBuffer*> &input_tensor_buffers  ) {
@@ -1087,11 +1091,12 @@ void DpuCloudController::run(const std::vector<vart::TensorBuffer*> &inputs,
       create_tb_batch = true;
     }
   //}
+  uint32_t buf_id = 0;
   if(create_tb_outside) {
     LOG_IF(INFO, ENV_PARAM(DEBUG_DPU_CONTROLLER))
       << "create tensorbuffer by user side";
     if (!tensorbuffer_phy) {
-      tensorbuffer_trans(input_tensor_buffers, output_tensor_buffers,inputs,outputs, true);
+      buf_id = tensorbuffer_trans(input_tensor_buffers, output_tensor_buffers,inputs,outputs, true, 0);
       create_tb_batch = false; // we call get_inputs(1), tensorbuffer.data not in batch
     } else {
       input_tensor_buffers = inputs;
@@ -1306,7 +1311,7 @@ void DpuCloudController::run(const std::vector<vart::TensorBuffer*> &inputs,
   __TOC__(OUTPUT_D2H)
   }
   if((!tensorbuffer_phy) &&create_tb_outside) {
-    tensorbuffer_trans(input_tensor_buffers, output_tensor_buffers,inputs,outputs, false);
+    tensorbuffer_trans(input_tensor_buffers, output_tensor_buffers,inputs,outputs, false, buf_id);
   }
 
 }

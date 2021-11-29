@@ -19,71 +19,90 @@
 #include "tensor_buffer_imp_view.hpp"
 #include "tensor_buffer_imp_host_phy.hpp"
 #include <queue>
+#include "blockingconcurrentqueue.hpp"
 //
 //DEF_ENV_PARAM(DEBUG_DPU_CONTROLLER, "0")
 //
 //
 class tensorbufferPool {
  public:
-  static tensorbufferPool& Instance() {
-    static tensorbufferPool pool(8);
-    return pool;
+  //static tensorbufferPool& Instance() {
+  //  static tensorbufferPool pool(12);
+  //  return pool;
+  //}
+  std::pair<vector<vart::TensorBuffer*>,vector<vart::TensorBuffer*>> get_buffer(uint32_t id) {
+    return queues[id];
   }
-  std::pair<vector<vart::TensorBuffer*>,vector<vart::TensorBuffer*>> get(std::string model) {
-    std::pair<vector<vart::TensorBuffer*>,vector<vart::TensorBuffer*>> rtn;
-    int found = 0;
-    while(!found) {
-      {
-        std::unique_lock<std::mutex> lock(lock_);
-        auto iter = queues.find(model);
-        if (iter != queues.end()) {
-          auto& queue = iter->second;
-          if(queue.size() == 0) {
-            continue;
-          }
-          
-          rtn = queue.front();
-          queue.pop();
-	  found=1;
-        } else {
-          throw std::runtime_error("Error: no queue founded");
-        }
-      }
-    }
-    return rtn;
+  uint32_t get() {
+    uint32_t id;
+    task_ids.wait_dequeue(id);
+    return id;
+    //std::pair<vector<vart::TensorBuffer*>,vector<vart::TensorBuffer*>> rtn
+    //int found = 0;
+    //while(!found) {
+      //{
+        //std::unique_lock<std::mutex> lock(lock_);
+        //auto iter = queues.find(model);
+        //if (iter != queues.end()) {
+        //  auto queue = iter->second;
+        //  if(queue.size() == 0) {
+        //    continue;
+        //  }
+        //  
+        //  rtn = queue.front();
+        //  queue.pop();
+	//  found=1;
+        //} else {
+        //  throw std::runtime_error("Error: no queue founded");
+        //}
+      //}
+    //}
   }
-  explicit tensorbufferPool(const size_t pool_size) : size_(pool_size) {
-   
+
+  explicit tensorbufferPool()  {
+    size_=12;
+    for (unsigned int i=0; i<size_; i++)
+      task_ids.enqueue(i);
+ 
   }
+
   ~tensorbufferPool() {
 
   }
-  void extend (std::string model, std::pair<std::vector<vart::TensorBuffer*>, std::vector<vart::TensorBuffer*>> buf) {
-    std::unique_lock<std::mutex> lock(lock_);
-    auto iter = queues.find(model);
-    if (iter != queues.end()) {
-      auto& queue = iter->second;
-      queue.push(buf);
-      queues.emplace(model,queue);
-    } else {
-      std::queue<std::pair<vector<vart::TensorBuffer*>,vector<vart::TensorBuffer*>>> queue;
-      queue.push(buf);
-      queues.emplace(model,queue);
-    } 
+  void extend (std::pair<std::vector<vart::TensorBuffer*>, std::vector<vart::TensorBuffer*>> buf) {
+    //std::unique_lock<std::mutex> lock(lock_);
+    //auto iter = queues.find(model);
+    //if (iter != queues.end()) {
+    //  auto& queue = iter->second;
+      queues.emplace_back(buf);
+    //  queues.emplace(model,queue);
+    //} else {
+    //  std::vector<std::pair<vector<vart::TensorBuffer*>,vector<vart::TensorBuffer*>>> queue;
+     // queues.emplace_back(buf);
+     // queues.emplace(model,queue);
+     // moodycamel::BlockingConcurrentQueue<uint32_t> task_ids;
+
+    //}
   }
-  bool check(std::string dm5) {
-    std::unique_lock<std::mutex> lock(lock_);
-    auto iter = queues.find(dm5);
-    if (iter != queues.end())
-      return true;
-    else
-      return false;
+  void free_id(uint32_t id) {
+  
+    task_ids.enqueue(id);
+  
   }
+  //bool check() {
+  //  //std::unique_lock<std::mutex> lock(lock_);
+  //  auto iter = queues.find(md5);
+  //  if (iter != queues.end())
+  //    return true;
+  //  else
+  //    return false;
+  //}
 
   private:
-    std::unordered_map<std::string,std::queue<std::pair<vector<vart::TensorBuffer*>,vector<vart::TensorBuffer*>>>> queues;
-    std::mutex lock_;
-    const size_t size_;
+    std::vector<std::pair<vector<vart::TensorBuffer*>,vector<vart::TensorBuffer*>>> queues;
+    moodycamel::BlockingConcurrentQueue<uint32_t>  task_ids;
+    //std::mutex lock_;
+    size_t size_;
 };
 
 #if __has_include(<filesystem>)
@@ -130,7 +149,7 @@ class DpuCloudController
   virtual std::vector<const xir::Tensor*> init_tensor(std::vector<const xir::Tensor*> tensors, int batchSupport, unsigned runEngine=1);
   virtual bool check_tensorbuffer_outside(const std::vector<vart::TensorBuffer*> &outputs);
   virtual void free_buffers(std::vector<vart::TensorBuffer*> &tbufs);
-  virtual void tensorbuffer_trans(std::vector<vart::TensorBuffer*> &input_tensor_buffers, std::vector<vart::TensorBuffer*> &output_tensor_buffers, const std::vector<vart::TensorBuffer*> &inputs, const std::vector<vart::TensorBuffer*> &outputs, bool is_input);
+  virtual uint32_t tensorbuffer_trans(std::vector<vart::TensorBuffer*> &input_tensor_buffers, std::vector<vart::TensorBuffer*> &output_tensor_buffers, const std::vector<vart::TensorBuffer*> &inputs, const std::vector<vart::TensorBuffer*> &outputs, bool is_input, uint32_t buf_id);
   virtual std::vector<std::tuple<int, int,uint64_t>>  get_dpu_reg_inside(bool create_tb_batch, std::vector<uint64_t> &in_addrs, std::vector<uint64_t> &out_addrs, std::vector<vart::TensorBuffer*> &output_tensor_buffers, std::vector<vart::TensorBuffer*> &input_tensor_buffers );
   std::vector<std::tuple<int, int,uint64_t>> get_dpu_reg_outside(bool create_tb_batch, std::vector<uint64_t> &in_addrs, std::vector<uint64_t> &out_addrs, const std::vector<vart::TensorBuffer*> &inputs, const std::vector<vart::TensorBuffer*> &outputs);
   std::vector<std::tuple<int, int,uint64_t>> get_dpu_reg_outside_hbm(bool create_tb_batch, std::vector<uint64_t> &in_addrs, std::vector<uint64_t> &out_addrs, const std::vector<vart::TensorBuffer*> &inputs, const std::vector<vart::TensorBuffer*> &outputs);
@@ -184,6 +203,7 @@ class DpuCloudController
   std::unordered_map<int, xir::Tensor*> tensors_map_;
   //std::unordered_map<string, xir::Tensor*> tensor_no_batch_map_;
   std::list<std::unique_ptr<xir::Tensor>> tensors_;
+  tensorbufferPool pool;
   //std::list<std::unique_ptr<xir::Tensor>> tensor_no_batch_;
 };
 
