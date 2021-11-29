@@ -60,14 +60,20 @@ class tensorbufferPool {
   }
 
   explicit tensorbufferPool()  {
-    size_=12;
+    size_=16;
+  }
+  void init_pool() {
     for (unsigned int i=0; i<size_; i++)
       task_ids.enqueue(i);
- 
   }
-
   ~tensorbufferPool() {
 
+  }
+  void set_pool_size(size_t size) {
+    size_ = size;
+  }
+  size_t get_pool_size() {
+    return size_;
   }
   void extend (std::pair<std::vector<vart::TensorBuffer*>, std::vector<vart::TensorBuffer*>> buf) {
     //std::unique_lock<std::mutex> lock(lock_);

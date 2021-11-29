@@ -72,6 +72,7 @@ using namespace chrono;
 //#define batch_size_ 8
 DEF_ENV_PARAM(DEBUG_DPU_CONTROLLER, "0")
 DEF_ENV_PARAM(XLNX_SHOW_DPU_COUNTER, "0");
+DEF_ENV_PARAM(XLNX_BUFFER_POOL, "0");
 DEF_ENV_PARAM(XLNX_ENABLE_FINGERPRINT_CHECK, "1");
 /*
  * a contiguous memory block is allocated for each requests' I/O
@@ -385,7 +386,11 @@ void DpuCloudController::init_graph(vector<unsigned> hbmw, vector<unsigned> hbmc
   model_->init_vitis_tensors(batch_size_, handle_->get_device_info().device_index);
   program_once_complete = 0;
   //tensorbufferPool& pool = tensorbufferPool::Instance();
-  for (int b=0; b<12; b++) {
+  if (ENV_PARAM(XLNX_BUFFER_POOL))  {
+    pool.set_pool_size(ENV_PARAM(XLNX_BUFFER_POOL));
+  }
+  pool.init_pool();
+  for (size_t b=0; b<pool.get_pool_size(); b++) {
     auto inputs = get_inputs(1);
     auto outputs = get_outputs(1);
     pool.extend(std::make_pair(inputs,outputs));
