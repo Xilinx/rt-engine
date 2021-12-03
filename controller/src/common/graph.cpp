@@ -346,8 +346,8 @@ void DpuXmodel::init_graph(const xir::Subgraph* subgraph) {
   // Get input offset
   auto input_tensors = subgraph_->get_input_tensors();
   auto output_tensors = subgraph_->get_output_tensors();
-  xdpu_total_in_size=0;
-  xdpu_total_out_size=0;
+  //xdpu_total_in_size=0;
+  //xdpu_total_out_size=0;
   for (auto &in_tensor : input_tensors) {
     auto out = find_tensor(in_tensor,subgraph_,true);
     auto ddr_addr = out->get_attr<std::int32_t>("ddr_addr");
@@ -362,15 +362,18 @@ void DpuXmodel::init_graph(const xir::Subgraph* subgraph) {
     auto attrs = out->get_attrs(); 
     auto tensor = xir::Tensor::create(in_tensor->get_name(), dims, in_tensor->get_data_type());
     //auto tensor = xir::Tensor::create(in_tensor->get_name(), dims, in_tensor->get_data_type());
+    if (!attrs->has_attr("reg_id")) {
+      attrs->set_attr<int32_t>("reg_id", out->get_attr<std::int32_t>("reg_id"));
+    }
 
     tensor->set_attrs(std::move(attrs));
-    input_regid = out->get_attr<std::int32_t>("reg_id");
+    input_regid.emplace_back(out->get_attr<std::int32_t>("reg_id"));
     graph_intensors_.emplace_back(std::move(tensor));
     //tensors_.emplace_back(std::move(tensor));
     //xdpu_total_in_size += tensor->get_element_num(); 
 
   }
-  xdpu_total_in_size = xdpu_total_reg_map.find(input_regid)->second; 
+  //xdpu_total_in_size = xdpu_total_reg_map.find(input_regid)->second; 
 
   // Get output offset
   for(auto &out_tensor : output_tensors) {
@@ -386,14 +389,17 @@ void DpuXmodel::init_graph(const xir::Subgraph* subgraph) {
         out_tensor->get_data_size(), layer_info::name_map(out->get_name()),out->get_attr<std::int32_t>("reg_id")));
     auto attrs = out->get_attrs();
     auto tensor = xir::Tensor::create(out_tensor->get_name(), dims, out_tensor->get_data_type());
+    if (!attrs->has_attr("reg_id")) {
+      attrs->set_attr<int32_t>("reg_id", out->get_attr<std::int32_t>("reg_id"));
+    }
     tensor->set_attrs(std::move(attrs));
     //auto tensor = out;
-    output_regid = out->get_attr<std::int32_t>("reg_id");
+    output_regid.emplace_back(out->get_attr<std::int32_t>("reg_id"));
     graph_outtensors_.emplace_back(std::move(tensor));
     //xdpu_total_out_size += tensor->get_element_num(); 
 
   }
-  xdpu_total_out_size = xdpu_total_reg_map.find(output_regid)->second; 
+  //xdpu_total_out_size = xdpu_total_reg_map.find(output_regid)->second; 
   //in release mode: using dbg_layers_ to store first inputs and final outputs information  
   dbg_layers_.clear();
   dbg_layers_.emplace_back(std::move(layer));

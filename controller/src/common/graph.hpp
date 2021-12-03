@@ -89,16 +89,16 @@ class DpuXmodel  {
   int is_splitio() {
     return split_io;
   }
-  int32_t get_total_outsize() {
-    return xdpu_total_out_size;
-  }
-  int32_t get_total_insize() {
-    return xdpu_total_in_size;
-  }
-  int32_t get_input_regid() {
+  //int32_t get_total_outsize() {
+  //  return xdpu_total_out_size;
+  //}
+  //std::vector<int32_t> get_total_insize() {
+  //  return xdpu_total_in_size;
+  //}
+  std::vector<int32_t> get_input_regid() {
     return input_regid;
   }
-  int32_t get_output_regid() {
+  std::vector<int32_t> get_output_regid() {
     return output_regid;
   }
   std::vector<float> get_input_scales() {
@@ -123,18 +123,18 @@ class DpuXmodel  {
   std::vector<const xir::Tensor*> get_graph_output_tensors();
   std::vector<const xir::Tensor*> get_output_tensors();
   std::vector<const xir::Tensor*> get_input_tensors();
-  int32_t get_total_out_size() { return xdpu_total_out_size;}
-  int32_t get_total_in_size() { return xdpu_total_in_size;}
+  //int32_t get_total_out_size() { return xdpu_total_out_size;}
+  //int32_t get_total_in_size() { return xdpu_total_in_size;}
   std::vector<layer_info> dbg_layers_;
   bool dump_mode_;
   std::string dump_folder_;
   bool debug_mode_;
   int split_io;
   //int batch_size_;
-  int32_t xdpu_total_out_size;
-  int32_t xdpu_total_in_size;
-  int32_t input_regid;
-  int32_t output_regid;
+  //int32_t xdpu_total_out_size;
+  //int32_t xdpu_total_in_size;
+  std::vector<int32_t> input_regid;
+  std::vector<int32_t> output_regid;
   //std::unordered_map<string,float> input_scales_;
   //std::unordered_map<string,float> output_scales_;
   std::vector<float> input_scales_;
