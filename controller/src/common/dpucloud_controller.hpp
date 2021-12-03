@@ -64,9 +64,9 @@ class DpuCloudController
   virtual bool check_tensorbuffer_outside(const std::vector<vart::TensorBuffer*> &outputs);
   virtual void free_buffers(std::vector<vart::TensorBuffer*> &tbufs);
   virtual void tensorbuffer_trans(std::vector<vart::TensorBuffer*> &input_tensor_buffers, std::vector<vart::TensorBuffer*> &output_tensor_buffers, const std::vector<vart::TensorBuffer*> &inputs, const std::vector<vart::TensorBuffer*> &outputs, bool is_input);
-  virtual std::vector<std::tuple<int, int,uint64_t>>  get_dpu_reg_inside(bool create_tb_batch, std::vector<uint64_t> &in_addrs, std::vector<uint64_t> &out_addrs, std::vector<vart::TensorBuffer*> &output_tensor_buffers, std::vector<vart::TensorBuffer*> &input_tensor_buffers );
-  std::vector<std::tuple<int, int,uint64_t>> get_dpu_reg_outside(bool create_tb_batch, std::vector<uint64_t> &in_addrs, std::vector<uint64_t> &out_addrs, const std::vector<vart::TensorBuffer*> &inputs, const std::vector<vart::TensorBuffer*> &outputs);
-  std::vector<std::tuple<int, int,uint64_t>> get_dpu_reg_outside_hbm(bool create_tb_batch, std::vector<uint64_t> &in_addrs, std::vector<uint64_t> &out_addrs, const std::vector<vart::TensorBuffer*> &inputs, const std::vector<vart::TensorBuffer*> &outputs);
+  virtual std::vector<std::tuple<int, int,uint64_t>>  get_dpu_reg_inside(bool create_tb_batch, std::vector<vart::TensorBuffer*> &output_tensor_buffers, std::vector<vart::TensorBuffer*> &input_tensor_buffers );
+  std::vector<std::tuple<int, int,uint64_t>> get_dpu_reg_outside(bool create_tb_batch, const std::vector<vart::TensorBuffer*> &inputs, const std::vector<vart::TensorBuffer*> &outputs);
+  std::vector<std::tuple<int, int,uint64_t>> get_dpu_reg_outside_hbm(bool create_tb_batch, const std::vector<vart::TensorBuffer*> &inputs, const std::vector<vart::TensorBuffer*> &outputs);
   std::vector<vart::TensorBuffer*> create_tensorbuffer_for_batch(std::vector<unsigned> hbm, bool isInputs, std::vector<const xir::Tensor*> tensors, std::vector<int> tensor_offset, int output_bz, bool isTensorsBatch);
   void dpu_trigger_run(ert_start_kernel_cmd* ecmd, xclDeviceHandle xcl_handle, xclBufferHandle bo_handle, std::vector<std::tuple<int, int,uint64_t>> xdpu_total_dpureg_map2);
   xclBufferHandle get_xrt_bo(void* data, int size, std::vector<unsigned> hbm);
@@ -109,6 +109,7 @@ class DpuCloudController
   std::unordered_map<std::string, std::pair<uint64_t,int32_t>> layer_debug_mode_preload;
   std::unordered_map<int, std::vector<vart::TensorBuffer*>> xdpu_workspace_dpu;
   std::shared_ptr<DpuXmodel> model_;
+  uint64_t get_addr(int32_t regid, int idx, std::vector<std::tuple<int, int,uint64_t>>& xdpu_total_dpureg_map_io);
  private:
   int flag;
   void init_profiler();
