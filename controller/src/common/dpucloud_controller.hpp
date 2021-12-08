@@ -30,37 +30,17 @@ class tensorbufferPool {
   //  static tensorbufferPool pool(12);
   //  return pool;
   //}
-  std::pair<vector<vart::TensorBuffer*>,vector<vart::TensorBuffer*>> get_buffer(uint32_t id) {
+  std::pair<std::vector<vart::TensorBuffer*>, std::vector<vart::TensorBuffer*>> get_buffer(uint32_t id) {
     return queues[id];
   }
   uint32_t get() {
     uint32_t id;
     task_ids.wait_dequeue(id);
     return id;
-    //std::pair<vector<vart::TensorBuffer*>,vector<vart::TensorBuffer*>> rtn
-    //int found = 0;
-    //while(!found) {
-      //{
-        //std::unique_lock<std::mutex> lock(lock_);
-        //auto iter = queues.find(model);
-        //if (iter != queues.end()) {
-        //  auto queue = iter->second;
-        //  if(queue.size() == 0) {
-        //    continue;
-        //  }
-        //  
-        //  rtn = queue.front();
-        //  queue.pop();
-	//  found=1;
-        //} else {
-        //  throw std::runtime_error("Error: no queue founded");
-        //}
-      //}
-    //}
   }
 
   explicit tensorbufferPool()  {
-    size_=16;
+    size_=0;
   }
   void init_pool() {
     for (unsigned int i=0; i<size_; i++)
@@ -76,38 +56,17 @@ class tensorbufferPool {
     return size_;
   }
   void extend (std::pair<std::vector<vart::TensorBuffer*>, std::vector<vart::TensorBuffer*>> buf) {
-    //std::unique_lock<std::mutex> lock(lock_);
-    //auto iter = queues.find(model);
-    //if (iter != queues.end()) {
-    //  auto& queue = iter->second;
       queues.emplace_back(buf);
-    //  queues.emplace(model,queue);
-    //} else {
-    //  std::vector<std::pair<vector<vart::TensorBuffer*>,vector<vart::TensorBuffer*>>> queue;
-     // queues.emplace_back(buf);
-     // queues.emplace(model,queue);
-     // moodycamel::BlockingConcurrentQueue<uint32_t> task_ids;
-
-    //}
   }
   void free_id(uint32_t id) {
   
     task_ids.enqueue(id);
   
   }
-  //bool check() {
-  //  //std::unique_lock<std::mutex> lock(lock_);
-  //  auto iter = queues.find(md5);
-  //  if (iter != queues.end())
-  //    return true;
-  //  else
-  //    return false;
-  //}
 
   private:
-    std::vector<std::pair<vector<vart::TensorBuffer*>,vector<vart::TensorBuffer*>>> queues;
+    std::vector<std::pair<std::vector<vart::TensorBuffer*>, std::vector<vart::TensorBuffer*>>> queues;
     moodycamel::BlockingConcurrentQueue<uint32_t>  task_ids;
-    //std::mutex lock_;
     size_t size_;
 };
 
@@ -156,9 +115,15 @@ class DpuCloudController
   virtual bool check_tensorbuffer_outside(const std::vector<vart::TensorBuffer*> &outputs);
   virtual void free_buffers(std::vector<vart::TensorBuffer*> &tbufs);
   virtual uint32_t tensorbuffer_trans(std::vector<vart::TensorBuffer*> &input_tensor_buffers, std::vector<vart::TensorBuffer*> &output_tensor_buffers, const std::vector<vart::TensorBuffer*> &inputs, const std::vector<vart::TensorBuffer*> &outputs, bool is_input, uint32_t buf_id);
-  virtual std::vector<std::tuple<int, int,uint64_t>>  get_dpu_reg_inside(bool create_tb_batch, std::vector<uint64_t> &in_addrs, std::vector<uint64_t> &out_addrs, std::vector<vart::TensorBuffer*> &output_tensor_buffers, std::vector<vart::TensorBuffer*> &input_tensor_buffers );
-  std::vector<std::tuple<int, int,uint64_t>> get_dpu_reg_outside(bool create_tb_batch, std::vector<uint64_t> &in_addrs, std::vector<uint64_t> &out_addrs, const std::vector<vart::TensorBuffer*> &inputs, const std::vector<vart::TensorBuffer*> &outputs);
-  std::vector<std::tuple<int, int,uint64_t>> get_dpu_reg_outside_hbm(bool create_tb_batch, std::vector<uint64_t> &in_addrs, std::vector<uint64_t> &out_addrs, const std::vector<vart::TensorBuffer*> &inputs, const std::vector<vart::TensorBuffer*> &outputs);
+  virtual std::vector<std::tuple<int, int,uint64_t>>  get_dpu_reg_inside(bool create_tb_batch, std::vector<vart::TensorBuffer*> &output_tensor_buffers, std::vector<vart::TensorBuffer*> &input_tensor_buffers );
+  std::vector<std::tuple<int, int,uint64_t>> get_dpu_reg_outside(bool create_tb_batch, const std::vector<vart::TensorBuffer*> &inputs, const std::vector<vart::TensorBuffer*> &outputs);
+  std::vector<std::tuple<int, int,uint64_t>> get_dpu_reg_outside_hbm(bool create_tb_batch, const std::vector<vart::TensorBuffer*> &inputs, const std::vector<vart::TensorBuffer*> &outputs);
+//=======
+//  virtual void tensorbuffer_trans(std::vector<vart::TensorBuffer*> &input_tensor_buffers, std::vector<vart::TensorBuffer*> &output_tensor_buffers, const std::vector<vart::TensorBuffer*> &inputs, const std::vector<vart::TensorBuffer*> &outputs, bool is_input);
+//  virtual std::vector<std::tuple<int, int,uint64_t>>  get_dpu_reg_inside(bool create_tb_batch, std::vector<vart::TensorBuffer*> &output_tensor_buffers, std::vector<vart::TensorBuffer*> &input_tensor_buffers );
+//  std::vector<std::tuple<int, int,uint64_t>> get_dpu_reg_outside(bool create_tb_batch, const std::vector<vart::TensorBuffer*> &inputs, const std::vector<vart::TensorBuffer*> &outputs);
+//  std::vector<std::tuple<int, int,uint64_t>> get_dpu_reg_outside_hbm(bool create_tb_batch, const std::vector<vart::TensorBuffer*> &inputs, const std::vector<vart::TensorBuffer*> &outputs);
+//>>>>>>> origin/master
   std::vector<vart::TensorBuffer*> create_tensorbuffer_for_batch(std::vector<unsigned> hbm, bool isInputs, std::vector<const xir::Tensor*> tensors, std::vector<int> tensor_offset, int output_bz, bool isTensorsBatch);
   void dpu_trigger_run(ert_start_kernel_cmd* ecmd, xclDeviceHandle xcl_handle, xclBufferHandle bo_handle, std::vector<std::tuple<int, int,uint64_t>> xdpu_total_dpureg_map2);
   xclBufferHandle get_xrt_bo(void* data, int size, std::vector<unsigned> hbm);
@@ -201,6 +166,7 @@ class DpuCloudController
   std::unordered_map<std::string, std::pair<uint64_t,int32_t>> layer_debug_mode_preload;
   std::unordered_map<int, std::vector<vart::TensorBuffer*>> xdpu_workspace_dpu;
   std::shared_ptr<DpuXmodel> model_;
+  uint64_t get_addr(int32_t regid, int idx, std::vector<std::tuple<int, int,uint64_t>>& xdpu_total_dpureg_map_io);
  private:
   int flag;
   void init_profiler();

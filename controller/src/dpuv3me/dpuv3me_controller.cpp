@@ -294,12 +294,12 @@ void DpuV3meController::run(const std::vector<vart::TensorBuffer*> &inputs,
 
   vector<std::tuple<int, int,uint64_t>> xdpu_total_dpureg_map2;
 
-  std::vector<uint64_t> in_addrs(batch_size_);
-  std::vector<uint64_t> out_addrs(batch_size_);
+  //std::vector<uint64_t> in_addrs(batch_size_);
+  //std::vector<uint64_t> out_addrs(batch_size_);
   if (create_tb_outside && tensorbuffer_phy) {
-    xdpu_total_dpureg_map2 = get_dpu_reg_outside(create_tb_batch, in_addrs, out_addrs, input_tensor_buffers, output_tensor_buffers);
+    xdpu_total_dpureg_map2 = get_dpu_reg_outside(create_tb_batch, output_tensor_buffers, input_tensor_buffers);
   } else {
-    xdpu_total_dpureg_map2 = get_dpu_reg_inside(create_tb_batch, in_addrs, out_addrs, output_tensor_buffers, input_tensor_buffers);
+    xdpu_total_dpureg_map2 = get_dpu_reg_inside(create_tb_batch,  output_tensor_buffers, input_tensor_buffers);
   }
 
   // upload batch of inputs
@@ -316,7 +316,9 @@ void DpuV3meController::run(const std::vector<vart::TensorBuffer*> &inputs,
      //  std::ofstream(input_file, mode).write((char*)inputs[i]->data().first,inSize);
       for (unsigned j=0; j < model_->get_input_offset().size(); j++) {
         uint8_t* dataPtr;
-        const auto inSize = get_input_tensors()[j]->get_element_num()/batch_size_;
+        auto tensor = get_input_tensors()[j];
+        const auto inSize =tensor->get_element_num()/batch_size_;
+        auto reg_id = tensor->get_attr<int32_t>("reg_id"); 
         if (create_tb_batch) {
           auto idx = input_tensor_buffers[j]->get_tensor()->get_shape();
           auto dims = vector<int>(idx.size(),0);
@@ -329,7 +331,7 @@ void DpuV3meController::run(const std::vector<vart::TensorBuffer*> &inputs,
           dataPtr =(uint8_t*)input_tensor_buffers[i*model_->get_input_offset().size()+j]->data(dims).first;
         }
         if (xclUnmgdPwrite(xcl_handle, 0, (void *)dataPtr, inSize,
-          in_addrs[i] + model_->get_input_offset()[j]))
+          get_addr(reg_id, i, xdpu_total_dpureg_map2)  + model_->get_input_offset()[j]))
           throw std::runtime_error("Error: upload failed");
       }
 
@@ -493,9 +495,10 @@ auto trigger_dpu_func = [&](){
       for(auto& out: dbg_layers[0].inputs) {
         auto offset = std::get<0>(out);
         auto size = std::get<1>(out);
+        auto reg_id = std::get<3>(out);
         auto data = std::make_unique<char[]>(size);
-        for (unsigned i=0; i < in_addrs.size(); i++) {
-          if (xclUnmgdPread(xcl_handle, 0, data.get(), size, in_addrs[i] + offset))
+        for (int i=0; i < batch_size_; i++) {
+          if (xclUnmgdPread(xcl_handle, 0, data.get(), size, get_addr(reg_id, i, xdpu_total_dpureg_map2) + offset))
             throw std::runtime_error("Error: dump failed!");
           std::stringstream ss;
           ss << dump_folder_ << "/E" << i << "/" << std::get<2>(out);
@@ -517,9 +520,10 @@ auto trigger_dpu_func = [&](){
       for(auto& out: dbg_layers[0].outputs) {
         auto offset = std::get<0>(out);
         auto size = std::get<1>(out);
+        auto reg_id = std::get<3>(out);
         auto data = std::make_unique<char[]>(size);
-        for (unsigned i=0; i < out_addrs.size(); i++) {
-          if (xclUnmgdPread(xcl_handle, 0, data.get(), size, out_addrs[i] + offset))
+        for (int i=0; i < batch_size_; i++) {
+          if (xclUnmgdPread(xcl_handle, 0, data.get(), size, get_addr(reg_id, i, xdpu_total_dpureg_map2) + offset))
             throw std::runtime_error("Error: dump failed!");
           std::stringstream ss;
           ss << dump_folder_ << "/E" << i << "/" << std::get<2>(out);
@@ -537,9 +541,10 @@ auto trigger_dpu_func = [&](){
       for(auto& input: inputs) {
         auto offset = std::get<0>(input);
         auto size = std::get<1>(input);
+        auto reg_id = std::get<3>(input);
         auto data = std::make_unique<char[]>(size);
-        for (unsigned i=0; i < in_addrs.size(); i++) {
-          if (xclUnmgdPread(xcl_handle, 0, data.get(), size, in_addrs[i] + offset))
+        for (int i=0; i < batch_size_; i++) {
+          if (xclUnmgdPread(xcl_handle, 0, data.get(), size, get_addr(reg_id, i, xdpu_total_dpureg_map2) + offset))
             throw std::runtime_error("Error: dump failed!");
           std::stringstream ss;
           ss << dump_folder_ << "/E" << i << "/" << std::get<2>(input); 
@@ -608,7 +613,9 @@ auto trigger_dpu_func = [&](){
     // just download output region
     // io_bufs[i]->download();
       for (unsigned j=0; j< model_->get_output_offset().size(); j++) {
-        const auto outSize = get_output_tensors()[j]->get_element_num();
+        auto tensor = get_output_tensors()[j];
+        int32_t reg_id = tensor->get_attr<int32_t>("reg_id");
+        const auto outSize = tensor->get_element_num();
         uint8_t* dataPtr;
         if (create_tb_batch) {
           auto idx = output_tensor_buffers[j]->get_tensor()->get_shape();
@@ -624,7 +631,7 @@ auto trigger_dpu_func = [&](){
         //__TIC_PROFILING__(OUTPUT)
         if (xclUnmgdPread(xcl_handle, 0, (void*)dataPtr,
           outSize,
-          out_addrs[i] + model_->get_output_offset()[j]))
+           get_addr(reg_id, i, xdpu_total_dpureg_map2)  + model_->get_output_offset()[j]))
           throw std::runtime_error("Error: download failed");
         //__TOC_PROFILING__(OUTPUT)
       }
