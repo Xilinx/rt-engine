@@ -113,7 +113,7 @@ else
     echo cmake "${args[@]}" "$script_path"
     cmake "${args[@]}" "$script_path"
     make -j
-    ${build_only:=false} || make install
+    ${build_only:=false} ||make install
     ${build_package:=false} && make package
 fi
 

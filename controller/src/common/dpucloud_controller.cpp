@@ -30,6 +30,8 @@
 #include "xir/graph/graph.hpp"
 #include "xir/graph/subgraph.hpp"
 #include "json-c/json.h"
+#include "openssl/md5.h"
+
 #include "dpu_runner.hpp"
 #include "xir/tensor/tensor.hpp"
 #include "vart/tensor_buffer.hpp"
@@ -70,6 +72,7 @@ using namespace chrono;
 //#define batch_size_ 8
 DEF_ENV_PARAM(DEBUG_DPU_CONTROLLER, "0")
 DEF_ENV_PARAM(XLNX_SHOW_DPU_COUNTER, "0");
+DEF_ENV_PARAM(XLNX_BUFFER_POOL, "0");
 DEF_ENV_PARAM(XLNX_ENABLE_FINGERPRINT_CHECK, "1");
 /*
  * a contiguous memory block is allocated for each requests' I/O
@@ -89,6 +92,15 @@ DEF_ENV_PARAM(XLNX_ENABLE_FINGERPRINT_CHECK, "1");
 #define DPUREG_CYCLE_COUNTER 0xa8
 #define VERSION_CODE_L 0x1f0
 #define VERSION_CODE_H 0x1f4
+static std::string md5sum(const char* val, size_t s) {
+  std::vector<unsigned char> result((size_t)MD5_DIGEST_LENGTH, '0');
+  std::ostringstream str;
+  MD5((const unsigned char*)&val[0], s, (unsigned char*)&result[0]);
+  for (const auto x : result) {
+    str << std::hex << std::setfill('0') << std::setw(2) << ((unsigned int)x);
+  }
+  return str.str();
+}
 
 static uint32_t read32_dpu_reg(xclDeviceHandle dpu_handle, uint64_t offset) {
   uint32_t val;
@@ -317,6 +329,7 @@ void DpuCloudController::init_graph(vector<unsigned> hbmw, vector<unsigned> hbmc
   //for (auto p : model_->get_parameter()) {
   auto weights = model_->get_parameter();
   auto segment = model_->get_xdpu_regid_to_hw_segment();
+  md5=" ";
   for (unsigned param_idx=0; param_idx < weights.size(); param_idx++) {
     auto p = weights[param_idx];
     if (std::get<1>(p)) {
@@ -331,6 +344,7 @@ void DpuCloudController::init_graph(vector<unsigned> hbmw, vector<unsigned> hbmc
       }
       if (reg0Mem == NULLBO)
         reg0Mem = get_xrt_bo(get<0>(p), get<1>(p), hbmw);
+      md5 = md5sum(get<0>(p), get<1>(p));
       xclSyncBO(handle, reg0Mem, XCL_BO_SYNC_BO_TO_DEVICE, std::get<1>(p), 0);
       xclGetBOProperties(handle, reg0Mem, &boProp);
       reg0_addr_ = boProp.paddr;
@@ -346,6 +360,8 @@ void DpuCloudController::init_graph(vector<unsigned> hbmw, vector<unsigned> hbmc
   // Load mc_code
   if(!debug_mode_) { 
     for (auto c : model_->get_code()) {
+      if (md5==" ") 
+        md5 = md5sum(c.first, c.second.first);
       auto codeMem = get_xrt_bo(c.first, c.second.first, hbmc);
       xclSyncBO(handle, codeMem, XCL_BO_SYNC_BO_TO_DEVICE, c.second.first, 0);
       xclGetBOProperties(handle, codeMem, &boProp);
@@ -391,6 +407,17 @@ void DpuCloudController::init_graph(vector<unsigned> hbmw, vector<unsigned> hbmc
   }
   model_->init_vitis_tensors(batch_size_, handle_->get_device_info().device_index);
   program_once_complete = 0;
+  //tensorbufferPool& pool = tensorbufferPool::Instance();
+  if (ENV_PARAM(XLNX_BUFFER_POOL))  {
+    pool.set_pool_size(ENV_PARAM(XLNX_BUFFER_POOL));
+    pool.init_pool();
+  }
+  for (size_t b=0; b<pool.get_pool_size(); b++) {
+    auto inputs = get_inputs(1);
+    auto outputs = get_outputs(1);
+    pool.extend(std::make_pair(inputs,outputs));
+  }
+
 }
 
 vector<float> DpuCloudController::get_input_scale() {
@@ -730,11 +757,12 @@ bool DpuCloudController::check_tensorbuffer_outside(const std::vector<vart::Tens
   }
   return create_tb_outside;
 }
-void DpuCloudController::tensorbuffer_trans(std::vector<vart::TensorBuffer*> &input_tensor_buffers, std::vector<vart::TensorBuffer*> &output_tensor_buffers, const std::vector<vart::TensorBuffer*> &inputs, const std::vector<vart::TensorBuffer*> &outputs, bool is_input) {
+uint32_t DpuCloudController::tensorbuffer_trans(std::vector<vart::TensorBuffer*> &input_tensor_buffers, std::vector<vart::TensorBuffer*> &output_tensor_buffers, const std::vector<vart::TensorBuffer*> &inputs, const std::vector<vart::TensorBuffer*> &outputs, bool is_input, uint32_t buf_id) {
   int ibs = inputs[0]->get_tensor()->get_shape()[0]*batch_size_/model_->get_input_tensors()[0]->get_shape()[0];
   int obs = outputs[0]->get_tensor()->get_shape()[0]*batch_size_/model_->get_output_tensors()[0]->get_shape()[0];
   // check if tensorbuffer store batch inputs/outputs
   int inputBs = batch_size_;
+  uint32_t id=0;
   if ((inputs.size()/model_->get_input_tensors().size())>1)
     inputBs = inputs.size()/model_->get_input_tensors().size();
   else
@@ -742,9 +770,17 @@ void DpuCloudController::tensorbuffer_trans(std::vector<vart::TensorBuffer*> &in
   auto tensors = get_input_tensors();
   int tsize = ibs;
   std::vector<vart::TensorBuffer*> buffers_from, buffers_to, buffers;
+  //tensorbufferPool& pool = tensorbufferPool::Instance();
   if (is_input) {
-    input_tensor_buffers = get_inputs(1);
-    output_tensor_buffers = get_outputs(1);
+    if(pool.get_pool_size() > 0) {
+      id = pool.get();
+      auto bufs = pool.get_buffer(id);
+      input_tensor_buffers = bufs.first;
+      output_tensor_buffers = bufs.second;
+    } else {
+      input_tensor_buffers = get_inputs(1);
+      output_tensor_buffers = get_outputs(1);
+    }
     buffers = inputs;
   } else {
     tensors = get_output_tensors();
@@ -805,10 +841,15 @@ void DpuCloudController::tensorbuffer_trans(std::vector<vart::TensorBuffer*> &in
   if (!tensor_find)
       throw std::runtime_error("Error: invilad tensorbuffer input");
   if (!is_input) {
+    if(pool.get_pool_size() == 0) {
       free_buffers(input_tensor_buffers);
       free_buffers(output_tensor_buffers);
-    
+    } else {
+      //pool.extend(md5,std::make_pair(input_tensor_buffers,output_tensor_buffers));
+      pool.free_id(buf_id);
+    }
   }
+  return id;
 
 }
 vector<std::tuple<int, int,uint64_t>>  DpuCloudController::get_dpu_reg_inside(bool create_tb_batch, std::vector<vart::TensorBuffer*> &output_tensor_buffers, std::vector<vart::TensorBuffer*> &input_tensor_buffers  ) {
@@ -1145,11 +1186,12 @@ void DpuCloudController::run(const std::vector<vart::TensorBuffer*> &inputs,
       create_tb_batch = true;
     }
   //}
+  uint32_t buf_id = 0;
   if(create_tb_outside) {
     LOG_IF(INFO, ENV_PARAM(DEBUG_DPU_CONTROLLER))
       << "create tensorbuffer by user side";
     if (!tensorbuffer_phy) {
-      tensorbuffer_trans(input_tensor_buffers, output_tensor_buffers,inputs,outputs, true);
+      buf_id = tensorbuffer_trans(input_tensor_buffers, output_tensor_buffers,inputs,outputs, true, 0);
       create_tb_batch = false; // we call get_inputs(1), tensorbuffer.data not in batch
     } else {
       input_tensor_buffers = inputs;
@@ -1369,7 +1411,7 @@ void DpuCloudController::run(const std::vector<vart::TensorBuffer*> &inputs,
   __TOC__(OUTPUT_D2H)
   }
   if((!tensorbuffer_phy) &&create_tb_outside) {
-    tensorbuffer_trans(input_tensor_buffers, output_tensor_buffers,inputs,outputs, false);
+    tensorbuffer_trans(input_tensor_buffers, output_tensor_buffers,inputs,outputs, false, buf_id);
   }
 
 }

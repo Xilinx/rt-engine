@@ -267,11 +267,12 @@ void DpuV3meController::run(const std::vector<vart::TensorBuffer*> &inputs,
     }
 
   //}
+  uint32_t buf_id=0;
   if(create_tb_outside) {
     LOG_IF(INFO, ENV_PARAM(DEBUG_DPU_CONTROLLER))
       << "create tensorbuffer by user side";
     if (!tensorbuffer_phy) {
-      tensorbuffer_trans(input_tensor_buffers, output_tensor_buffers,inputs,outputs, true);
+      buf_id = tensorbuffer_trans(input_tensor_buffers, output_tensor_buffers,inputs,outputs, true,0);
     } else {
       input_tensor_buffers = inputs;
       output_tensor_buffers = outputs;
@@ -638,7 +639,7 @@ auto trigger_dpu_func = [&](){
   }
   __TOC__(OUTPUT_D2H)
   if((!tensorbuffer_phy) &&create_tb_outside) {
-    tensorbuffer_trans(input_tensor_buffers, output_tensor_buffers,inputs,outputs, false);
+    tensorbuffer_trans(input_tensor_buffers, output_tensor_buffers,inputs,outputs, false,buf_id);
   }
 
 if(ENV_PARAM(CTRLER_RUN)){
