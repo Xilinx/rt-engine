@@ -992,7 +992,7 @@ vector<std::tuple<int, int,uint64_t>>  DpuCloudController::get_dpu_reg_outside_h
           auto tensor = outputs[output_idx]->get_tensor();
           for (unsigned t=0; t<outtensors.size(); t++) {
             if (tensor->get_attr<int32_t>("reg_id") == iter.first) {
-              uint64_t out_addr = outputs[output_idx+t]->data_phy(dims).first-model_->get_output_offset()[t];
+              uint64_t out_addr = outputs[output_idx+t]->data_phy(dims_out).first-model_->get_output_offset()[t];
               xdpu_total_dpureg_map2.push_back(std::make_tuple(iter.first,i+ts,out_addr));
               LOG_IF(INFO, ENV_PARAM(DEBUG_DPU_CONTROLLER))
               <<"Engine : " << i+ts<<  " workspace reg_id: " 
