@@ -202,35 +202,66 @@ DpuV3eController::DpuV3eController(const xir::Subgraph *subgraph, xir::Attrs* at
       }
     }
     else if ((dsa.find("u280") != std::string::npos) || (dsa.find("u55c") != std::string::npos)) {
-      if (cu_index == 0) {
-        hbmio.push_back(0);
-        hbmio.push_back(19);
-        hbmio.push_back(20);
-        hbmio.push_back(1);
-        hbmc.push_back(16);
-        hbmw.push_back(10);
-        hbmw.push_back(11);
+      if(!enable_dwc) {
+        if (cu_index == 0) {
+          hbmio.push_back(0);
+          hbmio.push_back(19);
+          hbmio.push_back(20);
+          hbmio.push_back(1);
+          hbmc.push_back(16);
+          hbmw.push_back(10);
+          hbmw.push_back(11);
+        }
+        else if (cu_index == 1) {
+          hbmio.push_back(2);
+          hbmio.push_back(3);
+          hbmio.push_back(21);
+          hbmio.push_back(22);
+          hbmio.push_back(4);
+          hbmc.push_back(17);
+          hbmw.push_back(12);
+          hbmw.push_back(13);
+        }
+        else {
+          hbmio.push_back(5);
+          hbmio.push_back(6);
+          hbmio.push_back(23);
+          hbmio.push_back(24);
+          hbmio.push_back(7);
+          hbmc.push_back(18);
+          hbmw.push_back(14);
+          hbmw.push_back(15);
+        }
+      } else {
+        if (cu_index == 0) {
+          hbmio.push_back(0);
+          hbmio.push_back(16);
+          hbmio.push_back(17);
+          hbmc.push_back(24);
+          hbmw.push_back(8);
+          hbmw.push_back(9);
+        }
+        else if (cu_index == 1) {
+          hbmio.push_back(1);
+          hbmio.push_back(18);
+          hbmio.push_back(18);
+          hbmio.push_back(2);
+          hbmc.push_back(25);
+          hbmw.push_back(22);
+          hbmw.push_back(23);
+        }
+        else {
+          hbmio.push_back(3);
+          hbmio.push_back(20);
+          hbmio.push_back(21);
+          hbmio.push_back(4);
+          hbmc.push_back(26);
+          hbmw.push_back(10);
+          hbmw.push_back(11);
+        }
+
       }
-      else if (cu_index == 1) {
-        hbmio.push_back(2);
-        hbmio.push_back(3);
-        hbmio.push_back(21);
-        hbmio.push_back(22);
-        hbmio.push_back(4);
-        hbmc.push_back(17);
-        hbmw.push_back(12);
-        hbmw.push_back(13);
-      }
-      else {
-        hbmio.push_back(5);
-        hbmio.push_back(6);
-        hbmio.push_back(23);
-        hbmio.push_back(24);
-        hbmio.push_back(7);
-        hbmc.push_back(18);
-        hbmw.push_back(14);
-        hbmw.push_back(15);
-      }
+       
     }
   }
   for (int i=0; i< 32; i++) {
