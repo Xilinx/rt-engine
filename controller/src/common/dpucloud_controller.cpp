@@ -30,7 +30,6 @@
 #include "xir/graph/graph.hpp"
 #include "xir/graph/subgraph.hpp"
 #include "json-c/json.h"
-#include "openssl/md5.h"
 
 #include "dpu_runner.hpp"
 #include "xir/tensor/tensor.hpp"
@@ -92,15 +91,6 @@ DEF_ENV_PARAM(XLNX_ENABLE_FINGERPRINT_CHECK, "1");
 #define DPUREG_CYCLE_COUNTER 0xa8
 #define VERSION_CODE_L 0x1f0
 #define VERSION_CODE_H 0x1f4
-static std::string md5sum(const char* val, size_t s) {
-  std::vector<unsigned char> result((size_t)MD5_DIGEST_LENGTH, '0');
-  std::ostringstream str;
-  MD5((const unsigned char*)&val[0], s, (unsigned char*)&result[0]);
-  for (const auto x : result) {
-    str << std::hex << std::setfill('0') << std::setw(2) << ((unsigned int)x);
-  }
-  return str.str();
-}
 
 static uint32_t read32_dpu_reg(xclDeviceHandle dpu_handle, uint64_t offset) {
   uint32_t val;
@@ -329,7 +319,6 @@ void DpuCloudController::init_graph(vector<unsigned> hbmw, vector<unsigned> hbmc
   //for (auto p : model_->get_parameter()) {
   auto weights = model_->get_parameter();
   auto segment = model_->get_xdpu_regid_to_hw_segment();
-  md5=" ";
   for (unsigned param_idx=0; param_idx < weights.size(); param_idx++) {
     auto p = weights[param_idx];
     if (std::get<1>(p)) {
@@ -344,7 +333,6 @@ void DpuCloudController::init_graph(vector<unsigned> hbmw, vector<unsigned> hbmc
       }
       if (reg0Mem == NULLBO)
         reg0Mem = get_xrt_bo(get<0>(p), get<1>(p), hbmw);
-      md5 = md5sum(get<0>(p), get<1>(p));
       xclSyncBO(handle, reg0Mem, XCL_BO_SYNC_BO_TO_DEVICE, std::get<1>(p), 0);
       xclGetBOProperties(handle, reg0Mem, &boProp);
       reg0_addr_ = boProp.paddr;
@@ -360,8 +348,6 @@ void DpuCloudController::init_graph(vector<unsigned> hbmw, vector<unsigned> hbmc
   // Load mc_code
   if(!debug_mode_) { 
     for (auto c : model_->get_code()) {
-      if (md5==" ") 
-        md5 = md5sum(c.first, c.second.first);
       auto codeMem = get_xrt_bo(c.first, c.second.first, hbmc);
       xclSyncBO(handle, codeMem, XCL_BO_SYNC_BO_TO_DEVICE, c.second.first, 0);
       xclGetBOProperties(handle, codeMem, &boProp);
@@ -845,7 +831,6 @@ uint32_t DpuCloudController::tensorbuffer_trans(std::vector<vart::TensorBuffer*>
       free_buffers(input_tensor_buffers);
       free_buffers(output_tensor_buffers);
     } else {
-      //pool.extend(md5,std::make_pair(input_tensor_buffers,output_tensor_buffers));
       pool.free_id(buf_id);
     }
   }
@@ -992,7 +977,7 @@ vector<std::tuple<int, int,uint64_t>>  DpuCloudController::get_dpu_reg_outside_h
           auto tensor = outputs[output_idx]->get_tensor();
           for (unsigned t=0; t<outtensors.size(); t++) {
             if (tensor->get_attr<int32_t>("reg_id") == iter.first) {
-              uint64_t out_addr = outputs[output_idx+t]->data_phy(dims).first-model_->get_output_offset()[t];
+              uint64_t out_addr = outputs[output_idx+t]->data_phy(dims_out).first-model_->get_output_offset()[t];
               xdpu_total_dpureg_map2.push_back(std::make_tuple(iter.first,i+ts,out_addr));
               LOG_IF(INFO, ENV_PARAM(DEBUG_DPU_CONTROLLER))
               <<"Engine : " << i+ts<<  " workspace reg_id: " 
