@@ -100,8 +100,6 @@ class Dpuv3Int8Controller : public XclDpuController<XrtDeviceHandle, XrtDeviceBu
   static std::vector<int32_t, rte::AlignedAllocator<int32_t>> load(std::string filename);
   static std::vector<int32_t, rte::AlignedAllocator<int32_t>> load(std::vector<std::string> svals);
 
-  cl_mem regMap_;
-
   static void data_float2fix(int8_t* dataDst, float* dataSrc, int size, float scale);
   static void data_fix2float(float* dataDst, int8_t* dataSrc, int size, float scale);
 

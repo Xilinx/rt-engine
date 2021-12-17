@@ -105,43 +105,10 @@ DeviceResource::DeviceResource(std::string kernelName, std::string xclbin, xir::
       /* cu_mask */       (1u << cuIdx_xrt),
       /* xclbin_path */   xclbin,
       /* full_name */     cu_full_name,
-      /* device_id */     0,
       /* device_handle */ nullptr,
-      /* xdev */          nullptr,
       /* uuid */          get_uuid(),
       /* fingerprint */   0,
   });
-
-  int err;
-  cl_platform_id platform_id;
-  char cl_platform_vendor[1001];
-  char cl_platform_name[1001];
-
-  err = clGetPlatformIDs(1, &platform_id, NULL);
-  if (err != CL_SUCCESS)
-    throw std::runtime_error("Error: DeviceResource clGetPlatformIDs");
-
-  err = clGetPlatformInfo(platform_id, CL_PLATFORM_VENDOR, 1000,
-      (void *)cl_platform_vendor, NULL);
-  if (err != CL_SUCCESS) 
-    throw std::runtime_error("Error: DeviceResource clGetPlatformInfo");
-
-  err = clGetPlatformInfo(platform_id, CL_PLATFORM_NAME, 1000,
-                           (void *) cl_platform_name, NULL);
-  if (err != CL_SUCCESS) 
-    throw std::runtime_error("Error: DeviceResource clGetPlatformInfo");
-
-  cl_uint numDevices = 0;
-  cl_device_id devices[100];
-  err = clGetDeviceIDs(platform_id, CL_DEVICE_TYPE_ACCELERATOR,
-      99, &devices[0], &numDevices);
-  if (err != CL_SUCCESS) 
-    throw std::runtime_error("Error: DeviceResource clGetDeviceIDs");
-
-  info_->device_id = devices[info_->device_index];
-  info_->xdev = xclGetXrtDevice(info_->device_id, &err);
-	if (err)
-    throw(std::runtime_error("Error: DeviceResource failed to get xdev"));
 }
 
 DeviceResource::~DeviceResource() {
@@ -248,74 +215,15 @@ XrtContext::~XrtContext() {
 /*
  * IPU device handle
  */
+// NOT USED ANYMORE
 IpuDeviceHandle::IpuDeviceHandle(std::string kernelName, std::string xclbin, xir::Attrs* attrs)
-  : DeviceHandle(kernelName, xclbin, attrs, ResourceType::IPU) {
-
-  context_ = std::make_unique<IpuContext>(*this);
-
-}
-
+  : DeviceHandle(kernelName, xclbin, attrs, ResourceType::IPU) {}
 IpuDeviceHandle::~IpuDeviceHandle() = default;
-
-/*
- * IPU device context (MUST alloc one for each thread)
- */
-IpuContext::IpuContext(IpuDeviceHandle &handle) : handle_(handle) {
-
-  // Deal with hwemu limitation share single handle for now.
-  // dev_handle_ = xclOpen(handle.get_device_info().device_index, NULL, XCL_INFO);
-  dev_handle_ = handle_.get_device_info().device_handle;
-
-  // Unclear if I need xclOpenContext for IPU
-
-  //auto ret = xclOpenContext(dev_handle_, handle.get_uuid(),
-  //                          handle.get_device_info().cu_index, true);
-  //if (ret)
-  //  throw std::runtime_error("Error: xclOpenContext failed");
-  bo_handle_ = xclAllocBO(dev_handle_, 4096, 0, XCL_BO_FLAGS_EXECBUF);
-  bo_addr_ = xclMapBO(dev_handle_, bo_handle_, true);
-}
-
-IpuContext::~IpuContext() {
-  xclFreeBO(dev_handle_, bo_handle_);
-  xclCloseContext(dev_handle_, handle_.get_uuid(), handle_.get_device_info().cu_index);
-  xclClose(dev_handle_);
-}
 
 IpuResource::IpuResource(std::string kernelName, std::string xclbin, xir::Attrs* attrs) {
 
-  auto num_devices = xclProbe();
-  if (num_devices == 0)
-    throw std::runtime_error("Error: no devices available");
+  info_.reset(new DeviceInfo);
 
-  size_t deviceIdx=0;
-  size_t cuIdx=0;
-  
-  auto handle = xclOpen(deviceIdx, NULL, XCL_INFO);
-  xir::XrtBinStream binstream(xclbin);
-  binstream.burn(handle);
-  //xclClose(handle); Don't close it for now due to hwemu limitation
-
-  uuid_ = binstream.get_uuid();
-
-  auto cu_full_name = kernelName + ":"
-         + std::to_string(deviceIdx) + ":" + std::to_string(cuIdx);
-
-  info_.reset(new DeviceInfo{
-    /* cu_base_addr */  0,
-    /* ddr_bank */      0,
-    /* device_index */  deviceIdx,
-    /* cu_index */      cuIdx,
-    /* cu_mask */       (1u << cuIdx),
-    /* xclbin_path */   xclbin,
-    /* full_name */     cu_full_name,
-    /* device_id */     0,
-    /* device_handle */ handle,
-    /* xdev */          nullptr,
-    /* uuid */          get_uuid(),
-    /* fingerprint */   0,
-  });
 }
 
-IpuResource::~IpuResource() {
-}
+IpuResource::~IpuResource() = default;

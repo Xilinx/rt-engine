@@ -15,7 +15,6 @@
 #include "device_handle_xrm.hpp"
 
 DEF_ENV_PARAM(DEBUG_DEVICE_HANDLE, "0")
-static std::mutex g_allocation_lock_xrm;
 
 static std::vector<std::string> get_xclbins_in_dir(std::string path) {
   if (path.find(".xclbin") != std::string::npos)
@@ -175,45 +174,10 @@ XrmResource::XrmResource(std::string kernelName, std::string xclbin, xir::Attrs*
         /* cu_mask */       (1u << cu_rsrc_->cuId),
         /* xclbin_path */   cu_rsrc_->xclbinFileName,
         /* full_name */     cu_full_name,
-        /* device_id */     nullptr,
         /* device_handle */ nullptr,
-        /* xdev */          nullptr,
         /* uuid */          &(cu_rsrc_->uuid[0]),
         /* fingerprint */   0,
     });
-
-    // Wait turn to run OCL Commands
-    std::lock_guard<std::mutex> lockGuard0(g_allocation_lock_xrm);
-
-    cl_platform_id platform_id;
-    char cl_platform_vendor[1001];
-    char cl_platform_name[1001];
-
-    err = clGetPlatformIDs(1, &platform_id, NULL);
-    if (err != CL_SUCCESS)
-      throw std::runtime_error("Error: XrmResource clGetPlatformIDs");
-
-    err = clGetPlatformInfo(platform_id, CL_PLATFORM_VENDOR, 1000,
-        (void *)cl_platform_vendor, NULL);
-    if (err != CL_SUCCESS) 
-      throw std::runtime_error("Error: XrmResource clGetPlatformInfo");
-
-    err = clGetPlatformInfo(platform_id, CL_PLATFORM_NAME, 1000,
-                             (void *) cl_platform_name, NULL);
-    if (err != CL_SUCCESS) 
-      throw std::runtime_error("Error: XrmResource clGetPlatformInfo");
-
-    cl_uint numDevices = 0;
-    cl_device_id devices[100];
-    err = clGetDeviceIDs(platform_id, CL_DEVICE_TYPE_ACCELERATOR,
-        99, &devices[0], &numDevices);
-    if (err != CL_SUCCESS) 
-      throw std::runtime_error("Error: XrmResource clGetDeviceIDs");
-
-    info_->device_id = devices[info_->device_index];
-    info_->xdev = xclGetXrtDevice(info_->device_id, &err);
-	  if (err)
-		  throw(std::runtime_error("Error: XrmResource failed to get xdev"));
 
     return;
   }

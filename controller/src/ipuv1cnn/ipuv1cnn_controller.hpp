@@ -18,11 +18,14 @@
 #include <iostream>
 #include <iterator>
 #include <memory>
-#include <ert.h> // ert_start_kernel_cmd
 #include <xir/graph/subgraph.hpp> // xir::Subgraph
 #include "dpu_controller.hpp" // XclDpuController
 #include "engine.hpp" // Engine
-#include "device_memory.hpp" // IpuDeviceBuffer
+
+#include <xrt/xrt_uuid.h>
+#include <xrt/xrt_device.h>
+#include <xrt/xrt_kernel.h>
+#include <xrt/xrt_bo.h>
 
 /*!
  * @class Ipuv1CnnController
@@ -70,22 +73,19 @@ protected:
   // Reference to the engine
   Engine& engine_;
 
-  // Create a context for each worker thread
-  std::vector<std::unique_ptr<IpuContext>> contexts_;
+  // All workers will share
+  xrt::device device_;
+  xrt::kernel kernel_;
+  xrt::uuid uuid_;
+  xrt::bo parameters_;
+  xrt::bo instructions_; // Shared across workers for now
+  xrt::bo intermediateBuffer_; // Shared across workers for now
 
-  // Create input and output buffers for each worker thread
-  // These are 2D vectors, first dimension being worker_id, second dimension being input_id
-  // This is to support M workers and N inputs/outputs
-  // Note that each device buffer is mapped to its own host pointer
-  std::vector<std::vector<IpuDeviceBuffer>> inputDeviceBuffers_;
-  std::vector<std::vector<IpuDeviceBuffer>> outputDeviceBuffers_;
-
-  // Create Device Buffers for instructions and model parameters and ddr spill
-  std::unique_ptr<IpuDeviceBuffer> parameters_;
-  std::unique_ptr<IpuDeviceBuffer> instructions_;
-  std::unique_ptr<IpuDeviceBuffer> intermediate_;
+  // Create per worker thread resources
+  std::vector<xrt::run> runners_; 
+  std::vector<std::vector<xrt::bo>> inputBuffers_;
+  std::vector<std::vector<xrt::bo>> outputBuffers_;
 
   size_t numInstructions_;
-  
 
 };

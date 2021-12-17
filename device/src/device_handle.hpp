@@ -24,7 +24,6 @@
 #include <memory>
 #include <string>
 #include <xrt.h>
-#include <CL/opencl.h>
 #include "xir/attrs/attrs.hpp"
 
 namespace xir {
@@ -40,9 +39,7 @@ struct DeviceInfo {
   unsigned int cu_mask;
   std::string xclbin_path;
   std::string full_name;
-  cl_device_id device_id;
   xclDeviceHandle device_handle;
-  xrt_device *xdev;
   unsigned char*  uuid;
   uint32_t fingerprint;
 };
@@ -67,6 +64,8 @@ class DeviceResource {
   std::array<unsigned char, sizeof(xuid_t)> uuid_;
 };
 
+// Dummy Class
+// Do Nothing
 class IpuResource : public DeviceResource {
 public:
   IpuResource(std::string kernelName, std::string xclbin, xir::Attrs* attrs);
@@ -123,39 +122,10 @@ class XrtContext {
   void *bo_addr_;
 };
 
-class IpuContext;
 class IpuDeviceHandle : public DeviceHandle {
 public:
   IpuDeviceHandle(std::string kernelName, std::string xclbin, xir::Attrs* attrs);
   virtual ~IpuDeviceHandle();
-
-  // a convenience context for basic work
-  // IMPORTANT: each worker thread must alloc its own context for exec()/wait()
-  const IpuContext& get_context() const { return *context_; }
-  unsigned char* get_uuid() { return &uuid_[0]; }
-
-private:
-  std::unique_ptr<IpuContext> context_;
-  std::array<unsigned char, sizeof(xuid_t)> uuid_;
-};
-
-class IpuContext {
-  // must create a separate IpuContext for each hostcode worker thread
-public:
-  IpuContext(IpuDeviceHandle &);
-  virtual ~IpuContext();
-  xclDeviceHandle get_dev_handle() const { return dev_handle_; }
-  xclBufferHandle get_bo_handle() const { return bo_handle_; }
-  void *get_bo_addr() { return bo_addr_; }
-
-private:
-  IpuContext() = delete;
-  IpuContext(const IpuContext &) = delete;
-
-  IpuDeviceHandle &handle_;
-  xclDeviceHandle dev_handle_;
-  xclBufferHandle bo_handle_;
-  void *bo_addr_;
 };
 
 class KernelNameManager {
