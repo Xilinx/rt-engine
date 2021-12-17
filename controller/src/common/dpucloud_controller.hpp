@@ -170,7 +170,6 @@ class DpuCloudController
  private:
   int flag;
   void init_profiler();
-  std::string md5;
   bool share;
   std::unordered_map<int, xir::Tensor*> tensors_map_;
   //std::unordered_map<string, xir::Tensor*> tensor_no_batch_map_;
