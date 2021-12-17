@@ -123,7 +123,7 @@ DpuV3eController::DpuV3eController(const xir::Subgraph *subgraph, xir::Attrs* at
     bool enable_dwc=false;
     if (subgraph->has_attr("dpu_fingerprint")) {
       const uint64_t fingerprint = subgraph->get_attr<std::uint64_t>("dpu_fingerprint");
-      kernelName = vitis::ai::target_factory()->create(fingerprint).type();
+      kernelName = vitis::ai::target_factory()->create(fingerprint).name();
     } else {
       kernelName = subgraph->get_attr<std::string>("kernel");
     }
