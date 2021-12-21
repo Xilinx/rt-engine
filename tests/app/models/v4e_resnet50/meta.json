@@ -1,9 +1,0 @@
-{ 
-  "target": "v4e", 
-  "filename": "dpu.xmodel", 
-  "kernel": "dpu_top", 
-  "config_file": "", 
-  "lib": "", 
-  "xclbin": "/group/dphi_cloud/v4e_rel/20200923/v4e_8pe_300MHz_xilinx_vck5000-es1_gen3x16_1_202010_1_a29ff10_Sep16Wed1614.xclbin"
-}
-
