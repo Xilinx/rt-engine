@@ -233,7 +233,7 @@ DpuV3eController::DpuV3eController(const xir::Subgraph *subgraph, xir::Attrs* at
           hbmw.push_back(15);
         }
       } else {
-        if (cu_index == 0) {
+        if (cu_index == 1) {
           hbmio.push_back(0);
           hbmio.push_back(16);
           hbmio.push_back(17);
@@ -241,10 +241,10 @@ DpuV3eController::DpuV3eController(const xir::Subgraph *subgraph, xir::Attrs* at
           hbmw.push_back(8);
           hbmw.push_back(9);
         }
-        else if (cu_index == 1) {
+        else if (cu_index == 0) {
           hbmio.push_back(1);
           hbmio.push_back(18);
-          hbmio.push_back(18);
+          hbmio.push_back(19);
           hbmio.push_back(2);
           hbmc.push_back(25);
           hbmw.push_back(22);
