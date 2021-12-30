@@ -71,6 +71,7 @@ target_link_libraries(
   ${PROJECT_NAME}
   PRIVATE
   XRT::xrt_core
+  XRT::xrt_coreutil
   XRT::xilinxopencl
   ${XRM_LIBRARIES}
   target-factory::target-factory 
