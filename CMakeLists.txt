@@ -37,6 +37,9 @@ find_path(JSONC_INCLUDE_DIRS NAMES json-c)
 find_library(JSONC_LIBRARIES NAMES json-c REQUIRED)
 find_package(Threads REQUIRED)
 
+# Temporary hack for windows
+find_package(Boost)
+
 add_subdirectory(engine)
 add_subdirectory(runner)
 add_subdirectory(controller)
@@ -78,6 +81,7 @@ target_link_libraries(
   glog::glog
   ${JSONC_LIBRARIES}
   Threads::Threads
+  Boost::boost
   )
 set_target_properties(
   ${PROJECT_NAME}
