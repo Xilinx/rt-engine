@@ -12,7 +12,6 @@ include(setup)
 
 find_package(XRT REQUIRED HINTS /opt/xilinx/xrt)
 find_package(XRM)
-find_package(OpenSSL REQUIRED)
 if (${XRM_FOUND})
   message(STATUS "XRM was found at ${XRM_CMAKE_DIR}")
   add_definitions(-DXRM_FOUND)
@@ -72,7 +71,6 @@ target_link_libraries(
   PRIVATE
   XRT::xrt_core
   XRT::xrt_coreutil
-  XRT::xilinxopencl
   ${XRM_LIBRARIES}
   target-factory::target-factory 
   vart::runner
@@ -80,7 +78,6 @@ target_link_libraries(
   glog::glog
   ${JSONC_LIBRARIES}
   Threads::Threads
-  OpenSSL::Crypto
   )
 set_target_properties(
   ${PROJECT_NAME}
