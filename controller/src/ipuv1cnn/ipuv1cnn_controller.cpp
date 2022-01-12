@@ -13,7 +13,7 @@
 // limitations under the License.
 
 #include "ipuv1cnn_controller.hpp"
-
+#include <iostream>
 #include <algorithm>
 
 typedef unsigned int uint;
@@ -33,22 +33,22 @@ Ipuv1CnnController::Ipuv1CnnController(const xir::Subgraph *subgraph)
   uuid_ = device_.load_xclbin(xclbinPath);
   kernel_ = xrt::kernel(device_, uuid_, "DPU"); // Kernel Name is DPU, this could change
 
-  // Load Model Instructions
+  std::cout << "Loading Model Instructions from XMODEL" << std::endl;
   std::vector<int> instrVec;
   auto instrs = subgraph->get_attr<std::vector<std::string>>("mc_code");
   std::for_each(instrs.begin(), instrs.end(), [&](std::string& s) {
-    instrVec.emplace_back(std::stol(s, nullptr, 16));
+    instrVec.emplace_back(std::stoll(s, nullptr, 16));
   });
   instructions_ = xrt::bo(device_, sizeof(int)*instrVec.size(), kernel_.group_id(4));
   std::memcpy(instructions_.map<int*>(), instrVec.data(), sizeof(int)*instrVec.size());
   instructions_.sync(XCL_BO_SYNC_BO_TO_DEVICE);
   numInstructions_ = instrVec.size();
 
-  // Load Model Parameters
+  std::cout << "Loading Model Parameters from XMODEL" << std::endl;
   std::vector<int> paramsVec;
   auto params = subgraph->get_attr<std::vector<std::string>>("params");
   std::for_each(params.begin(), params.end(), [&](std::string& s) {
-    paramsVec.emplace_back(std::stol(s, nullptr, 16));
+    paramsVec.emplace_back(std::stoll(s, nullptr, 16));
   });
   parameters_ = xrt::bo(device_, sizeof(int)*paramsVec.size(), XRT_BO_FLAGS_HOST_ONLY, kernel_.group_id(1));
   std::memcpy(parameters_.map<int*>(), paramsVec.data(), sizeof(int)*paramsVec.size());
