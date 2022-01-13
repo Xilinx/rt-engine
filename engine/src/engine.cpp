@@ -14,6 +14,13 @@
 
 #include "engine.hpp"
 
+namespace {
+  unsigned getNumWorkers() {
+    const char* value = getenv("RTENGINE_NUM_WORKERS");
+    return value ? std::stoi(value) : 64;
+  }
+}
+
 /*
  * Engine Thread Pool
  * General purpose pool that can execute any std::function
@@ -21,7 +28,7 @@
 
 EngineThreadPool::EngineThreadPool() : terminate_(false) {
   const unsigned maxConcurrentTasks = 10000;
-  const unsigned numWorkerThreads = 64;
+  const unsigned numWorkerThreads = getNumWorkers();
 
   // init task ids and task status
   task_status_.resize(maxConcurrentTasks, EngineThreadPool::DONE);
