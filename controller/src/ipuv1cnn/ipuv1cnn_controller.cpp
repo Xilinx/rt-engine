@@ -34,28 +34,23 @@ Ipuv1CnnController::Ipuv1CnnController(const xir::Subgraph *subgraph)
   kernel_ = xrt::kernel(device_, uuid_, "DPU"); // Kernel Name is DPU, this could change
 
   std::cout << "Loading Model Instructions from XMODEL" << std::endl;
-  std::vector<int> instrVec;
-  auto instrs = subgraph->get_attr<std::vector<std::string>>("mc_code");
-  std::for_each(instrs.begin(), instrs.end(), [&](std::string& s) {
-    instrVec.emplace_back(std::stoll(s, nullptr, 16));
-  });
-  instructions_ = xrt::bo(device_, sizeof(int)*instrVec.size(), kernel_.group_id(4));
-  std::memcpy(instructions_.map<int*>(), instrVec.data(), sizeof(int)*instrVec.size());
+  auto instrs = subgraph->get_attr<std::vector<char>>("mc_code");
+  instructions_ = xrt::bo(device_, instrs.size(), kernel_.group_id(4));
+  std::memcpy(instructions_.map<int*>(), instrs.data(), instrs.size());
   instructions_.sync(XCL_BO_SYNC_BO_TO_DEVICE);
-  numInstructions_ = instrVec.size();
+  numInstructions_ = instrs.size()/sizeof(int);
 
   std::cout << "Loading Model Parameters from XMODEL" << std::endl;
-  std::vector<int> paramsVec;
-  auto params = subgraph->get_attr<std::vector<std::string>>("params");
-  std::for_each(params.begin(), params.end(), [&](std::string& s) {
-    paramsVec.emplace_back(std::stoll(s, nullptr, 16));
-  });
-  parameters_ = xrt::bo(device_, sizeof(int)*paramsVec.size(), XRT_BO_FLAGS_HOST_ONLY, kernel_.group_id(1));
-  std::memcpy(parameters_.map<int*>(), paramsVec.data(), sizeof(int)*paramsVec.size());
+  auto paramsMap = subgraph->get_attr<std::map<std::string, std::vector<char>>>("reg_id_to_parameter_value");
+  auto &params = paramsMap["REG_0"];
+  std::cout << "B: " << params[0] << std::endl;
+  parameters_ = xrt::bo(device_, params.size(), XRT_BO_FLAGS_HOST_ONLY, kernel_.group_id(1));
+  std::memcpy(parameters_.map<int*>(), params.data(), params.size());
   parameters_.sync(XCL_BO_SYNC_BO_TO_DEVICE);
 
   // Define Intermediate Buffer for DDR spill
-  auto interSize = subgraph->get_attr<std::int32_t>("inter_size");
+  auto interSizeMap = subgraph->get_attr<std::map<std::string, int32_t>>("reg_id_to_size");
+  auto &interSize = interSizeMap["REG_1"];
   intermediateBuffer_ = xrt::bo(device_, interSize, XRT_BO_FLAGS_HOST_ONLY, kernel_.group_id(3));
 
   // For each worker
