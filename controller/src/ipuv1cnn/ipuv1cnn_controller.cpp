@@ -50,8 +50,7 @@ Ipuv1CnnController::Ipuv1CnnController(const xir::Subgraph *subgraph)
 
   // Define Intermediate Buffer for DDR spill
   auto interSizeMap = subgraph->get_attr<std::map<std::string, int32_t>>("reg_id_to_size");
-  auto &interSize = interSizeMap["REG_1"];
-  intermediateBuffer_ = xrt::bo(device_, interSize, XRT_BO_FLAGS_HOST_ONLY, kernel_.group_id(3));
+  interSize_ = interSizeMap["REG_1"];
 
   // For each worker
   for (unsigned i=0; i < engine_.get_num_workers(); i++) {
@@ -70,7 +69,11 @@ Ipuv1CnnController::Ipuv1CnnController(const xir::Subgraph *subgraph)
       outputBuffers_[i].emplace_back(
         device_, outTensor->get_data_size(), XRT_BO_FLAGS_HOST_ONLY, kernel_.group_id(2)
       );
-  
+    
+    // Create intermediate buffers
+    intermediateBuffer_.emplace_back(
+      device_, interSize_, XRT_BO_FLAGS_HOST_ONLY, kernel_.group_id(3)
+    );
   }
 }
 
@@ -90,7 +93,7 @@ void Ipuv1CnnController::run(const std::vector<vart::TensorBuffer*> &inputs,
       inputBuffers_[wIdx].back(), // Actually only supporting one input
       parameters_,
       outputBuffers_[wIdx].back(), // Actually only supporting one output
-      intermediateBuffer_,
+      intermediateBuffers_[wIdx],
       instructions_,
       numInstructions_
   );

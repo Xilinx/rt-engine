@@ -1,4 +1,4 @@
-// Copyright 2021 Xilinx Inc.
+// Copyright 2022 Xilinx Inc.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -14,6 +14,7 @@
 
 #include <vector>
 #include <cstring>
+#include <cstdint>
 #include <string>
 #include <iostream>
 #include <iterator>
@@ -78,14 +79,15 @@ protected:
   xrt::kernel kernel_;
   xrt::uuid uuid_;
   xrt::bo parameters_;
-  xrt::bo instructions_; // Shared across workers for now
-  xrt::bo intermediateBuffer_; // Shared across workers for now
+  xrt::bo instructions_;
 
   // Create per worker thread resources
   std::vector<xrt::run> runners_; 
   std::vector<std::vector<xrt::bo>> inputBuffers_;
   std::vector<std::vector<xrt::bo>> outputBuffers_;
+  std::vector<xrt::bo> intermediateBuffers_;
 
   size_t numInstructions_;
+  std::int32_t interSize_;
 
 };
