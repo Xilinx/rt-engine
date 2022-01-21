@@ -71,7 +71,7 @@ Ipuv1CnnController::Ipuv1CnnController(const xir::Subgraph *subgraph)
       );
     
     // Create intermediate buffers
-    intermediateBuffer_.emplace_back(
+    intermediateBuffers_.emplace_back(
       device_, interSize_, XRT_BO_FLAGS_HOST_ONLY, kernel_.group_id(3)
     );
   }
