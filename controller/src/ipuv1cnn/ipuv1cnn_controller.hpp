@@ -71,6 +71,10 @@ protected:
   std::set<const xir::Tensor *> inTensors_;
   std::set<const xir::Tensor *> outTensors_;
 
+  // Get Input/Output Scale Factors
+  std::vector<float> inputScales_;
+  std::vector<float> outputScales_;
+
   // Reference to the engine
   Engine& engine_;
 
@@ -89,5 +93,7 @@ protected:
 
   size_t numInstructions_;
   std::int32_t interSize_;
+  std::int32_t inputSize_;
+  std::int32_t outputSize_;
 
 };

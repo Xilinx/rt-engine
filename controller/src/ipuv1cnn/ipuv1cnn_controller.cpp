@@ -48,9 +48,17 @@ Ipuv1CnnController::Ipuv1CnnController(const xir::Subgraph *subgraph)
   std::memcpy(parameters_.map<int*>(), params.data(), params.size());
   parameters_.sync(XCL_BO_SYNC_BO_TO_DEVICE);
 
-  // Define Intermediate Buffer for DDR spill
-  auto interSizeMap = subgraph->get_attr<std::map<std::string, int32_t>>("reg_id_to_size");
-  interSize_ = interSizeMap["REG_1"];
+  // Determine buffer sizes
+  auto sizeMap = subgraph->get_attr<std::map<std::string, std::int32_t>>("reg_id_to_size");
+  interSize_ = sizeMap["REG_1"];
+  inputSize_ = sizeMap["REG_2"];
+  outputSize_ = sizeMap["REG_3"];
+
+  // Get Scale Factors for input and outputs
+  for (auto& inTensor : inTensors_)
+    inputScales_.emplace_back(pow(2,inTensor->get_attr<std::int32_t>("fix_point")));
+  for (auto& outTensor : outTensors_)
+    outputScales_.emplace_back(pow(2,-1*outTensor->get_attr<std::int32_t>("fix_point")));
 
   // For each worker
   for (unsigned i=0; i < engine_.get_num_workers(); i++) {
