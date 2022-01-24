@@ -15,7 +15,7 @@
 #include "ipuv1cnn_controller.hpp"
 #include <iostream>
 #include <algorithm>
-
+#include <cmath>
 typedef unsigned int uint;
 
 Ipuv1CnnController::Ipuv1CnnController(const xir::Subgraph *subgraph)
