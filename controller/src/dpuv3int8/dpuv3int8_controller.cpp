@@ -72,6 +72,7 @@ void Dpuv3Int8Controller::initializeTensors()
     for(uint32_t k=0; k<xmodel_->getOutputNum(); k++)
     {
       std::vector<std::int32_t> outputdims = { BATCH_SIZE, xmodel_->getOutTensorsDims()[k][1], xmodel_->getOutTensorsDims()[k][0], xmodel_->getOutTensorsDims()[k][2]};
+      outputStdSize_ = BATCH_SIZE*xmodel_->getOutTensorsDims()[k][1]*xmodel_->getOutTensorsDims()[k][0]*xmodel_->getOutTensorsDims()[k][2];
       xir::Tensor *outputOp = xir::Tensor::create(xmodel_->getOutTensorsNames()[k], outputdims, xir::DataType{xir::DataType::XINT, 8}).release();
       std::unique_ptr<xir::Tensor> outtensor;
       outtensor.reset(outputOp);
@@ -410,9 +411,12 @@ std::vector<vart::TensorBuffer*>
 Dpuv3Int8Controller::get_inputs(int batchsz) {
   if (batchsz != -1)
     throw std::runtime_error("Error: custom batch size not supported for this DPU");
-  auto stdBufs = create_tensor_buffers(get_input_tensors(), /*isInput*/true, -1, false);
-  auto hwBufs = create_hw_buffers(stdBufs, /*isInput*/true);
-  return stdBufs;
+//  auto stdBufs = create_tensor_buffers(get_input_tensors(), /*isInput*/true, -1, false);
+//  auto hwBufs = create_hw_buffers(stdBufs, /*isInput*/true);
+  auto hwBufs = create_hw_buffers(/*isInput*/true);
+ 
+  //return stdBufs;
+  return hwBufs;
 }
 
 std::vector<vart::TensorBuffer*> 
@@ -420,11 +424,43 @@ Dpuv3Int8Controller::get_outputs(int batchsz) {
   if (batchsz != -1)
     throw std::runtime_error("Error: custom batch size not supported for this DPU");
   
-  auto stdBufs = create_tensor_buffers(get_output_tensors(), /*isInput*/false, -1, false);
-  auto hwBufs = create_hw_buffers(stdBufs, /*isInput*/false);
-  return stdBufs;
+//  auto stdBufs = create_tensor_buffers(get_output_tensors(), /*isInput*/false, -1, false);
+//   auto hwBufs = create_hw_buffers(stdBufs, /*isInput*/false);
+  auto hwBufs = create_hw_buffers(/*isInput*/false);
+//  return stdBufs;
+  return hwBufs;
 
 }
+
+std::vector<vart::TensorBuffer*>
+Dpuv3Int8Controller::create_hw_buffers(bool isInput) {
+  std::unique_lock<std::mutex> lock(globalMutex);
+  std::vector<vart::TensorBuffer*> hwBuf;
+  std::vector<vart::TensorBuffer*> swapBuf;
+  std::vector<vart::TensorBuffer*> druSrcBuf;
+  std::vector<vart::TensorBuffer*> druDstBuf;
+  
+
+  if(isInput)
+    {
+      hwBuf = create_tensor_buffers({in_hw_tensor_.get()}, isInput);
+      swapBuf = create_tensor_buffers({swap_tensor_.get()}, isInput);
+      druSrcBuf = create_tensor_buffers({druSrc_tensor_.get()}, isInput);
+      druDstBuf = create_tensor_buffers({druDst_tensor_.get()}, isInput);
+
+      hwbuf2swapbuf_[hwBuf[0]] = swapBuf[0];
+      hwbuf2druSrcbuf_[hwBuf[0]] = druSrcBuf[0];
+      hwbuf2druDstbuf_[hwBuf[0]] = druDstBuf[0];
+
+    }
+  else
+    {
+      hwBuf = create_tensor_buffers({out_hw_tensor_.get()}, isInput);
+    }
+
+  return hwBuf;
+}
+
 
 std::vector<vart::TensorBuffer*>
 Dpuv3Int8Controller::create_hw_buffers(std::vector<vart::TensorBuffer*> stdBuf, bool isInput) {
@@ -445,6 +481,11 @@ Dpuv3Int8Controller::create_hw_buffers(std::vector<vart::TensorBuffer*> stdBuf, 
       stdbuf2swapbuf_[stdBuf[0]] = swapBuf[0];
       stdbuf2druSrcbuf_[stdBuf[0]] = druSrcBuf[0];
       stdbuf2druDstbuf_[stdBuf[0]] = druDstBuf[0];
+
+      hwbuf2swapbuf_[hwBuf[0]] = swapBuf[0];
+      hwbuf2druSrcbuf_[hwBuf[0]] = druSrcBuf[0];
+      hwbuf2druDstbuf_[hwBuf[0]] = druDstBuf[0];
+
     }
   else
     {
@@ -627,7 +668,8 @@ void Dpuv3Int8Controller::preprocess(vart::TensorBuffer* stdbuf, vart::TensorBuf
 {
     if (!xmodel_->getDruMode())
     {
-      void* std_data = (void*)stdbuf->data().first;
+//      void* std_data = (void*)stdbuf->data().first;
+      void* std_data = (void*)hwbuf->data().first;
       std::vector<int8_t> inputStdData(xmodel_->getInW()*xmodel_->getInH()*xmodel_->getInCh()*BATCH_SIZE,0);
       for(uint32_t i=0; i<inputStdData.size(); i++)
       {
@@ -651,29 +693,29 @@ void Dpuv3Int8Controller::preprocess(vart::TensorBuffer* stdbuf, vart::TensorBuf
     else
     {
 
-      void* std_data = (void*)stdbuf->data().first;
-      std::vector<uint8_t> flattenedData(xmodel_->getInW()*xmodel_->getInH()*xmodel_->getInCh()*BATCH_SIZE,0);
-      for(uint32_t i=0; i<flattenedData.size(); i++)
-      {
-        flattenedData[i]=*(int8_t *)((long long) std_data+i);
-      }
-  
-      std::vector<int,rte::AlignedAllocator<int>> hwDinVector(flattenedData.size()/4,0);
-  
-      int j=0;
-      
-      for(uint32_t i=0; i<flattenedData.size(); i=i+BATCH_SIZE)
-      {
-        uint8_t *ptr = (uint8_t*)&(hwDinVector[j]);
-        for(int o=0; o<BATCH_SIZE; o++)
-        {
-          ptr[o] = flattenedData[i+o];
-  
-        }
-        j++;
-      }
-      
-      memcpy((void*)hwbuf->data().first, (void*)hwDinVector.data(), hwDinVector.size()*BATCH_SIZE);
+//      void* std_data = (void*)stdbuf->data().first;
+//      std::vector<uint8_t> flattenedData(xmodel_->getInW()*xmodel_->getInH()*xmodel_->getInCh()*BATCH_SIZE,0);
+//      for(uint32_t i=0; i<flattenedData.size(); i++)
+//      {
+//        flattenedData[i]=*(int8_t *)((long long) std_data+i);
+//      }
+//  
+//      std::vector<int,rte::AlignedAllocator<int>> hwDinVector(flattenedData.size()/4,0);
+//  
+//      int j=0;
+//      
+//      for(uint32_t i=0; i<flattenedData.size(); i=i+BATCH_SIZE)
+//      {
+//        uint8_t *ptr = (uint8_t*)&(hwDinVector[j]);
+//        for(int o=0; o<BATCH_SIZE; o++)
+//        {
+//          ptr[o] = flattenedData[i+o];
+//  
+//        }
+//        j++;
+//      }
+//      
+//      memcpy((void*)hwbuf->data().first, (void*)hwDinVector.data(), hwDinVector.size()*BATCH_SIZE);
 
     }
 }
@@ -682,8 +724,8 @@ void Dpuv3Int8Controller::postprocess(std::vector<vart::TensorBuffer*> stdbuf, v
 {
    
    std::vector<void*> vecs;
-   for(uint32_t i=0; i<stdbuf.size(); i++)
-   {
+ for(uint32_t i=0; i<stdbuf.size(); i++)
+  {
      vecs.push_back((void*)stdbuf[i]->data().first);
    }
 
@@ -722,8 +764,9 @@ void Dpuv3Int8Controller::run(const std::vector<vart::TensorBuffer*> &inputs,
   bool create_tb_outside=false;
 
   // Does this need to be protected by a mutex for mt
-  auto it = stdbuf2hwbuf_.find(outputs[0]);
-  if (it == stdbuf2hwbuf_.end())
+//  auto it = stdbuf2hwbuf_.find(outputs[0]);
+  auto it = hwbuf2swapbuf_.find(inputs[0]);
+  if (it == hwbuf2swapbuf_.end())
   {
     create_tb_outside=true;
   }
@@ -763,19 +806,25 @@ void Dpuv3Int8Controller::run(const std::vector<vart::TensorBuffer*> &inputs,
     output_tensor_buffers = outputs;
   }
 
-  vart::TensorBuffer* inHwTbuf = get_hw_buffer(input_tensor_buffers[0]);
-  vart::TensorBuffer* outHwTbuf = get_hw_buffer(output_tensor_buffers[0]);
-  vart::TensorBuffer* swapTbuf = stdbuf2swapbuf_[input_tensor_buffers[0]];
-  vart::TensorBuffer* druSrcTbuf = stdbuf2druSrcbuf_[input_tensor_buffers[0]];
-  vart::TensorBuffer* druDstTbuf = stdbuf2druDstbuf_[input_tensor_buffers[0]];
+//  vart::TensorBuffer* inHwTbuf = get_hw_buffer(input_tensor_buffers[0]);
+//  vart::TensorBuffer* outHwTbuf = get_hw_buffer(output_tensor_buffers[0]);
+//  vart::TensorBuffer* swapTbuf = stdbuf2swapbuf_[input_tensor_buffers[0]];
+//  vart::TensorBuffer* druSrcTbuf = stdbuf2druSrcbuf_[input_tensor_buffers[0]];
+//  vart::TensorBuffer* druDstTbuf = stdbuf2druDstbuf_[input_tensor_buffers[0]];
+  vart::TensorBuffer* swapTbuf = hwbuf2swapbuf_[input_tensor_buffers[0]];
+  vart::TensorBuffer* druSrcTbuf = hwbuf2druSrcbuf_[input_tensor_buffers[0]];
+  vart::TensorBuffer* druDstTbuf = hwbuf2druDstbuf_[input_tensor_buffers[0]];
 
-  auto *inHwBuf = dynamic_cast<XrtDeviceBuffer*>(get_device_buffer(inHwTbuf));
-  auto *outHwBuf = dynamic_cast<XrtDeviceBuffer*>(get_device_buffer(outHwTbuf));
+//   auto *inHwBuf = dynamic_cast<XrtDeviceBuffer*>(get_device_buffer(inHwTbuf));
+  auto *inHwBuf = dynamic_cast<XrtDeviceBuffer*>(get_device_buffer(input_tensor_buffers[0]));
+//   auto *outHwBuf = dynamic_cast<XrtDeviceBuffer*>(get_device_buffer(outHwTbuf));
+  auto *outHwBuf = dynamic_cast<XrtDeviceBuffer*>(get_device_buffer(output_tensor_buffers[0]));
   auto *swapBuf = dynamic_cast<XrtDeviceBuffer*>(get_device_buffer(swapTbuf));
   auto *druSrcBuf = dynamic_cast<XrtDeviceBuffer*>(get_device_buffer(druSrcTbuf));
   auto *druDstBuf = dynamic_cast<XrtDeviceBuffer*>(get_device_buffer(druDstTbuf));
 
-  preprocess(input_tensor_buffers[0], inHwTbuf);
+//  preprocess(input_tensor_buffers[0], inHwTbuf);
+  preprocess(input_tensor_buffers[0], input_tensor_buffers[0]);
 
   uint64_t buf_addr[BUF_IDX_NUM];
 
@@ -797,7 +846,8 @@ void Dpuv3Int8Controller::run(const std::vector<vart::TensorBuffer*> &inputs,
   uint64_t data;
   size_t size;
 
-  std::tie(data, size) = inHwTbuf->data();
+//  std::tie(data, size) = inHwTbuf->data();
+  std::tie(data, size) = input_tensor_buffers[0]->data();
 
   if (xclUnmgdPwrite(xcl_handle, 0, reinterpret_cast<void*>(data), size, inHwBuf->get_phys_addr()))
     throw std::runtime_error("Error: upload failed");
@@ -809,12 +859,14 @@ void Dpuv3Int8Controller::run(const std::vector<vart::TensorBuffer*> &inputs,
   uint64_t outdata;
   size_t outsize;
 
-  std::tie(outdata, outsize) = outHwTbuf->data();
+//  std::tie(outdata, outsize) = outHwTbuf->data();
+  std::tie(outdata, outsize) = output_tensor_buffers[0]->data();
 
   if (xclUnmgdPread(xcl_handle, 0, reinterpret_cast<void*>(outdata), outsize, outHwBuf->get_phys_addr()))
     throw std::runtime_error("Error: dump failed!");
   
-  postprocess(output_tensor_buffers, outHwTbuf);
+//  postprocess(output_tensor_buffers, outHwTbuf);
+  postprocess(output_tensor_buffers, output_tensor_buffers[0]);
 
   // If the user has provided us TB
   if(create_tb_outside) {
