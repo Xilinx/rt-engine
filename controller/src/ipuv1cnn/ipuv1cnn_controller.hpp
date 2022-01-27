@@ -68,12 +68,17 @@ public:
 protected:
 
   // Get Input/Output Tensors from subgraph
-  std::set<const xir::Tensor *> inTensors_;
-  std::set<const xir::Tensor *> outTensors_;
+  const std::vector<const xir::Tensor *> inTensors_;
+  const std::vector<const xir::Tensor *> outTensors_;
 
   // Get Input/Output Scale Factors
   std::vector<float> inputScales_;
   std::vector<float> outputScales_;
+
+  // Get Input Padding Parameters
+  std::vector<std::vector<std::int32_t>> padding_; // Left, Right, Top, Bottom
+  std::vector<std::vector<std::int32_t>> origShape_; // N, H, W, C
+  std::vector<std::vector<std::int32_t>> paddedShape_; // N, H, W, C
 
   // Reference to the engine
   Engine& engine_;
@@ -96,4 +101,5 @@ protected:
   std::int32_t inputSize_;
   std::int32_t outputSize_;
 
+  void copyInputs(const unsigned int, const std::vector<vart::TensorBuffer*> &);
 };
