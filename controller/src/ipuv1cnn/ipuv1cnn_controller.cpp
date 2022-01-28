@@ -17,6 +17,8 @@
 #include <iostream>
 #include <algorithm>
 #include <cmath>
+#include <cmath>
+#include <limits>
 typedef unsigned int uint;
 
 DEF_ENV_PARAM(DEBUG_DPU_CONTROLLER, "0")
@@ -26,6 +28,24 @@ namespace {
   std::vector<const xir::Tensor *> initTensorVec(const std::set<const xir::Tensor *> &tensorSet) {
     return {tensorSet.cbegin(), tensorSet.cend()};
   }
+
+  // Convert float to int8 with rounding
+  inline std::int8_t float2fix(float data) {
+    static const int data_max = std::numeric_limits<std::int8_t>::max();
+    static const int data_min = std::numeric_limits<std::int8_t>::min();
+    float rlt;
+    if (data > data_max) {
+      rlt = data_max;
+    } else if (data < data_min) {
+      rlt = data_min;
+    } else if (data < 0 && (data - floor(data)) == 0.5f) {
+      rlt = std::ceil(data);
+    } else {
+      rlt = std::round(data);
+    }
+    return rlt;
+  }
+
 }
 
 Ipuv1CnnController::Ipuv1CnnController(const xir::Subgraph *subgraph)
@@ -83,8 +103,13 @@ Ipuv1CnnController::Ipuv1CnnController(const xir::Subgraph *subgraph)
   }
   for (auto& outTensor : outTensors_) {
     outputScales_.emplace_back(pow(2,-1*outTensor->get_attr<std::int32_t>("fix_point")));
+    outputShape_.emplace_back(outTensor->get_shape());
     LOG_IF(INFO, ENV_PARAM(DEBUG_DPU_CONTROLLER))
       << "Output: " << outTensor->get_name();
+    LOG_IF(INFO, ENV_PARAM(DEBUG_DPU_CONTROLLER))
+      << "Shape: ";
+    for (auto& el : outputShape_.back())
+      LOG_IF(INFO, ENV_PARAM(DEBUG_DPU_CONTROLLER)) << " " << el;
     LOG_IF(INFO, ENV_PARAM(DEBUG_DPU_CONTROLLER))
       << "Scale Factor: " << outputScales_.back();
   }
@@ -140,14 +165,13 @@ Ipuv1CnnController::Ipuv1CnnController(const xir::Subgraph *subgraph)
   }
 }
 
-//#define TEST_MODE
 void Ipuv1CnnController::copyInputs(const unsigned int wIdx, const std::vector<vart::TensorBuffer*> &inputs) {
 
   for (unsigned i = 0; i < inputs.size(); i++) {
     
     #ifdef TEST_MODE
     std::memcpy(inputBuffers_[wIdx][i].map<void*>(), reinterpret_cast<void *>(inputs[i]->data().first), inputs[i]->data().second);
-    #else // Do Padding
+    #else // Do Padding // Quantize
     
     auto &padLeft = padding_[i][0];
     //auto &padRight = padding_[i][1];
@@ -166,9 +190,10 @@ void Ipuv1CnnController::copyInputs(const unsigned int wIdx, const std::vector<v
 
     auto inputIsFloat = inputs[i]->get_tensor()->get_data_type().type == xir::DataType::FLOAT;
     auto &scaleFactor = inputScales_[i];
-    
-    auto dst_array = inputBuffers_[wIdx][i].map<void*>();
-    memset(dst_array, 0, dst_in*dst_ih*dst_iw*dst_ic); 
+
+    // Need to opimize this code to do work in one pass
+    auto dst_array = inputBuffers_[wIdx][i].map<std::int8_t*>();
+    memset((void*)dst_array, 0, dst_in*dst_ih*dst_iw*dst_ic); 
 
     auto src_array = reinterpret_cast<void*>(inputs[i]->data().first);
     
@@ -177,7 +202,7 @@ void Ipuv1CnnController::copyInputs(const unsigned int wIdx, const std::vector<v
       for (auto w = 0; w < src_iw; ++w) {
         for (auto c = 0; c < src_ic; ++c, ++src_idx) {
           auto dst_idx = (h + padLeft) * dst_iw * dst_ic + (w + padTop) * dst_ic + c;
-          ((std::int8_t*)dst_array)[dst_idx] = (inputIsFloat) ? static_cast<std::int8_t>(scaleFactor * ((float*)src_array)[src_idx]) : ((std::int8_t*)src_array)[src_idx];
+          dst_array[dst_idx] = (inputIsFloat) ? float2fix(scaleFactor * ((float*)src_array)[src_idx]) : ((std::int8_t*)src_array)[src_idx];
         }
       }
     }
@@ -185,24 +210,36 @@ void Ipuv1CnnController::copyInputs(const unsigned int wIdx, const std::vector<v
 
     // Sync To Device
     inputBuffers_[wIdx][i].sync(XCL_BO_SYNC_BO_TO_DEVICE);
+  }
+}
+
+void Ipuv1CnnController::copyOutputs(const unsigned int wIdx, const std::vector<vart::TensorBuffer*> &outputs) {
+
+  for (unsigned i = 0; i < outputs.size(); i++) {
+
+    // Sync From Device
+    outputBuffers_[wIdx][i].sync(XCL_BO_SYNC_BO_FROM_DEVICE);
+
+    auto outputIsFloat = outputs[i]->get_tensor()->get_data_type().type == xir::DataType::FLOAT;
+    auto &scaleFactor = outputScales_[i];
     
+    auto src_array = outputBuffers_[wIdx][i].map<std::int8_t*>();
+    auto dst_array = reinterpret_cast<void*>(outputs[i]->data().first);
+
+    if (outputIsFloat)
+      std::transform(&src_array[0], &src_array[outputSize_], (float*)dst_array, [&](std::int8_t i) -> float {return scaleFactor*i;});
+    else
+      std::copy(&src_array[0], &src_array[outputSize_], (std::int8_t*)dst_array);
   }
 }
 
 void Ipuv1CnnController::run(const std::vector<vart::TensorBuffer*> &inputs,
-                        const std::vector<vart::TensorBuffer*> &outputs) {
+                             const std::vector<vart::TensorBuffer*> &outputs) {
 
   const auto wIdx = engine_.get_my_worker_id();
 
   // Copy inputs to Device
   copyInputs(wIdx, inputs);
-  
-  /*
-  auto dst_array = inputBuffers_[wIdx][0].map<std::int8_t*>();
-  for (int i = 0; i < inputSize_; ++i) {
-    std::cout << std::dec << +dst_array[i] << std::endl; 
-  }
-  */
 
   // Execute Kernel
   runners_[wIdx](
@@ -216,10 +253,7 @@ void Ipuv1CnnController::run(const std::vector<vart::TensorBuffer*> &inputs,
   runners_[wIdx].wait();
 
   // Copy outputs from Device
-  for (unsigned i = 0; i < outputs.size(); i++) {
-    outputBuffers_[wIdx][i].sync(XCL_BO_SYNC_BO_FROM_DEVICE);
-    std::memcpy(reinterpret_cast<void *>(outputs[i]->data().first), outputBuffers_[wIdx][i].map<void*>(), outputs[i]->data().second);
-  }
+  copyOutputs(wIdx, outputs);
 
 }
 

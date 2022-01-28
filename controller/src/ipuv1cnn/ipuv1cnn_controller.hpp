@@ -80,6 +80,9 @@ protected:
   std::vector<std::vector<std::int32_t>> origShape_; // N, H, W, C
   std::vector<std::vector<std::int32_t>> paddedShape_; // N, H, W, C
 
+  // Get Output Shapes
+  std::vector<std::vector<std::int32_t>> outputShape_; // N, H, W, C
+
   // Reference to the engine
   Engine& engine_;
 
@@ -102,4 +105,5 @@ protected:
   std::int32_t outputSize_;
 
   void copyInputs(const unsigned int, const std::vector<vart::TensorBuffer*> &);
+  void copyOutputs(const unsigned int, const std::vector<vart::TensorBuffer*> &);
 };
