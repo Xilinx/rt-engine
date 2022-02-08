@@ -75,13 +75,11 @@ protected:
   std::vector<float> inputScales_;
   std::vector<float> outputScales_;
 
-  // Get Input Padding Parameters
+  // Get Padding Parameters and Shape Info
   std::vector<std::vector<std::int32_t>> padding_; // Left, Right, Top, Bottom
-  std::vector<std::vector<std::int32_t>> origShape_; // N, H, W, C
-  std::vector<std::vector<std::int32_t>> paddedShape_; // N, H, W, C
-
-  // Get Output Shapes
-  std::vector<std::vector<std::int32_t>> outputShape_; // N, H, W, C
+  std::vector<std::vector<std::int32_t>> origInputShape_, origOutputShape_; // N, H, W, C
+  std::vector<std::vector<std::int32_t>> paddedInputShape_, paddedOutputShape_; // N, H, W, C
+  std::vector<std::int32_t> origInputSize_, origOutputSize_;
 
   // Reference to the engine
   Engine& engine_;

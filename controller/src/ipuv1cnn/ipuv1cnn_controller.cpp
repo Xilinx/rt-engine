@@ -16,6 +16,7 @@
 #include "vitis/ai/env_config.hpp" // For DEF_ENV_PARAM
 #include <iostream>
 #include <algorithm>
+#include <numeric>
 #include <cmath>
 #include <cmath>
 #include <limits>
@@ -70,27 +71,30 @@ Ipuv1CnnController::Ipuv1CnnController(const xir::Subgraph *subgraph)
   // Extract key XMODEL info
   for (auto& inTensor : inTensors_) {
     inputScales_.emplace_back(pow(2,inTensor->get_attr<std::int32_t>("fix_point")));
-    paddedShape_.emplace_back(inTensor->get_shape());
+    paddedInputShape_.emplace_back(inTensor->get_shape());
     auto data_op = inTensor->get_producer();
     if(data_op->has_attr("origin_input_pad") && data_op->has_attr("origin_input_shape")) {
       padding_.emplace_back(data_op->get_attr<std::vector<std::int32_t>>("origin_input_pad"));
-      origShape_.emplace_back(data_op->get_attr<std::vector<std::int32_t>>("origin_input_shape"));
+      origInputShape_.emplace_back(data_op->get_attr<std::vector<std::int32_t>>("origin_input_shape"));
     }
     else {
       padding_.emplace_back(std::vector<std::int32_t>{0, 0, 0, 0});
-      origShape_.emplace_back(std::vector<std::int32_t>{0, 0, 0, 0});
+      origInputShape_.emplace_back(inTensor->get_shape());
     }
+  
+    origInputSize_.push_back(std::accumulate(origInputShape_.back().cbegin(), origInputShape_.back().cend(), 1, std::multiplies<>()));
+    
     LOG_IF(INFO, ENV_PARAM(DEBUG_DPU_CONTROLLER))
       << "Input: " << inTensor->get_name();
 
     LOG_IF(INFO, ENV_PARAM(DEBUG_DPU_CONTROLLER))
       << "Shape: ";
-    for (auto& el : origShape_.back())
+    for (auto& el : origInputShape_.back())
       LOG_IF(INFO, ENV_PARAM(DEBUG_DPU_CONTROLLER)) << " " << el;
     
     LOG_IF(INFO, ENV_PARAM(DEBUG_DPU_CONTROLLER))
       << "Padded Shape: ";
-    for (auto& el : paddedShape_.back())
+    for (auto& el : paddedInputShape_.back())
       LOG_IF(INFO, ENV_PARAM(DEBUG_DPU_CONTROLLER)) << " " << el;
     
     LOG_IF(INFO, ENV_PARAM(DEBUG_DPU_CONTROLLER))
@@ -103,13 +107,31 @@ Ipuv1CnnController::Ipuv1CnnController(const xir::Subgraph *subgraph)
   }
   for (auto& outTensor : outTensors_) {
     outputScales_.emplace_back(pow(2,-1*outTensor->get_attr<std::int32_t>("fix_point")));
-    outputShape_.emplace_back(outTensor->get_shape());
+    paddedOutputShape_.emplace_back(outTensor->get_shape());
+    auto download_op = outTensor->get_producer();
+    auto data_op = download_op->get_input_op("input");
+    if(data_op->has_attr("actual_output_shape")) {
+      origOutputShape_.emplace_back(data_op->get_attr<std::vector<std::int32_t>>("actual_output_shape"));
+    }
+    else {
+      origOutputShape_.emplace_back(outTensor->get_shape());
+    }
+    
+    origOutputSize_.push_back(std::accumulate(origOutputShape_.back().cbegin(), origOutputShape_.back().cend(), 1, std::multiplies<>()));
+    
     LOG_IF(INFO, ENV_PARAM(DEBUG_DPU_CONTROLLER))
       << "Output: " << outTensor->get_name();
+    
     LOG_IF(INFO, ENV_PARAM(DEBUG_DPU_CONTROLLER))
       << "Shape: ";
-    for (auto& el : outputShape_.back())
+    for (auto& el : origOutputShape_.back())
       LOG_IF(INFO, ENV_PARAM(DEBUG_DPU_CONTROLLER)) << " " << el;
+    
+    LOG_IF(INFO, ENV_PARAM(DEBUG_DPU_CONTROLLER))
+      << "Padded Shape: ";
+    for (auto& el : paddedOutputShape_.back())
+      LOG_IF(INFO, ENV_PARAM(DEBUG_DPU_CONTROLLER)) << " " << el;
+    
     LOG_IF(INFO, ENV_PARAM(DEBUG_DPU_CONTROLLER))
       << "Scale Factor: " << outputScales_.back();
   }
@@ -178,15 +200,15 @@ void Ipuv1CnnController::copyInputs(const unsigned int wIdx, const std::vector<v
     auto &padTop = padding_[i][2];
     //auto &padBottom = padding_[i][3];
 
-    //auto &src_in = origShape_[i][0];
-    auto &src_ih = origShape_[i][1];
-    auto &src_iw = origShape_[i][2];
-    auto &src_ic = origShape_[i][3];
+    //auto &src_in = origInputShape_[i][0];
+    auto &src_ih = origInputShape_[i][1];
+    auto &src_iw = origInputShape_[i][2];
+    auto &src_ic = origInputShape_[i][3];
   
-    auto &dst_in = paddedShape_[i][0];
-    auto &dst_ih = paddedShape_[i][1];
-    auto &dst_iw = paddedShape_[i][2];
-    auto &dst_ic = paddedShape_[i][3];
+    auto &dst_in = paddedInputShape_[i][0];
+    auto &dst_ih = paddedInputShape_[i][1];
+    auto &dst_iw = paddedInputShape_[i][2];
+    auto &dst_ic = paddedInputShape_[i][3];
 
     auto inputIsFloat = inputs[i]->get_tensor()->get_data_type().type == xir::DataType::FLOAT;
     auto &scaleFactor = inputScales_[i];
@@ -219,6 +241,10 @@ void Ipuv1CnnController::copyOutputs(const unsigned int wIdx, const std::vector<
 
     // Sync From Device
     outputBuffers_[wIdx][i].sync(XCL_BO_SYNC_BO_FROM_DEVICE);
+    
+    #ifdef TEST_MODE
+    std::memcpy(reinterpret_cast<void *>(outputs[i]->data().first), outputBuffers_[wIdx][i].map<void*>(), outputs[i]->data().second);
+    #else // Do Output Formatting
 
     auto outputIsFloat = outputs[i]->get_tensor()->get_data_type().type == xir::DataType::FLOAT;
     auto &scaleFactor = outputScales_[i];
@@ -226,10 +252,14 @@ void Ipuv1CnnController::copyOutputs(const unsigned int wIdx, const std::vector<
     auto src_array = outputBuffers_[wIdx][i].map<std::int8_t*>();
     auto dst_array = reinterpret_cast<void*>(outputs[i]->data().first);
 
-    if (outputIsFloat)
-      std::transform(&src_array[0], &src_array[outputSize_], (float*)dst_array, [&](std::int8_t i) -> float {return scaleFactor*i;});
-    else
-      std::copy(&src_array[0], &src_array[outputSize_], (std::int8_t*)dst_array);
+    for (std::int32_t j = 0; j < origOutputSize_[i]; ++j) {
+      if (outputIsFloat)
+        ((float*)dst_array)[j] = scaleFactor * src_array[j];
+      else
+        ((std::int8_t*)dst_array)[j] = src_array[j];
+    }
+
+    #endif
   }
 }
 
