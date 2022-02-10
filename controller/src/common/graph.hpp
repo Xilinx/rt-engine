@@ -143,11 +143,15 @@ class DpuXmodel  {
   uint64_t get_fingerprint() {
     return fingerprint;
   }
+  std::vector<std::string> get_md5() {
+    return md5value;
+  }
+
  private:
   void init(const std::string &meta);
   void init(const xir::Subgraph* subgraph);
   void init_graph(const xir::Subgraph* subgraph);
-
+  std::vector<std::string> md5value;
   std::vector<std::vector<std::int32_t>> input_dims;
   std::vector<std::vector<std::int32_t>> output_dims;
   //std::vector<const xir::Tensor*> input_tensors_;
