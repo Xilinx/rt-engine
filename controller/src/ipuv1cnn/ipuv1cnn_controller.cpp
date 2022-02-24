@@ -139,7 +139,7 @@ Ipuv1CnnController::Ipuv1CnnController(const xir::Subgraph *subgraph)
   LOG_IF(INFO, ENV_PARAM(DEBUG_DPU_CONTROLLER))
     << "Loading Model Instructions from XMODEL";
   auto instrs = subgraph->get_attr<std::vector<char>>("mc_code");
-  instructions_ = xrt::bo(device_, instrs.size(), kernel_.group_id(4));
+  instructions_ = xrt::bo(device_, instrs.size(), kernel_.group_id(5));
   std::memcpy(instructions_.map<int*>(), instrs.data(), instrs.size());
   instructions_.sync(XCL_BO_SYNC_BO_TO_DEVICE);
   numInstructions_ = instrs.size()/sizeof(int);
@@ -150,7 +150,7 @@ Ipuv1CnnController::Ipuv1CnnController(const xir::Subgraph *subgraph)
     << "Loading Model Parameters from XMODEL";
   auto paramsMap = subgraph->get_attr<std::map<std::string, std::vector<char>>>("reg_id_to_parameter_value");
   auto &params = paramsMap["REG_0"];
-  parameters_ = xrt::bo(device_, params.size(), XRT_BO_FLAGS_HOST_ONLY, kernel_.group_id(1));
+  parameters_ = xrt::bo(device_, params.size(), XRT_BO_FLAGS_HOST_ONLY, kernel_.group_id(2));
   std::memcpy(parameters_.map<int*>(), params.data(), params.size());
   parameters_.sync(XCL_BO_SYNC_BO_TO_DEVICE);
   LOG_IF(INFO, ENV_PARAM(DEBUG_DPU_CONTROLLER))
@@ -171,18 +171,18 @@ Ipuv1CnnController::Ipuv1CnnController(const xir::Subgraph *subgraph)
     // Create input buffers
     for (auto& inTensor : inTensors_)
       inputBuffers_[i].emplace_back(
-        device_, inTensor->get_data_size(), XRT_BO_FLAGS_HOST_ONLY, kernel_.group_id(0)
+        device_, inTensor->get_data_size(), XRT_BO_FLAGS_HOST_ONLY, kernel_.group_id(1)
       );
 
     // Create output buffers
     for (auto& outTensor : outTensors_)
       outputBuffers_[i].emplace_back(
-        device_, outTensor->get_data_size(), XRT_BO_FLAGS_HOST_ONLY, kernel_.group_id(2)
+        device_, outTensor->get_data_size(), XRT_BO_FLAGS_HOST_ONLY, kernel_.group_id(3)
       );
     
     // Create intermediate buffers
     intermediateBuffers_.emplace_back(
-      device_, interSize_, XRT_BO_FLAGS_HOST_ONLY, kernel_.group_id(3)
+      device_, interSize_, XRT_BO_FLAGS_HOST_ONLY, kernel_.group_id(4)
     );
   }
 }
@@ -273,6 +273,7 @@ void Ipuv1CnnController::run(const std::vector<vart::TensorBuffer*> &inputs,
 
   // Execute Kernel
   runners_[wIdx](
+      std::uint64_t(1), // Indicate to FW not to run selfTest
       inputBuffers_[wIdx].back(), // Actually only supporting one input
       parameters_,
       outputBuffers_[wIdx].back(), // Actually only supporting one output
