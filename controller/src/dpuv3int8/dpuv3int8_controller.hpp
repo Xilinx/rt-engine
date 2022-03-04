@@ -47,7 +47,7 @@ class Dpuv3Int8Controller : public XclDpuController<XrtDeviceHandle, XrtDeviceBu
 
  protected:    
   virtual void preprocess(vart::TensorBuffer*, vart::TensorBuffer*); 
-  virtual void each_output_reorg(void* std_data, void *result_data, int ddr_size, int startVal, int std_size, int stdOutCh, int outputNumber);
+  virtual void each_output_reorg(void* std_data, void *result_data, long ddr_size, long startVal, int std_size, int stdOutCh, int outputNumber);
   virtual void runKernel(ert_start_kernel_cmd* ecmd, uint64_t* buf_addr, uint32_t* reg_val, xclDeviceHandle xcl_handle, xclBufferHandle bo_handle);
 //  virtual void runKernel(xrtcpp::exec::exec_write_command cmd, uint64_t* buf_addr, uint32_t* reg_val);
   virtual void initRunBufs(uint64_t *buf_addr, XrtDeviceBuffer* swap_buf, XrtDeviceBuffer* druSrc_buf, XrtDeviceBuffer* druDst_buf);

@@ -340,12 +340,12 @@ void Dpuv3Int8Controller::output_reorg(std::vector<void*> stdData, void *result_
 
 }
 
-void Dpuv3Int8Controller::each_output_reorg(void* std_data, void *result_data, int ddr_size, int startVal, int std_size, int stdOutCh, int outputNumber)
+void Dpuv3Int8Controller::each_output_reorg(void* std_data, void *result_data, long ddr_size, long startVal, int std_size, int stdOutCh, int outputNumber)
 {
-    int i, mbatch, segment, group;
+    long i, mbatch, segment, group;
     std::vector<int> count(BATCH_SIZE,0);
 
-    int result_size = ddr_size*4;
+    long result_size = ddr_size*4;
     std::vector<int8_t> stdExtraZeroesData(result_size,0);
 
     for (i = startVal; i < result_size+startVal; i++)
