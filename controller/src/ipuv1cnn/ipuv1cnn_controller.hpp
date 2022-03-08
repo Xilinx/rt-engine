@@ -64,6 +64,54 @@ public:
    * The thread will process the inputs provided, and return the results to the outputs buffer.
    */
   virtual void run(const std::vector<vart::TensorBuffer*> &inputs, const std::vector<vart::TensorBuffer*> &outputs) override;
+  
+  /**
+   * get_input_tensors() - Retrieve metadata regarding model inputs. i.e. shapes.
+   *
+   *  Return: A vector of pointers to Tensors. The tensors can be queried for metadata.
+   *
+   */
+  virtual std::vector<const xir::Tensor*> get_input_tensors() const override; 
+  
+  /**
+   * get_output_tensors() - Retrieve metadata regarding model outputs. i.e. shapes.
+   *
+   *  Return: A vector of pointers to Tensors. The tensors can be queried for metadata.
+   *
+   */
+  virtual std::vector<const xir::Tensor*> get_output_tensors() const override; 
+  
+  /**
+   * get_inputs() - Retrieve input tensor buffers
+   *
+   *  Return: A vector of pointers to TensorBuffers. The tensor buffers can be filled with input data.
+   *
+   */
+  virtual std::vector<vart::TensorBuffer*> get_inputs(int batchsz=-1) override; 
+  
+  /**
+   * get_outputs() - Retrieve output tensor buffers
+   *
+   *  Return: A vector of pointers to TensorBuffers. The tensor buffers can be read by the user application.
+   *
+   */
+  virtual std::vector<vart::TensorBuffer*> get_outputs(int batchsz=-1) override; 
+  
+  /**
+   * get_input_scale() - Retrieve input scale factors
+   *
+   *  Return: A vector of floats. Each float represents the scaling factor used to convert from float to int.
+   *
+   */
+  virtual std::vector<float> get_input_scale() override; 
+  
+  /**
+   * get_output_scale() - Retrieve output scale factors
+   *
+   *  Return: A vector of floats. Each float represents the scaling factor used to convert from int to float.
+   *
+   */
+  virtual std::vector<float> get_output_scale() override; 
 
 protected:
 

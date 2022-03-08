@@ -288,6 +288,13 @@ void Ipuv1CnnController::run(const std::vector<vart::TensorBuffer*> &inputs,
 
 }
 
+std::vector<const xir::Tensor*> Ipuv1CnnController::get_input_tensors() const {return inTensors_;}
+std::vector<const xir::Tensor*> Ipuv1CnnController::get_output_tensors() const {return outTensors_;}
+std::vector<vart::TensorBuffer*> Ipuv1CnnController::get_inputs(int batchsz) {throw std::runtime_error("Error: get_inputs() is not yet supported by this DPU."); return {};}
+std::vector<vart::TensorBuffer*> Ipuv1CnnController::get_outputs(int batchsz) {throw std::runtime_error("Error: get_outputs() is not yet supported by this DPU."); return {};}
+std::vector<float> Ipuv1CnnController::get_input_scale() {return inputScales_;}
+std::vector<float> Ipuv1CnnController::get_output_scale() {return outputScales_;}
+
 Ipuv1CnnController::Ipuv1CnnController(std::string meta)
   : XclDpuController<IpuDeviceHandle, IpuDeviceBuffer, IpuDeviceBuffer>(meta),
       engine_(Engine::get_instance()) {
