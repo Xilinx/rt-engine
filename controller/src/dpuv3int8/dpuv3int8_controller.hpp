@@ -70,7 +70,6 @@ class Dpuv3Int8Controller : public XclDpuController<XrtDeviceHandle, XrtDeviceBu
   void dumpReg();
   void postprocess(std::vector<vart::TensorBuffer*>, vart::TensorBuffer*);
   std::vector<vart::TensorBuffer*> create_hw_buffers(std::vector<vart::TensorBuffer*> stdBuf, bool isInput);
-  std::vector<vart::TensorBuffer*> create_hw_buffers(bool isInput);
   vart::TensorBuffer* get_hw_buffer(vart::TensorBuffer *tb);
   
   std::unique_ptr<xir::Tensor> in_tensor_;
@@ -93,17 +92,11 @@ class Dpuv3Int8Controller : public XclDpuController<XrtDeviceHandle, XrtDeviceBu
   std::unordered_map<vart::TensorBuffer*, vart::TensorBuffer*> stdbuf2druSrcbuf_;
   std::unordered_map<vart::TensorBuffer*, vart::TensorBuffer*> stdbuf2druDstbuf_;
   
-  std::unordered_map<vart::TensorBuffer*, vart::TensorBuffer*> hwbuf2swapbuf_;
-  std::unordered_map<vart::TensorBuffer*, vart::TensorBuffer*> hwbuf2druSrcbuf_;
-  std::unordered_map<vart::TensorBuffer*, vart::TensorBuffer*> hwbuf2druDstbuf_;
-
   std::unique_ptr<vart::CpuFlatTensorBuffer> instrTbuf_;
   std::unique_ptr<vart::CpuFlatTensorBuffer> paramsTbuf_;
 
   uint32_t reg_val[REG_NUM];
   
-  uint32_t outputStdSize_;
-
   static std::vector<int32_t, rte::AlignedAllocator<int32_t>> load(std::string filename);
   static std::vector<int32_t, rte::AlignedAllocator<int32_t>> load(std::vector<std::string> svals);
 
