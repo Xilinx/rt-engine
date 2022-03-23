@@ -27,7 +27,7 @@ XrtBinStream::XrtBinStream(const std::string filename) {
 }
 
 XrtBinStream::~XrtBinStream() {
-  delete data_;
+  delete[] data_;
 }
 
 void XrtBinStream::init_fd(const std::string fnm) {
