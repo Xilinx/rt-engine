@@ -63,8 +63,17 @@ Ipuv1CnnController::Ipuv1CnnController(const xir::Subgraph *subgraph)
     << "IPU Controller: Loading XCLBIN";
   std::string xclbinPath(std::getenv("XLNX_VART_FIRMWARE"));
   device_ = xrt::device(0);
-  uuid_ = device_.load_xclbin(xclbinPath);
-  kernel_ = xrt::kernel(device_, uuid_, "DPU"); // Kernel Name is DPU, this could change
+  auto xclbin = xrt::xclbin(xclbinPath);
+
+  // Determine The DPU Kernel Name
+  auto xkernels = xclbin.get_kernels();
+  auto xkernel = *std::find_if(xkernels.begin(), xkernels.end(), [](xrt::xclbin::kernel& k) {
+    auto name = k.get_name();
+    return name.rfind("DPU",0) == 0; // Starts with "DPU"
+  });
+  auto kernelName = xkernel.get_name();
+  uuid_ = device_.load_xclbin(xclbin);
+  kernel_ = xrt::kernel(device_, uuid_, kernelName);
   LOG_IF(INFO, ENV_PARAM(DEBUG_DPU_CONTROLLER))
     << "IPU Controller: Finished Loading XCLBIN";
 
@@ -161,6 +170,11 @@ Ipuv1CnnController::Ipuv1CnnController(const xir::Subgraph *subgraph)
   interSize_ = sizeMap["REG_1"];
   inputSize_ = sizeMap["REG_2"];
   outputSize_ = sizeMap["REG_3"];
+
+  if (interSize_ == 0) {
+    LOG(INFO) << "Intermediate Buffer Requested size is 0. Using 1MB instead.";
+    interSize_ = 1024*1024;
+  }
 
   // For each worker
   for (unsigned i=0; i < engine_.get_num_workers(); i++) {
@@ -290,8 +304,8 @@ void Ipuv1CnnController::run(const std::vector<vart::TensorBuffer*> &inputs,
 
 std::vector<const xir::Tensor*> Ipuv1CnnController::get_input_tensors() const {return inTensors_;}
 std::vector<const xir::Tensor*> Ipuv1CnnController::get_output_tensors() const {return outTensors_;}
-std::vector<vart::TensorBuffer*> Ipuv1CnnController::get_inputs(int batchsz) {throw std::runtime_error("Error: get_inputs() is not yet supported by this DPU."); return {};}
-std::vector<vart::TensorBuffer*> Ipuv1CnnController::get_outputs(int batchsz) {throw std::runtime_error("Error: get_outputs() is not yet supported by this DPU."); return {};}
+std::vector<vart::TensorBuffer*> Ipuv1CnnController::get_inputs(int batchsz) {/*throw std::runtime_error("Error: get_inputs() is not yet supported by this DPU.");*/ return {};}
+std::vector<vart::TensorBuffer*> Ipuv1CnnController::get_outputs(int batchsz) {/*throw std::runtime_error("Error: get_outputs() is not yet supported by this DPU.");*/ return {};}
 std::vector<float> Ipuv1CnnController::get_input_scale() {return inputScales_;}
 std::vector<float> Ipuv1CnnController::get_output_scale() {return outputScales_;}
 

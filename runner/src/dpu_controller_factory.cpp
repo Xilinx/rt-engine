@@ -39,7 +39,7 @@ std::shared_ptr<DpuController> DpuControllerFactory::get(std::string kernel, T s
   {
     return std::make_shared<DpuV3eController>(subgraph, attrs);
   }
-  else if (kernel == "IPUV1CNN" || kernel == "AMD_AIE2_4x5_Overlay")
+  else if (kernel == "AMD_AIE2_4x5_Overlay" || kernel == "AMD_AIE2_1x4_Overlay")
   {
     return std::make_shared<Ipuv1CnnController>(subgraph);
   }
