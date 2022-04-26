@@ -14,6 +14,7 @@ set(CONTROLLER_SRCS
   ${CMAKE_CURRENT_SOURCE_DIR}/src/dpuv3me/dpuv3me_controller.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/src/dpuv4e/dpuv4e_controller.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/src/ipuv1cnn/ipuv1cnn_controller.cpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/src/flexml/flexml_controller.cpp
   PARENT_SCOPE
   )
 
@@ -25,5 +26,6 @@ set(CONTROLLER_HDRS
   ${PROJECT_SOURCE_DIR}/controller/src/dpuv3e
   ${PROJECT_SOURCE_DIR}/controller/src/dpuv3int8
   ${PROJECT_SOURCE_DIR}/controller/src/ipuv1cnn
+  ${PROJECT_SOURCE_DIR}/controller/src/flexml
   PARENT_SCOPE
   )
