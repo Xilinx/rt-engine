@@ -27,7 +27,7 @@
 #include <xrt/xrt_device.h>
 #include <xrt/xrt_kernel.h>
 #include <xrt/xrt_bo.h>
-#include <xrt/xrt_graph.h>
+#include <xrt/xrt_aie.h>
 #include "pl_controller_sw_xrt.hpp"
 /*!
  * @class FlexmlController
@@ -51,7 +51,7 @@ public:
    *
    */
   ~FlexmlController() = default;
-  
+
   /**
    * run() - Run inference on a given vector of inputs
    *
@@ -65,54 +65,54 @@ public:
    * The thread will process the inputs provided, and return the results to the outputs buffer.
    */
   virtual void run(const std::vector<vart::TensorBuffer*> &inputs, const std::vector<vart::TensorBuffer*> &outputs) override;
-  
+
   /**
    * get_input_tensors() - Retrieve metadata regarding model inputs. i.e. shapes.
    *
    *  Return: A vector of pointers to Tensors. The tensors can be queried for metadata.
    *
    */
-  virtual std::vector<const xir::Tensor*> get_input_tensors() const override; 
-  
+  virtual std::vector<const xir::Tensor*> get_input_tensors() const override;
+
   /**
    * get_output_tensors() - Retrieve metadata regarding model outputs. i.e. shapes.
    *
    *  Return: A vector of pointers to Tensors. The tensors can be queried for metadata.
    *
    */
-  virtual std::vector<const xir::Tensor*> get_output_tensors() const override; 
-  
+  virtual std::vector<const xir::Tensor*> get_output_tensors() const override;
+
   /**
    * get_inputs() - Retrieve input tensor buffers
    *
    *  Return: A vector of pointers to TensorBuffers. The tensor buffers can be filled with input data.
    *
    */
-  virtual std::vector<vart::TensorBuffer*> get_inputs(int batchsz=-1) override; 
-  
+  virtual std::vector<vart::TensorBuffer*> get_inputs(int batchsz=-1) override;
+
   /**
    * get_outputs() - Retrieve output tensor buffers
    *
    *  Return: A vector of pointers to TensorBuffers. The tensor buffers can be read by the user application.
    *
    */
-  virtual std::vector<vart::TensorBuffer*> get_outputs(int batchsz=-1) override; 
-  
+  virtual std::vector<vart::TensorBuffer*> get_outputs(int batchsz=-1) override;
+
   /**
    * get_input_scale() - Retrieve input scale factors
    *
    *  Return: A vector of floats. Each float represents the scaling factor used to convert from float to int.
    *
    */
-  virtual std::vector<float> get_input_scale() override; 
-  
+  virtual std::vector<float> get_input_scale() override;
+
   /**
    * get_output_scale() - Retrieve output scale factors
    *
    *  Return: A vector of floats. Each float represents the scaling factor used to convert from int to float.
    *
    */
-  virtual std::vector<float> get_output_scale() override; 
+  virtual std::vector<float> get_output_scale() override;
 
 protected:
 
@@ -135,15 +135,15 @@ protected:
 
   // All workers will share
   xrt::device device_;
+    xrt::uuid uuid_;
   pl_controller::pl_controller_sw_xrt pl_ctrl_sw_;
   xrt::graph ghdl_;
   //xrt::kernel kernel_;
-  xrt::uuid uuid_;
   xrt::bo weights_;
   //xrt::bo instructions_;
 
   // Create per worker thread resources
-  //std::vector<xrt::run> runners_; 
+  //std::vector<xrt::run> runners_;
   std::vector<std::vector<xrt::bo>> inputBuffers_;
   std::vector<std::vector<xrt::bo>> outputBuffers_;
   //std::vector<xrt::bo> intermediateBuffers_;
