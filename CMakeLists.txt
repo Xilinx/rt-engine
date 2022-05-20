@@ -10,7 +10,7 @@ set(CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/cmake)
 
 include(setup)
 
-find_package(XRT REQUIRED HINTS /opt/xilinx/xrt)
+find_package(XRT REQUIRED HINTS /proj/xbuilds/2022.1_daily_latest/xbb/xrt/packages/x86_64/xrt-2.13.478_ubuntu_18.04/opt/xilinx/xrt)
 find_package(XRM)
 if (${XRM_FOUND})
   message(STATUS "XRM was found at ${XRM_CMAKE_DIR}")
@@ -74,6 +74,7 @@ target_link_libraries(
   PRIVATE
   XRT::xrt_core
   XRT::xrt_coreutil
+  XRT::xrt++
   ${XRM_LIBRARIES}
   target-factory::target-factory 
   vart::runner
