@@ -1,5 +1,8 @@
 #include "pl_controller_sw_xrt.hpp"
 #include <fstream>
+#include <chrono>
+#include <thread>
+
 namespace pl_controller {
 pl_controller_sw_xrt::pl_controller_sw_xrt(xrt::device m_device, const char* xclbinFilename) {
     //// Open device
@@ -102,7 +105,8 @@ int pl_controller_sw_xrt::wait(uint32_t timeout) {
         if (status == 6 || status == 4) {
             break;
         }
-        sleep(2);
+        //sleep(2);
+	std::this_thread::sleep_for(std::chrono::milliseconds(2000));
     }
     std::cout << "PL controller done!" << std::endl;
     return 0;
