@@ -27,7 +27,7 @@
 #include <xrt/xrt_device.h>
 #include <xrt/xrt_kernel.h>
 #include <xrt/xrt_bo.h>
-#include <xrt/xrt_aie.h>
+#include <experimental/xrt_aie.h>
 #include "pl_controller_sw_xrt.hpp"
 /*!
  * @class FlexmlController
@@ -42,9 +42,9 @@ public:
    *
    * @param subgraph: Subgraph object representing the instructions to execute
    */
-  FlexmlController(const xir::Subgraph *subgraph);
+  FlexmlController(const xir::Subgraph *subgraph,unsigned int device_index=0);
   // NOT IMPLEMENTED
-  FlexmlController(std::string meta);
+  FlexmlController(std::string meta,unsigned int device_index=0);
 
   /**
    * ~FlexmlController() - Destroy controller object
