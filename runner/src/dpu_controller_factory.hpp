@@ -24,6 +24,7 @@
 #include "dpuv4e_controller.hpp"
 #include "dpuv3e_controller.hpp"
 #include "ipuv1cnn_controller.hpp"
+#include "flexml_controller.hpp"
 
 class DpuControllerFactory {
   public:
