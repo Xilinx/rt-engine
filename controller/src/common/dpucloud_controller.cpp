@@ -426,10 +426,8 @@ void DpuCloudController::init_graph(vector<unsigned> hbmw, vector<unsigned> hbmc
        //  xdpu_workspace_dpu.emplace(workspace.first,buf);
       int flag = 0;
        vector<std::pair<bounding, bo_share>>::iterator iter;
-       { 
        std::unique_lock<std::mutex> lock(bo_mtx_);
        iter = xdpu_workspace_bo.begin();
-       }    
        while ( iter !=  xdpu_workspace_bo.end()) {
          if ((model_->get_md5())[0] == iter->first.md5value[0]) {
            if ((handle_->get_device_info().cu_index == iter->first.cu_id) && 
@@ -446,20 +444,21 @@ void DpuCloudController::init_graph(vector<unsigned> hbmw, vector<unsigned> hbmc
                << " phy_addr: "
                << p.paddr;
              addrs.emplace_back(p.paddr);
+           }
              auto bos = iter->second;
              bos.cnt.emplace_back(1);
+	     bos.bo_handles =  iter->second.bo_handles;
              LOG_IF(INFO, ENV_PARAM(DEBUG_DPU_CONTROLLER))
                << "share featuremap bo " << "cu_index: "<< iter->first.cu_id 
                << ", device_id: " << iter->first.device_id
                ;
              auto bd = iter->first;
              {
-               std::unique_lock<std::mutex> lock(bo_mtx_);
+               //std::unique_lock<std::mutex> lock(bo_mtx_);
                xdpu_workspace_bo.erase(iter);
                xdpu_workspace_bo.emplace_back(std::make_pair(bd, bos));
                flag++;
              }
-           }
            workspace_addr.emplace_back(workspace.first, addrs);
            break;
            }
@@ -473,6 +472,7 @@ void DpuCloudController::init_graph(vector<unsigned> hbmw, vector<unsigned> hbmc
           bd.cu_id = handle_->get_device_info().cu_index;
           bo_s.cnt.emplace_back(1);
           bd.device_id = handle_->get_device_info().device_index;
+          std::vector<xclBufferHandle> handles;
           vector<uint64_t> addrs;
           LOG_IF(INFO, ENV_PARAM(DEBUG_DPU_CONTROLLER))
             << "generate new featuremap bo " << "cu_index: "<< bd.cu_id 
@@ -486,8 +486,8 @@ void DpuCloudController::init_graph(vector<unsigned> hbmw, vector<unsigned> hbmc
               throw std::bad_alloc();
             auto ioMem = get_xrt_bo(ioPtr, workspace.second, get_hbmio());
                xclGetBOProperties(handle, ioMem, &p);
-            bo_s.bo_handles.emplace_back(ioMem);  
-            addrs.emplace_back(p.paddr);
+	    handles.emplace_back(ioMem);  
+	    addrs.emplace_back(p.paddr);
             LOG_IF(INFO, ENV_PARAM(DEBUG_DPU_CONTROLLER))
               <<"Engine : " << i<<  " workspace reg_id: " 
               << workspace.first
@@ -495,11 +495,12 @@ void DpuCloudController::init_graph(vector<unsigned> hbmw, vector<unsigned> hbmc
               << p.paddr;
             free(ioPtr);
          }
+         bo_s.bo_handles = handles;
          bo_s.handle=contexts_[0]->get_dev_handle();
          bo_s.reg_id=workspace.first;
          workspace_addr.emplace_back(workspace.first, addrs);
          {
-           std::unique_lock<std::mutex> lock(bo_mtx_);
+           //std::unique_lock<std::mutex> lock(bo_mtx_);
            xdpu_workspace_bo.emplace_back(std::make_pair(bd, bo_s));
          }
        }
