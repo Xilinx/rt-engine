@@ -478,14 +478,20 @@ void DpuCloudController::init_graph(vector<unsigned> hbmw, vector<unsigned> hbmc
             << "generate new featuremap bo " << "cu_index: "<< bd.cu_id 
             << ", device_id: " << bd.device_id
             ;
+	  auto hbm = get_hbmio();
           for (int i=0;i<batch_size_;i++) {
             void *ioPtr = NULL;
             
             xclBOProperties p;
             if (posix_memalign(&ioPtr, getpagesize(),workspace.second ))
               throw std::bad_alloc();
-            auto ioMem = get_xrt_bo(ioPtr, workspace.second, get_hbmio());
-               xclGetBOProperties(handle, ioMem, &p);
+	    xclBufferHandle ioMem;
+	    if (hbm.size() >= (unsigned int)batch_size_) {
+              ioMem = get_xrt_bo(ioPtr, workspace.second, hbm[i]);
+	    } else {
+              ioMem = get_xrt_bo(ioPtr, workspace.second, hbm[0]);
+	    }
+            xclGetBOProperties(handle, ioMem, &p);
 	    handles.emplace_back(ioMem);  
 	    addrs.emplace_back(p.paddr);
             LOG_IF(INFO, ENV_PARAM(DEBUG_DPU_CONTROLLER))
