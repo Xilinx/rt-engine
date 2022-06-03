@@ -83,13 +83,14 @@ class Xmodel {
     
     std::vector<std::int32_t> get_input_fix_point_values();
     std::vector<std::int32_t> get_output_fix_point_values();
+    bool get_zero_copy();
 
     const std::vector<std::string>& getInstr();
     const std::vector<std::string>& getParams();
 
     Xmodel(std::string meta, bool isDebugMode);
-    Xmodel(const xir::Subgraph *subgraph, bool isDebugMode);        
-    
+    Xmodel(const xir::Subgraph *subgraph, xir::Attrs* attrs=nullptr, bool isDebugMode=false);
+ 
   private:
     std::string getFileNameIfExists(std::string name, json_object* jobj);
     uint32_t getValue(std::string name, json_object* jobj);
@@ -109,6 +110,7 @@ class Xmodel {
     std::string params_filename_;
     bool enable_xmodel_format_;
     std::string runner_dir_;
+    bool zero_copy_;
 
     bool single_pool_debug_;
     std::string debug_dumpdir_;

@@ -436,8 +436,30 @@ Xmodel::Xmodel(std::string meta, bool isDebugMode)
 
 }
 
-Xmodel::Xmodel(const xir::Subgraph *subgraph, bool isDebugMode)
+bool Xmodel::get_zero_copy()
 {
+   return zero_copy_;
+}
+
+Xmodel::Xmodel(const xir::Subgraph *subgraph, xir::Attrs* attrs, bool isDebugMode)
+{
+
+  if(attrs==nullptr)
+  {
+    zero_copy_ = false;
+  }
+  else
+  {
+    if(attrs->has_attr("zero_copy"))
+    {
+      zero_copy_ = attrs->get_attr<bool>("zero_copy");
+    }
+    else
+    {
+      zero_copy_ = false;
+    } 
+  }
+  
   runner_dir_ = subgraph->get_attr<std::string>("runner_dir");
   instr_asm_filename_ = runner_dir_+"instr.asm";
   instr_filename_ = runner_dir_+"instr.txt";
