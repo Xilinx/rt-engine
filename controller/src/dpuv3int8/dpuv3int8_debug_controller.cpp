@@ -19,7 +19,7 @@
 
 using namespace std;
 
-Dpuv3Int8DebugController::Dpuv3Int8DebugController(std::string meta) : Dpuv3Int8Controller(meta) {
+Dpuv3Int8DebugController::Dpuv3Int8DebugController(std::string meta, xir::Attrs* attrs) : Dpuv3Int8Controller(meta, attrs) {
   
   dumpDmem_ = std::getenv("DPUV3INT8_DEBUGMODE_DUMPDMEM") ? atoi(std::getenv("DPUV3INT8_DEBUGMODE_DUMPDMEM")) == 1 : false;
   xmodel_.reset(new Xmodel(meta, true));
@@ -38,11 +38,11 @@ Dpuv3Int8DebugController::Dpuv3Int8DebugController(std::string meta) : Dpuv3Int8
   
 }
 
-Dpuv3Int8DebugController::Dpuv3Int8DebugController(const xir::Subgraph *subgraph) : Dpuv3Int8Controller(subgraph)
+Dpuv3Int8DebugController::Dpuv3Int8DebugController(const xir::Subgraph *subgraph, xir::Attrs* attrs) : Dpuv3Int8Controller(subgraph, attrs)
 {
   
   dumpDmem_ = std::getenv("DPUV3INT8_DEBUGMODE_DUMPDMEM") ? atoi(std::getenv("DPUV3INT8_DEBUGMODE_DUMPDMEM")) == 1 : false;
-  xmodel_.reset(new Xmodel(subgraph, true));
+  xmodel_.reset(new Xmodel(subgraph, attrs, true));
   loadBinFile(xmodel_->getDebugDinFilename(), true, 0);
   for(uint32_t i=0; i<xmodel_->getOutputNum(); i++)
     loadBinFile(xmodel_->getDebugGoldenFilename(i), false, i);

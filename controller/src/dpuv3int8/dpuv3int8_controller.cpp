@@ -23,7 +23,7 @@
 using namespace std;
 std::mutex globalMutex;
 
-Dpuv3Int8Controller::Dpuv3Int8Controller(std::string meta) : XclDpuController<XrtDeviceHandle, XrtDeviceBuffer, XrtDeviceBuffer>(meta) {
+Dpuv3Int8Controller::Dpuv3Int8Controller(std::string meta, xir::Attrs* attrs) : XclDpuController<XrtDeviceHandle, XrtDeviceBuffer, XrtDeviceBuffer>(meta, attrs) {
 
   Engine& engine = Engine::get_instance();
   for (unsigned i=0; i < engine.get_num_workers(); i++)
@@ -37,7 +37,7 @@ Dpuv3Int8Controller::Dpuv3Int8Controller(std::string meta) : XclDpuController<Xr
   initCreateBuffers();
 }
 
-Dpuv3Int8Controller::Dpuv3Int8Controller(const xir::Subgraph *subgraph) : XclDpuController<XrtDeviceHandle, XrtDeviceBuffer, XrtDeviceBuffer>(subgraph)
+Dpuv3Int8Controller::Dpuv3Int8Controller(const xir::Subgraph *subgraph, xir::Attrs* attrs) : XclDpuController<XrtDeviceHandle, XrtDeviceBuffer, XrtDeviceBuffer>(subgraph, attrs)
 {
 
   Engine& engine = Engine::get_instance();
@@ -45,7 +45,7 @@ Dpuv3Int8Controller::Dpuv3Int8Controller(const xir::Subgraph *subgraph) : XclDpu
     contexts_.emplace_back(new XrtContext(*handle_));
   inputsTBfs_.resize(engine.get_num_workers());
   outputsTBfs_.resize(engine.get_num_workers());
-  xmodel_ = std::make_unique<Xmodel>(subgraph, false);
+  xmodel_ = std::make_unique<Xmodel>(subgraph, attrs, false);
  
   initializeTensors();
   initializeTaskDRUVariables();
@@ -411,7 +411,7 @@ Dpuv3Int8Controller::get_inputs(int batchsz) {
   if (batchsz != -1)
     throw std::runtime_error("Error: custom batch size not supported for this DPU");
 
-  auto stdBufs = create_tensor_buffers(get_input_tensors(), /*isInput*/true, -1, false);
+  auto stdBufs = create_tensor_buffers(get_input_tensors(), /*isInput*/true, -1, true);
   auto hwBufs = create_hw_buffers(stdBufs, /*isInput*/true);
   return stdBufs;
  
@@ -778,6 +778,18 @@ void Dpuv3Int8Controller::run(const std::vector<vart::TensorBuffer*> &inputs,
   auto *swapBuf = dynamic_cast<XrtDeviceBuffer*>(get_device_buffer(swapTbuf));
   auto *druSrcBuf = dynamic_cast<XrtDeviceBuffer*>(get_device_buffer(druSrcTbuf));
   auto *druDstBuf = dynamic_cast<XrtDeviceBuffer*>(get_device_buffer(druDstTbuf));
+
+  if(xmodel_->get_zero_copy())
+  { 
+    uint64_t data;
+    size_t size;
+
+    std::tie(data, size) = input_tensor_buffers[0]->data();
+    auto *hwbuf = dynamic_cast<XrtDeviceBuffer*>(get_device_buffer(input_tensor_buffers[0]));
+    if (xclUnmgdPread(xcl_handle, 0, reinterpret_cast<void*>(data), size, hwbuf->get_phys_addr()))
+      throw std::runtime_error("Error: dump failed!");
+
+  }
 
   preprocess(input_tensor_buffers[0], inHwTbuf);
 
