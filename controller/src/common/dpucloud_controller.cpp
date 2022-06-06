@@ -491,6 +491,17 @@ void DpuCloudController::init_graph(vector<unsigned> hbmw, vector<unsigned> hbmc
 	    } else {
               ioMem = get_xrt_bo(ioPtr, workspace.second, hbm[0]);
 	    }
+            if (ioMem == NULLBO) {
+	      if (hbm.size() >= (unsigned int)batch_size_) { 
+		// V3E has multipe hbms for featuremap, if bouding alloc fail, we can try to use other hbm
+                ioMem = get_xrt_bo(ioPtr, workspace.second, hbm);
+                if (ioMem == NULLBO)
+                  throw std::bad_alloc();
+	      } else {
+                throw std::bad_alloc();
+	      
+	      }
+	    }
             xclGetBOProperties(handle, ioMem, &p);
 	    handles.emplace_back(ioMem);  
 	    addrs.emplace_back(p.paddr);
