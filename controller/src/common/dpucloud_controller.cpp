@@ -420,114 +420,106 @@ void DpuCloudController::init_graph(vector<unsigned> hbmw, vector<unsigned> hbmc
 
   }
   if (model_->get_xdpu_workspace_reg_map().size()>0) {
+    int share_check=1;
     for(auto workspace : model_->get_xdpu_workspace_reg_map()) {
-       //auto buf = create_tensor_buffers_hbm(get_merged_io_tensors(workspace.first),false, get_hbmio(),1);
-       //if (!buf.empty()) {
-       //  xdpu_workspace_dpu.emplace(workspace.first,buf);
       int flag = 0;
-       vector<std::pair<bounding, bo_share>>::iterator iter;
-       std::unique_lock<std::mutex> lock(bo_mtx_);
-       iter = xdpu_workspace_bo.begin();
-       while ( iter !=  xdpu_workspace_bo.end()) {
-         if ((model_->get_md5())[0] == iter->first.md5value[0]) {
-           if ((handle_->get_device_info().cu_index == iter->first.cu_id) && 
-                (handle_->get_device_info().device_index== iter->first.device_id)) {
-           //iter->second.cnt.emplace_back(1);
-           vector<uint64_t> addrs;
-           //auto bos = iter.second.bo_handles;
-           for (unsigned int i=0; i< iter->second.bo_handles.size(); i++) {
-             xclBOProperties p;
-             xclGetBOProperties(iter->second.handle, iter->second.bo_handles[i], &p);
-             LOG_IF(INFO, ENV_PARAM(DEBUG_DPU_CONTROLLER))
-               <<"Engine : " << i<<  " workspace reg_id: " 
-               << iter->second.reg_id
-               << " phy_addr: "
-               << p.paddr;
-             addrs.emplace_back(p.paddr);
+      vector<std::pair<bounding, bo_share>>::iterator iter;
+      std::unique_lock<std::mutex> lock(bo_mtx_);
+      iter = xdpu_workspace_bo.begin();
+      if (share_check) {
+        while ( iter !=  xdpu_workspace_bo.end()) {
+          if ((model_->get_md5())[0] == iter->first.md5value[0]) {
+            if ((handle_->get_device_info().cu_index == iter->first.cu_id) && 
+                 (handle_->get_device_info().device_index== iter->first.device_id)) {
+              vector<uint64_t> addrs;
+              for (unsigned int i=0; i< iter->second.bo_handles.size(); i++) {
+                xclBOProperties p;
+                xclGetBOProperties(iter->second.handle, iter->second.bo_handles[i], &p);
+                LOG_IF(INFO, ENV_PARAM(DEBUG_DPU_CONTROLLER))
+                  <<"Engine : " << i<<  " workspace reg_id: " 
+                  << iter->second.reg_id
+                  << " phy_addr: "
+                  << p.paddr;
+                addrs.emplace_back(p.paddr);
+              }
+              auto bos = iter->second;
+              bos.cnt.emplace_back(1);
+              bos.bo_handles =  iter->second.bo_handles;
+              LOG_IF(INFO, ENV_PARAM(DEBUG_DPU_CONTROLLER))
+                << "share featuremap bo " << "cu_index: "<< iter->first.cu_id 
+                << ", device_id: " << iter->first.device_id
+                ;
+              auto bd = iter->first;
+              {
+                //std::unique_lock<std::mutex> lock(bo_mtx_);
+                xdpu_workspace_bo.erase(iter);
+                xdpu_workspace_bo.emplace_back(std::make_pair(bd, bos));
+                flag++;
+              }
+              workspace_addr.emplace_back(workspace.first, addrs);
+              break;
+            }
+          }
+          iter++; 
+        }  
+      } 
+      if (flag==0) {
+         share_check = 0;
+         bo_share bo_s;
+         bounding bd;
+         bd.md5value = model_->get_md5();
+         bd.cu_id = handle_->get_device_info().cu_index;
+         bo_s.cnt.emplace_back(1);
+         bd.device_id = handle_->get_device_info().device_index;
+         std::vector<xclBufferHandle> handles;
+         vector<uint64_t> addrs;
+         LOG_IF(INFO, ENV_PARAM(DEBUG_DPU_CONTROLLER))
+           << "generate new featuremap bo " << "cu_index: "<< bd.cu_id 
+           << ", device_id: " << bd.device_id
+           ;
+         auto hbm = get_hbmio();
+         for (int i=0;i<batch_size_;i++) {
+           void *ioPtr = NULL;
+           
+           xclBOProperties p;
+           if (posix_memalign(&ioPtr, getpagesize(),workspace.second ))
+             throw std::bad_alloc();
+           xclBufferHandle ioMem;
+           if (hbm.size() >= (unsigned int)batch_size_) {
+             ioMem = get_xrt_bo(ioPtr, workspace.second, hbm[i]);
+           } else {
+             ioMem = get_xrt_bo(ioPtr, workspace.second, hbm[0]);
            }
-             auto bos = iter->second;
-             bos.cnt.emplace_back(1);
-	     bos.bo_handles =  iter->second.bo_handles;
-             LOG_IF(INFO, ENV_PARAM(DEBUG_DPU_CONTROLLER))
-               << "share featuremap bo " << "cu_index: "<< iter->first.cu_id 
-               << ", device_id: " << iter->first.device_id
-               ;
-             auto bd = iter->first;
-             {
-               //std::unique_lock<std::mutex> lock(bo_mtx_);
-               xdpu_workspace_bo.erase(iter);
-               xdpu_workspace_bo.emplace_back(std::make_pair(bd, bos));
-               flag++;
+           if (ioMem == NULLBO) {
+             if (hbm.size() >= (unsigned int)batch_size_) { 
+       	       // V3E has multipe hbms for featuremap, if bouding alloc fail, we can try to use other hbm
+               ioMem = get_xrt_bo(ioPtr, workspace.second, hbm);
+               if (ioMem == NULLBO)
+                 throw std::bad_alloc();
+             } else {
+               throw std::bad_alloc();
+             
              }
-           workspace_addr.emplace_back(workspace.first, addrs);
-           break;
            }
-         }
-         iter++; 
-       }  
-       if (flag==0) {
-          bo_share bo_s;
-          bounding bd;
-          bd.md5value = model_->get_md5();
-          bd.cu_id = handle_->get_device_info().cu_index;
-          bo_s.cnt.emplace_back(1);
-          bd.device_id = handle_->get_device_info().device_index;
-          std::vector<xclBufferHandle> handles;
-          vector<uint64_t> addrs;
-          LOG_IF(INFO, ENV_PARAM(DEBUG_DPU_CONTROLLER))
-            << "generate new featuremap bo " << "cu_index: "<< bd.cu_id 
-            << ", device_id: " << bd.device_id
-            ;
-	  auto hbm = get_hbmio();
-          for (int i=0;i<batch_size_;i++) {
-            void *ioPtr = NULL;
-            
-            xclBOProperties p;
-            if (posix_memalign(&ioPtr, getpagesize(),workspace.second ))
-              throw std::bad_alloc();
-	    xclBufferHandle ioMem;
-	    if (hbm.size() >= (unsigned int)batch_size_) {
-              ioMem = get_xrt_bo(ioPtr, workspace.second, hbm[i]);
-	    } else {
-              ioMem = get_xrt_bo(ioPtr, workspace.second, hbm[0]);
-	    }
-            if (ioMem == NULLBO) {
-	      if (hbm.size() >= (unsigned int)batch_size_) { 
-		// V3E has multipe hbms for featuremap, if bouding alloc fail, we can try to use other hbm
-                ioMem = get_xrt_bo(ioPtr, workspace.second, hbm);
-                if (ioMem == NULLBO)
-                  throw std::bad_alloc();
-	      } else {
-                throw std::bad_alloc();
-	      
-	      }
-	    }
-            xclGetBOProperties(handle, ioMem, &p);
-	    handles.emplace_back(ioMem);  
-	    addrs.emplace_back(p.paddr);
-            LOG_IF(INFO, ENV_PARAM(DEBUG_DPU_CONTROLLER))
-              <<"Engine : " << i<<  " workspace reg_id: " 
-              << workspace.first
-              << " phy_addr: "
-              << p.paddr;
-            free(ioPtr);
-         }
-         bo_s.bo_handles = handles;
-         bo_s.handle=contexts_[0]->get_dev_handle();
-         bo_s.reg_id=workspace.first;
-         workspace_addr.emplace_back(workspace.first, addrs);
-         {
-           //std::unique_lock<std::mutex> lock(bo_mtx_);
-           xdpu_workspace_bo.emplace_back(std::make_pair(bd, bo_s));
-         }
-       }
-       //auto buf = create_tensor_buffers_hbm(get_merged_io_tensors(workspace.second),false, get_hbmio());
-       //if (!buf.empty()) {
-       ////auto io_buf = dynamic_cast<XrtDeviceBuffer*>(get_device_buffer(buf));
-       //  xdpu_workspace_dpu.emplace(workspace.first,buf);
-       //}
-
-       //}
+           xclGetBOProperties(handle, ioMem, &p);
+           handles.emplace_back(ioMem);  
+           addrs.emplace_back(p.paddr);
+           LOG_IF(INFO, ENV_PARAM(DEBUG_DPU_CONTROLLER))
+             <<"Engine : " << i<<  " workspace reg_id: " 
+             << workspace.first
+             << " phy_addr: "
+             << p.paddr;
+           free(ioPtr);
+        }
+        bo_s.bo_handles = handles;
+        bo_s.handle=contexts_[0]->get_dev_handle();
+        bo_s.reg_id=workspace.first;
+        workspace_addr.emplace_back(workspace.first, addrs);
+        {
+          //std::unique_lock<std::mutex> lock(bo_mtx_);
+          xdpu_workspace_bo.emplace_back(std::make_pair(bd, bo_s));
+        }
+      }
     }
   }
   model_->init_vitis_tensors(batch_size_, handle_->get_device_info().device_index);
