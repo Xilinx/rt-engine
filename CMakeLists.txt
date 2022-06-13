@@ -37,8 +37,13 @@ find_path(JSONC_INCLUDE_DIRS NAMES json-c)
 find_library(JSONC_LIBRARIES NAMES json-c REQUIRED)
 find_package(Threads REQUIRED)
 
+if(UNIX)
+#for ubuntu20.04
+find_package(Boost COMPONENTS system filesystem thread serialization REQUIRED)
+else()
 # Temporary hack for windows
 find_package(Boost)
+endif()
 
 add_subdirectory(engine)
 add_subdirectory(runner)
