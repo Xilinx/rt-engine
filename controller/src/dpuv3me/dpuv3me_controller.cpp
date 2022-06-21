@@ -426,6 +426,19 @@ auto trigger_dpu_func = [&](){
 //    regVals.push_back( { XDPU_CONTROL_ADDR_0_L / 4, reg0_addr_ & 0xFFFFFFFF });
 //    regVals.push_back( { XDPU_CONTROL_ADDR_0_H / 4, (reg0_addr_ >> 32) & 0xFFFFFFFF });
   }
+   auto iter3 = workspace_addr.begin();
+    while(iter3 != workspace_addr.end() ) {
+      for (int bz=0;bz<batch_size_;bz++) {
+        regVals.push_back(  { (XDPU_CONTROL_ADDR_0_L + 8*iter3->first + bz*0x100) / 4, (iter3->second)[bz] & 0xFFFFFFFF });
+        regVals.push_back(  { (XDPU_CONTROL_ADDR_0_H + 8*iter3->first + bz*0x100) / 4, (iter3->second[bz] >> 32) & 0xFFFFFFFF });
+        LOG_IF(INFO, ENV_PARAM(DEBUG_DPU_CONTROLLER))
+          << "io: "  //
+          << iter3->second[bz]      //
+          ;
+      }
+      iter3++;
+    }
+
     for (auto iter2 : xdpu_total_dpureg_map2) {
       regVals.push_back(  { (XDPU_CONTROL_ADDR_0_L + 8*std::get<0>(iter2) + std::get<1>(iter2)*0x100) / 4, std::get<2>(iter2) & 0xFFFFFFFF });
       regVals.push_back(  { (XDPU_CONTROL_ADDR_0_H + 8*std::get<0>(iter2) + std::get<1>(iter2)*0x100) / 4, (std::get<2>(iter2) >> 32) & 0xFFFFFFFF });

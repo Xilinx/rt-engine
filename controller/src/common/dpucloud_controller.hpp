@@ -165,7 +165,11 @@ class DpuCloudController
   std::unordered_map<std::string, std::pair<uint64_t,int32_t>> layer_debug_mode;
   std::unordered_map<std::string, std::pair<uint64_t,int32_t>> layer_debug_mode_preload;
   std::unordered_map<int, std::vector<vart::TensorBuffer*>> xdpu_workspace_dpu;
+  std::vector<std::pair<int, std::vector<uint64_t>>> workspace_addr; 
   std::shared_ptr<DpuXmodel> model_;
+  size_t cu_index_;
+  size_t device_index_;
+
   uint64_t get_addr(int32_t regid, int idx, std::vector<std::tuple<int, int,uint64_t>>& xdpu_total_dpureg_map_io);
  private:
   int flag;
