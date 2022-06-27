@@ -66,7 +66,7 @@ FlexmlController::FlexmlController(const xir::Subgraph *subgraph, unsigned int d
     inTensors_(initTensorVec(subgraph->get_input_tensors())),
     outTensors_(initTensorVec(subgraph->get_output_tensors())),
     engine_(Engine::get_instance()),
-    device_(xrt::aie::device(device_index)),
+    device_(xrt::device(0)),
     uuid_(load_xclbin(device_)),
     pl_ctrl_sw_(device_, uuid_),
     ghdl_(xrt::graph(device_, uuid_, "compute_graph")),
@@ -269,7 +269,7 @@ std::vector<float> FlexmlController::get_input_scale() {return inputScales_;}
 std::vector<float> FlexmlController::get_output_scale() {return outputScales_;}
 //TODO: Is this needed? 
 FlexmlController::FlexmlController(std::string meta,unsigned int device_index)
-  : XclDpuController<IpuDeviceHandle, IpuDeviceBuffer, IpuDeviceBuffer>(meta),device_(xrt::aie::device(device_index)),
+  : XclDpuController<IpuDeviceHandle, IpuDeviceBuffer, IpuDeviceBuffer>(meta),device_(xrt::device(0)),
     uuid_(load_xclbin(device_)),pl_ctrl_sw_(device_, uuid_),ghdl_(xrt::graph(device_, uuid_, "compute_graph")), engine_(Engine::get_instance()) {
   throw std::runtime_error("Error: Meta json file flow not supported by this DPU.");
 }
