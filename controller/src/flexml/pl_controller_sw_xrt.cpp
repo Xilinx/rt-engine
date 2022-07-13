@@ -24,7 +24,117 @@ pl_controller_sw_xrt::pl_controller_sw_xrt(xrt::device m_device, const xrt::uuid
     pl_ctrl_krnl = xrt::kernel(device, uuid, "pl_controller_hw_v4", true); // cu_access_mode::exclusive
 }
 
+pl_controller_sw_xrt::pl_controller_sw_xrt(xrt::device m_device, const xrt::uuid& uuid, const std::string& ucodeFile) {
+    device = m_device;
+    // obtain object from xclbin
+    pl_ctrl_krnl = xrt::kernel(device, uuid, "pl_controller_hw_v4", true); // cu_access_mode::exclusive
+    // load micro code
+    std::ifstream fin(ucodeFile, std::ios::binary);
+    if(fin.fail() == true) {
+        std::cout << "ucode File not found" << std::endl;
+        exit(1);
+    }
+    uint32_t u_sz, rt_sz;
+    fin.read((char*)&u_sz, sizeof(uint32_t));
+    fin.read((char*)&rt_sz, sizeof(uint32_t));
+    pre_ucode_size = u_sz / sizeof(uint32_t);
+    pre_ucode_buff = new uint32_t[pre_ucode_size];
+    for (uint32_t i = 0; i < pre_ucode_size; i++) {
+        uint32_t val = 0;
+        if (fin.read((char*)&val, sizeof(uint32_t))) {
+            pre_ucode_buff[i] = val;
+        } else {
+            printf("pre_ucode UCODE number is not correct\n");
+	    exit(1);
+        }
+    }
+    uint32_t map_sz = 0;
+    fin.read((char*)&map_sz, sizeof(int));
+    for (uint32_t i = 0; i < map_sz; i++) {
+        uint32_t str_sz;
+        fin.read((char*)&str_sz, sizeof(int));
+        char tmp[str_sz + 1];
+        fin.read(tmp, str_sz);
+        tmp[str_sz] = '\0';
+        ext_map[tmp] = i;
+        std::cout << "loadMicroCode: name=" << tmp << ", id=" << i << std::endl;
+    }
+    // iteration
+    fin.read((char*)&core_iter_size, sizeof(uint32_t));
+    std::cout << "core_iter_size=" << core_iter_size << std::endl;
+    core_iter_buff = new uint32_t[core_iter_size];
+    for (uint32_t i = 0; i < core_iter_size; i++) {
+        uint32_t val;
+        if (fin.read((char*)&val, sizeof(uint32_t))) {
+            core_iter_buff[i] = val;
+        } else {
+            printf("core_iter UCODE number is not correct\n");
+	    exit(1);
+        }
+    }
+    // core control
+    fin.read((char*)&core_control_size, sizeof(uint32_t));
+    core_control_buff = new uint32_t[core_control_size];
+    std::cout << "core_control_size=" << core_control_size << std::endl;
+    for (uint32_t i = 0; i < core_control_size; i++) {
+        uint32_t val;
+        if (fin.read((char*)&val, sizeof(uint32_t))) {
+            core_control_buff[i] = val;
+        } else {
+            printf("core control UCODE number is not correct\n");
+            exit(1);
+        }
+    }
+    fin.close();
+
+    // allcoate buffer for uncode
+    ucode_size = (pre_ucode_size + core_iter_size * 3 + core_control_size * 3 * 2) * sizeof(uint32_t);
+    ucode_offset = 0;
+    ucode_bo = xrt::bo(device, ucode_size, pl_ctrl_krnl.group_id(0));
+    ucode_bo_mapped = ucode_bo.map<uint32_t*>();
+
+    // allocate buffer for runtime address
+    runtime_addr_size = (map_sz + 1) * sizeof(uint64_t);
+    runtime_addr_bo = xrt::bo(device, runtime_addr_size, pl_ctrl_krnl.group_id(3));
+    runtime_addr_bo_mapped = runtime_addr_bo.map<uint32_t*>();
+    runtime_addr_bo_mapped[0] = map_sz;
+    std::cout << "ucode_size=" << ucode_size << ", runtime_addr_size=" << runtime_addr_size << std::endl;
+}
+
 pl_controller_sw_xrt::~pl_controller_sw_xrt() {}
+
+int pl_controller_sw_xrt::getGroupId() {
+    return pl_ctrl_krnl.group_id(0); // ucode buffer
+}
+
+int pl_controller_sw_xrt::enqueueGraphRun(uint32_t iter) {
+    for (uint32_t i = 0; i < core_iter_size; i++) {
+        ucode_bo_mapped[ucode_offset++] = 8;
+        ucode_bo_mapped[ucode_offset++] = core_iter_buff[i];
+        ucode_bo_mapped[ucode_offset++] = iter;
+    }
+    for (uint32_t i = 0; i < core_control_size; i++) {
+        ucode_bo_mapped[ucode_offset++] = 8;
+        ucode_bo_mapped[ucode_offset++] = core_control_buff[i];
+        ucode_bo_mapped[ucode_offset++] = 1;
+    }
+    return 0;
+}
+
+int pl_controller_sw_xrt::enqueueRuntimeControl() {
+    memcpy(&ucode_bo_mapped[ucode_offset], pre_ucode_buff, pre_ucode_size * sizeof(uint32_t));
+    ucode_offset += pre_ucode_size;
+    return 0;
+}
+
+int pl_controller_sw_xrt::enqueueGraphEnd() {
+    for (uint32_t i = 0; i < core_control_size; i++) {
+        ucode_bo_mapped[ucode_offset++] = 8;
+        ucode_bo_mapped[ucode_offset++] = core_control_buff[i];
+        ucode_bo_mapped[ucode_offset++] = 0;
+    }
+    return 0;
+}
 
 int pl_controller_sw_xrt::loadMicroCode(const std::string& ucodeFile) {
     std::ifstream fin(ucodeFile, std::ios::binary);
@@ -63,7 +173,7 @@ int pl_controller_sw_xrt::loadMicroCode(const std::string& ucodeFile) {
     fin.read((char*)&map_sz, sizeof(int));
     runtime_addr_bo_mapped[0] = map_sz;
     std::cout << "external buffer size: " << map_sz << std::endl;
-    for (int i = 0; i < map_sz; i++) {
+    for (uint32_t i = 0; i < map_sz; i++) {
         uint32_t str_sz;
         fin.read((char*)&str_sz, sizeof(int));
         char tmp[str_sz + 1];

@@ -137,7 +137,7 @@ protected:
   xrt::device device_;
     xrt::uuid uuid_;
   pl_controller::pl_controller_sw_xrt pl_ctrl_sw_;
-  xrt::graph ghdl_;
+  //xrt::graph ghdl_;
   //xrt::kernel kernel_;
   xrt::bo weights_;
   //xrt::bo instructions_;
