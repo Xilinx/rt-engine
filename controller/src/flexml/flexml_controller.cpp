@@ -97,8 +97,8 @@ FlexmlController::FlexmlController(const xir::Subgraph *subgraph, unsigned int d
     // FIXME use TinyYolo data
     int group_id = pl_ctrl_sw_.getGroupId();
     std::cout << "group_id=" << group_id << std::endl;
- std::string wtsFile = "./wts32.txt";
- std::ifstream wts_strm(wtsFile, std::ios::in);
+ //std::string wtsFile = "./wts32.txt";
+ //std::ifstream wts_strm(wtsFile, std::ios::in);
 
  //std::cout << "graph init...\n";
  //ghdl_ = xrt::graph(device_, uuid_, "compute_graph");
@@ -183,13 +183,13 @@ FlexmlController::FlexmlController(const xir::Subgraph *subgraph, unsigned int d
 
   LOG_IF(INFO, ENV_PARAM(DEBUG_DPU_CONTROLLER))
     << "Loading Model Weights from XMODEL";
-  //auto weights_vec = subgraph->get_attr<std::vector<char>>("weights");
+  auto weights_vec = subgraph->get_attr<std::vector<char>>("params");
   const int wts_size = 78848;
   weights_ = xrt::bo(device_, wts_size,group_id);
   auto weights_bo_map = weights_.map<uint32_t*>();
-  for (int i = 0; i < wts_size / 4; i++) wts_strm >> std::hex >> weights_bo_map[i];
+  //for (int i = 0; i < wts_size / 4; i++) wts_strm >> std::hex >> weights_bo_map[i];
   pl_ctrl_sw_.setAddress("compute_graph.wts_ddr", weights_.address());
-  //std::memcpy(weights_.map<char*>(), weights_vec.data(), wts_size);
+  std::memcpy(weights_.map<char*>(), weights_vec.data(), wts_size);
   weights_.sync(XCL_BO_SYNC_BO_TO_DEVICE, wts_size, 0);
   for(int i=0 ; i< wts_size /4 ;i++)
      std::cout << "Weights byte" << i << "from bo map:" << weights_bo_map[i] << std::endl;
