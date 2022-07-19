@@ -104,7 +104,7 @@ struct bounding {
   std::vector<string> md5value;
 
 };
-std::mutex bo_mtx_;
+static std::mutex bo_mtx_;
 static std::vector<std::pair<bounding, bo_share>> xdpu_workspace_bo;
 
 static uint32_t read32_dpu_reg(xclDeviceHandle dpu_handle, uint64_t offset) {
@@ -185,7 +185,7 @@ DpuCloudController::~DpuCloudController() {
    }
   
   }*/
-  std::unique_lock<std::mutex> lock(hwbufio_mtx_);
+  std::unique_lock<std::mutex> lock(bo_mtx_);
   auto iter = xdpu_workspace_bo.begin();
   while (iter !=  xdpu_workspace_bo.end()) {
     if ((model_->get_md5())[0] == iter->first.md5value[0]) {
