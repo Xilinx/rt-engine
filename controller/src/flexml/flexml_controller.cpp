@@ -62,6 +62,8 @@ xrt::uuid load_xclbin(xrt::device device){
   return uuid;
 }
 
+
+
 FlexmlController::FlexmlController(const xir::Subgraph *subgraph, unsigned int device_index)
   : XclDpuController<IpuDeviceHandle, IpuDeviceBuffer, IpuDeviceBuffer>(subgraph),
     inTensors_(initTensorVec(subgraph->get_input_tensors())),
@@ -69,7 +71,7 @@ FlexmlController::FlexmlController(const xir::Subgraph *subgraph, unsigned int d
     engine_(Engine::get_instance()),
     device_(xrt::device(0)),
     uuid_(load_xclbin(device_)),
-    pl_ctrl_sw_(device_, uuid_, "./ucode.bin"),
+    pl_ctrl_sw_(device_, uuid_),
     inputBuffers_(engine_.get_num_workers()),
     outputBuffers_(engine_.get_num_workers())
     {
@@ -171,16 +173,14 @@ FlexmlController::FlexmlController(const xir::Subgraph *subgraph, unsigned int d
      // << "Scale Factor: " << outputScales_.back();
   }
 
-  /*LOG_IF(INFO, ENV_PARAM(DEBUG_DPU_CONTROLLER))
-    << "Loading Model Instructions from XMODEL";
-  auto instrs = subgraph->get_attr<std::vector<char>>("mc_code");
-  instructions_ = xrt::bo(device_, instrs.size(), kernel_.group_id(5));
-  std::memcpy(instructions_.map<int*>(), instrs.data(), instrs.size());
-  instructions_.sync(XCL_BO_SYNC_BO_TO_DEVICE);
-  numInstructions_ = instrs.size()/sizeof(int);
   LOG_IF(INFO, ENV_PARAM(DEBUG_DPU_CONTROLLER))
-    << "Finished Loading Model Instructions from XMODEL";*/
-
+    << "Loading Model Instructions from XMODEL";
+  std::cout << "Loading Model Instructions from XMODEL" <<std::endl;
+  auto ucode = subgraph->get_attr<std::vector<char>>("mc_code");
+  pl_ctrl_sw_.loadMicroCode(ucode);
+  LOG_IF(INFO, ENV_PARAM(DEBUG_DPU_CONTROLLER))
+    << "Finished Loading Model Instructions from XMODEL";
+  std::cout << "Finished Loading Model Instructions from XMODEL" <<std::endl;
   LOG_IF(INFO, ENV_PARAM(DEBUG_DPU_CONTROLLER))
     << "Loading Model Weights from XMODEL";
   auto weights_vec = subgraph->get_attr<std::vector<char>>("params");
@@ -206,8 +206,6 @@ FlexmlController::FlexmlController(const xir::Subgraph *subgraph, unsigned int d
   
 
   weights_.sync(XCL_BO_SYNC_BO_TO_DEVICE, weights_vec.size(), 0);
-  //for(int i=0 ; i< wts_size /4 ;i++)
-  //   std::cout << "Weights byte" << i << "from bo map:" << weights_bo_map[i] << std::endl;
   LOG_IF(INFO, ENV_PARAM(DEBUG_DPU_CONTROLLER))
     << "Finished Loading Weights from XMODEL";
 

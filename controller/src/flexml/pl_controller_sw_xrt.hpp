@@ -50,6 +50,8 @@ class pl_controller_sw_xrt {
     // allocate buffer for runtime address
     // load ucode to ucode buffer
     int loadMicroCode(const std::string& ucodeFile);
+    //load ucode
+    int loadMicroCode(const std::vector<uint8_t>& ucode);
 
     // set runtime address
     int setAddress(uint32_t id, uint64_t addr);

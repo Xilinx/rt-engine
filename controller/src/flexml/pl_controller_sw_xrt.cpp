@@ -135,6 +135,113 @@ int pl_controller_sw_xrt::enqueueGraphEnd() {
     }
     return 0;
 }
+int pl_controller_sw_xrt::loadMicroCode(const std::vector<uint8_t>& ucode) {
+    uint32_t u_sz, rt_sz;
+    uint32_t offt = 0;
+    if(ucode.size() < sizeof(uint32_t)){
+        fprintf(stderr, "ERROR: cannot read ucode size\n");
+        return -1; 
+    }else {
+        u_sz = *(uint32_t*)(ucode.data() + offt);
+        offt += sizeof(uint32_t);
+    }
+    std::cout<<"u_sz: "<<u_sz<<std::endl;
+    if(ucode.size() < offt + sizeof(uint32_t)){
+        fprintf(stderr, "ERROR: cannot read runtime address size\n");
+        return -1; 
+    }else {
+        rt_sz = *(uint32_t*)(ucode.data() + offt);
+        offt += sizeof(uint32_t);
+    }
+    std::cout<<"rt_sz: "<<rt_sz<<std::endl;
+    pre_ucode_size = u_sz / sizeof(uint32_t);
+    pre_ucode_buff = new uint32_t[pre_ucode_size];
+    if(ucode.size() < offt + u_sz) {
+        fprintf(stderr, "ERROR: cannot runtime address size\n");
+        return -1; 
+    }else {
+        memcpy(pre_ucode_buff, ucode.data() + offt, u_sz);
+        offt += u_sz;
+    }
+
+    uint32_t map_sz = 0;
+    if(ucode.size() < offt + sizeof(uint32_t)) {
+        fprintf(stderr, "ERROR: cannot read graph size\n");
+        return -1; 
+    }else {
+        map_sz = *(uint32_t*)(ucode.data() + offt);
+        offt += sizeof(uint32_t);
+    }
+    std::cout<<"map_sz: "<<map_sz<<std::endl;
+    for (int i = 0; i < map_sz; i++) {
+        uint32_t str_sz;
+        if(ucode.size() < offt + sizeof(uint32_t)) {
+            fprintf(stderr, "ERROR: cannot read length of graph name\n");
+            return -1; 
+        }else {
+            str_sz = *(uint32_t*)(ucode.data() + offt);
+            offt += sizeof(uint32_t);
+        }
+        std::string name;
+        if(ucode.size() < offt + str_sz) {
+            fprintf(stderr, "ERROR: cannot read graph name\n");
+            return -1; 
+        }else {
+            name.assign((char*)(ucode.data() + offt), str_sz);
+            offt += str_sz;
+        }
+
+        ext_map[name] = i;
+        std::cout << "loadMicroCode: name=" << name << ", id=" << i << std::endl;
+    }
+    // iteration
+    if(ucode.size() < offt + sizeof(uint32_t)) {
+        fprintf(stderr, "ERROR: cannot read core iteration size\n");
+        return -1; 
+    }else {
+        core_iter_size = *(uint32_t*)(ucode.data() + offt);
+        offt += sizeof(uint32_t);
+    }
+    std::cout << "core_iter_size=" << core_iter_size << std::endl;
+    core_iter_buff = new uint32_t[core_iter_size];
+    if(ucode.size() < offt + core_iter_size * sizeof(uint32_t)) {
+        fprintf(stderr, "ERROR: cannot read core iteration address\n");
+        return -1; 
+    }else {
+        memcpy(core_iter_buff, ucode.data() + offt, core_iter_size * sizeof(uint32_t));
+        offt += core_iter_size * sizeof(uint32_t);
+    }
+    // core control
+    if(ucode.size() < offt + sizeof(uint32_t)) {
+        fprintf(stderr, "ERROR: cannot read core control size\n");
+        return -1; 
+    }else {
+        core_control_size = *(uint32_t*)(ucode.data() + offt);
+        offt += sizeof(uint32_t);
+    }
+    core_control_buff = new uint32_t[core_control_size];
+    if(ucode.size() < offt + core_control_size * sizeof(uint32_t)) {
+        fprintf(stderr, "ERROR: cannot read core control address\n");
+        return -1; 
+    }else {
+        memcpy(core_control_buff, ucode.data() + offt, core_control_size * sizeof(uint32_t));
+        offt += core_control_size * sizeof(uint32_t);
+    }
+
+    // allcoate buffer for uncode
+    ucode_size = (pre_ucode_size + core_iter_size * 3 + core_control_size * 3 * 2) * sizeof(uint32_t);
+    ucode_offset = 0;
+    ucode_bo = xrt::bo(device, ucode_size, pl_ctrl_krnl.group_id(0));
+    ucode_bo_mapped = ucode_bo.map<uint32_t*>();
+
+    // allocate buffer for runtime address
+    runtime_addr_size = (map_sz + 1) * sizeof(uint64_t);
+    runtime_addr_bo = xrt::bo(device, runtime_addr_size, pl_ctrl_krnl.group_id(3));
+    runtime_addr_bo_mapped = runtime_addr_bo.map<uint32_t*>();
+    runtime_addr_bo_mapped[0] = map_sz;
+    std::cout << "ucode_size=" << ucode_size << ", runtime_addr_size=" << runtime_addr_size << std::endl;
+    // first 2 32-bits storing the ucode size and runtime address id size
+}
 
 int pl_controller_sw_xrt::loadMicroCode(const std::string& ucodeFile) {
     std::ifstream fin(ucodeFile, std::ios::binary);
