@@ -22,7 +22,7 @@
 #include <limits>
 #include <fstream>
 typedef unsigned int uint;
-
+#define NUM_LAYERS 9
 DEF_ENV_PARAM(DEBUG_DPU_CONTROLLER, "1")
 
 namespace {
@@ -184,15 +184,30 @@ FlexmlController::FlexmlController(const xir::Subgraph *subgraph, unsigned int d
   LOG_IF(INFO, ENV_PARAM(DEBUG_DPU_CONTROLLER))
     << "Loading Model Weights from XMODEL";
   auto weights_vec = subgraph->get_attr<std::vector<char>>("params");
-  const int wts_size = 78848;
-  weights_ = xrt::bo(device_, wts_size,group_id);
+  //auto network = subgraph->get_attr<std::string>("network");
+  //const int wts_size = 78848;
+  weights_ = xrt::bo(device_, weights_vec.size(),group_id);
   auto weights_bo_map = weights_.map<uint32_t*>();
   //for (int i = 0; i < wts_size / 4; i++) wts_strm >> std::hex >> weights_bo_map[i];
-  pl_ctrl_sw_.setAddress("compute_graph.wts_ddr", weights_.address());
-  std::memcpy(weights_.map<char*>(), weights_vec.data(), wts_size);
-  weights_.sync(XCL_BO_SYNC_BO_TO_DEVICE, wts_size, 0);
-  for(int i=0 ; i< wts_size /4 ;i++)
-     std::cout << "Weights byte" << i << "from bo map:" << weights_bo_map[i] << std::endl;
+  //pl_ctrl_sw_.setAddress("compute_graph.wts_ddr", weights_.address());
+  std::vector<uint32_t> wts_ddr_offset = {0, 352, 1600, 6528, 26240, 106112, 421504, 1683072, 4140672};
+  for (int i = 0; i < NUM_LAYERS; i++) {
+        std::string name = "compute_graph.yolo_layers[" + std::to_string(i) + "].wts_ddr";
+        pl_ctrl_sw_.setAddress(name, weights_.address() + wts_ddr_offset[i] * sizeof(uint32_t));
+  }
+  std::memcpy(weights_.map<char*>(), weights_vec.data(), weights_vec.size());
+  // Debug 
+     std::ofstream debugwtsFile("weights1-9.txt");
+ 
+     for (unsigned int index=0;index< weights_vec.size()/4 ;index++){
+         debugwtsFile << std::hex << weights_bo_map[index] << std::endl;
+     }
+     debugwtsFile.close();
+  
+
+  weights_.sync(XCL_BO_SYNC_BO_TO_DEVICE, weights_vec.size(), 0);
+  //for(int i=0 ; i< wts_size /4 ;i++)
+  //   std::cout << "Weights byte" << i << "from bo map:" << weights_bo_map[i] << std::endl;
   LOG_IF(INFO, ENV_PARAM(DEBUG_DPU_CONTROLLER))
     << "Finished Loading Weights from XMODEL";
 
@@ -239,7 +254,7 @@ void FlexmlController::copyInputs(const unsigned int wIdx, const std::vector<var
     auto ifm_bo_map = inputBuffers_[wIdx][i].map<uint32_t*>();
     std::ofstream debugFile("inputs_from_VTB.txt");
 
-    for (int index=0;index<inputs[i]->data().second /4 ;index++){
+    for (unsigned int index=0;index<inputs[i]->data().second /4 ;index++){
         debugFile << std::hex << ifm_bo_map[index] << std::endl;
     }
     //std::cout << "Inputs byte" << i << "from bo map:" << ifm_bo_map << std::endl;
@@ -296,7 +311,10 @@ std::vector<float> FlexmlController::get_input_scale() {return inputScales_;}
 std::vector<float> FlexmlController::get_output_scale() {return outputScales_;}
 //TODO: Is this needed? 
 FlexmlController::FlexmlController(std::string meta,unsigned int device_index)
-  : XclDpuController<IpuDeviceHandle, IpuDeviceBuffer, IpuDeviceBuffer>(meta),device_(xrt::device(0)),
-    uuid_(load_xclbin(device_)),pl_ctrl_sw_(device_, uuid_), engine_(Engine::get_instance()) {
-  throw std::runtime_error("Error: Meta json file flow not supported by this DPU.");
+: XclDpuController<IpuDeviceHandle, IpuDeviceBuffer, IpuDeviceBuffer>(meta),
+engine_(Engine::get_instance()),
+device_(xrt::device(0)),
+uuid_(load_xclbin(device_)),
+pl_ctrl_sw_(device_, uuid_) {
+        throw std::runtime_error("Error: Meta json file flow not supported by this DPU.");
 }
