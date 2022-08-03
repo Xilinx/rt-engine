@@ -173,7 +173,7 @@ int pl_controller_sw_xrt::loadMicroCode(const std::vector<uint8_t>& ucode) {
         offt += sizeof(uint32_t);
     }
     std::cout<<"map_sz: "<<map_sz<<std::endl;
-    for (int i = 0; i < map_sz; i++) {
+    for (uint32_t i = 0; i < map_sz; i++) {
         uint32_t str_sz;
         if(ucode.size() < offt + sizeof(uint32_t)) {
             fprintf(stderr, "ERROR: cannot read length of graph name\n");
@@ -241,6 +241,7 @@ int pl_controller_sw_xrt::loadMicroCode(const std::vector<uint8_t>& ucode) {
     runtime_addr_bo_mapped[0] = map_sz;
     std::cout << "ucode_size=" << ucode_size << ", runtime_addr_size=" << runtime_addr_size << std::endl;
     // first 2 32-bits storing the ucode size and runtime address id size
+    return 0;
 }
 
 int pl_controller_sw_xrt::loadMicroCode(const std::string& ucodeFile) {
