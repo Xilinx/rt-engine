@@ -22,7 +22,6 @@
 #include <limits>
 #include <fstream>
 typedef unsigned int uint;
-#define NUM_LAYERS 9
 DEF_ENV_PARAM(DEBUG_DPU_CONTROLLER, "1")
 
 namespace {
@@ -76,34 +75,14 @@ FlexmlController::FlexmlController(const xir::Subgraph *subgraph, unsigned int d
     outputBuffers_(engine_.get_num_workers())
     {
 
-  // Do our own resource allocation
-  /*LOG_IF(INFO, ENV_PARAM(DEBUG_DPU_CONTROLLER))
-    << "FLEXML Controller: Loading XCLBIN";
-  std::string xclbinPath(std::getenv("XLNX_VART_FIRMWARE"));
-  device_ = xrt::device(0);
-  auto xclbin = xrt::xclbin(xclbinPath);
 
-  uuid_ = device_.load_xclbin(xclbin);
-  //pl_controller::pl_controller_sw_xrt pl_ctrl_sw(device_, uuid_);
-  pl_controller::pl_controller_sw_xrt pl_ctrl_sw(device_, uuid_);
-  LOG_IF(INFO, ENV_PARAM(DEBUG_DPU_CONTROLLER))
-    << "FLEXML Controller: Finished Loading XCLBIN";*/
-
- // TODO: Need an API to read buffer instead of filename
  // load ucode
- //std::string ucodeFile = "./ucode.bin" ;
- //int rc = pl_ctrl_sw_.loadMicroCode(ucodeFile);
- //pl_ctrl_sw_.loadMicroCode(ucodeFile);
   std::cout << "load ucode" << std::endl;
 
     // FIXME use TinyYolo data
     int group_id = pl_ctrl_sw_.getGroupId();
     std::cout << "group_id=" << group_id << std::endl;
- //std::string wtsFile = "./wts32.txt";
- //std::ifstream wts_strm(wtsFile, std::ios::in);
 
- //std::cout << "graph init...\n";
- //ghdl_ = xrt::graph(device_, uuid_, "compute_graph");
 
   // Extract key XMODEL info
   for (auto& inTensor : inTensors_) {
@@ -173,31 +152,36 @@ FlexmlController::FlexmlController(const xir::Subgraph *subgraph, unsigned int d
      // << "Scale Factor: " << outputScales_.back();
   }
 
+  // Load instructions from xmodel
   LOG_IF(INFO, ENV_PARAM(DEBUG_DPU_CONTROLLER))
     << "Loading Model Instructions from XMODEL";
   std::cout << "Loading Model Instructions from XMODEL" <<std::endl;
-  auto ucode = subgraph->get_attr<std::vector<char>>("mc_code");
-  pl_ctrl_sw_.loadMicroCode(ucode);
+  auto mc_code = subgraph->get_attr<std::vector<char>>("mc_code");
+  std::vector<uint8_t> xmodel_ucode;
+  for(char byte:mc_code){
+      xmodel_ucode.push_back((uint8_t)byte);
+  }
+
+  pl_ctrl_sw_.loadMicroCode(xmodel_ucode);
   LOG_IF(INFO, ENV_PARAM(DEBUG_DPU_CONTROLLER))
     << "Finished Loading Model Instructions from XMODEL";
   std::cout << "Finished Loading Model Instructions from XMODEL" <<std::endl;
+  
+  // Load weights and weight offsets from xmodel 
   LOG_IF(INFO, ENV_PARAM(DEBUG_DPU_CONTROLLER))
     << "Loading Model Weights from XMODEL";
   auto weights_vec = subgraph->get_attr<std::vector<char>>("params");
-  //auto network = subgraph->get_attr<std::string>("network");
-  //const int wts_size = 78848;
+  auto network = subgraph->get_attr<std::string>("network");
   weights_ = xrt::bo(device_, weights_vec.size(),group_id);
   auto weights_bo_map = weights_.map<uint32_t*>();
-  //for (int i = 0; i < wts_size / 4; i++) wts_strm >> std::hex >> weights_bo_map[i];
-  //pl_ctrl_sw_.setAddress("compute_graph.wts_ddr", weights_.address());
-  std::vector<uint32_t> wts_ddr_offset = {0, 352, 1600, 6528, 26240, 106112, 421504, 1683072, 4140672};
-  for (int i = 0; i < NUM_LAYERS; i++) {
-        std::string name = "compute_graph.yolo_layers[" + std::to_string(i) + "].wts_ddr";
+  std::vector<uint32_t> wts_ddr_offset = subgraph->get_attr<std::vector<uint32_t>>("wts_ddr_offset");
+  for (uint32_t i = 0; i < wts_ddr_offset.size(); i++) {
+        std::string name = "compute_graph."+ network +"_layers[" + std::to_string(i) + "].wts_ddr";
         pl_ctrl_sw_.setAddress(name, weights_.address() + wts_ddr_offset[i] * sizeof(uint32_t));
   }
   std::memcpy(weights_.map<char*>(), weights_vec.data(), weights_vec.size());
   // Debug 
-     std::ofstream debugwtsFile("weights1-9.txt");
+     std::ofstream debugwtsFile("weights_dump.txt");
  
      for (unsigned int index=0;index< weights_vec.size()/4 ;index++){
          debugwtsFile << std::hex << weights_bo_map[index] << std::endl;
@@ -282,7 +266,6 @@ void FlexmlController::run(const std::vector<vart::TensorBuffer*> &inputs,
 
   // Execute Kernel
  std::cout << "graph run...\n";
- //ghdl_.run(1);
  pl_ctrl_sw_.enqueueGraphRun(1);
  pl_ctrl_sw_.enqueueRuntimeControl();
  pl_ctrl_sw_.enqueueGraphEnd();
@@ -291,9 +274,7 @@ void FlexmlController::run(const std::vector<vart::TensorBuffer*> &inputs,
  //int rc_run = pl_ctrl_sw_.run(aieBase);
  pl_ctrl_sw_.run(aieBase);
     // wait done;
- //int rc_wait = pl_ctrl_sw_.wait(0);
  pl_ctrl_sw_.wait(0);
- //ghdl_.wait();
   std::cout << "Graph wait done" << std::endl;
 
   // Copy outputs from Device
