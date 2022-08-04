@@ -135,18 +135,13 @@ protected:
 
   // All workers will share
   xrt::device device_;
-    xrt::uuid uuid_;
+  xrt::uuid uuid_;
   pl_controller::pl_controller_sw_xrt pl_ctrl_sw_;
-  //xrt::graph ghdl_;
-  //xrt::kernel kernel_;
   xrt::bo weights_;
-  //xrt::bo instructions_;
 
   // Create per worker thread resources
-  //std::vector<xrt::run> runners_;
   std::vector<std::vector<xrt::bo>> inputBuffers_;
   std::vector<std::vector<xrt::bo>> outputBuffers_;
-  //std::vector<xrt::bo> intermediateBuffers_;
 
   size_t numInstructions_;
   std::int32_t interSize_;
