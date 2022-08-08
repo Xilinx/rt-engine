@@ -1520,18 +1520,37 @@ void DpuCloudController::run(const std::vector<vart::TensorBuffer*> &inputs,
           auto size = std::get<1>(out);
           auto reg_id = std::get<3>(out);
           auto data = std::make_unique<char[]>(size);
-          //for (unsigned i=0; i < io_bufs.size(); i++) {
-          for (auto it :  xdpu_total_dpureg_map_io ) {
-            auto regid = std::get<0>(it);
-            if (regid == reg_id) {
-              if (xclUnmgdPread(xcl_handle, 0, data.get(), size, std::get<2>(it) + offset))
-                throw std::runtime_error("Error: dump failed!");
-              std::stringstream ss;
-              ss << dump_folder_ << "/E" << std::get<1>(it) << "/" << std::get<2>(out);
-              std::ofstream ofs(ss.str(), std::ofstream::binary);
-              ofs.write(data.get(), size);
-              ofs.close();
+          if(check_exist(reg_id, model_->get_output_regid())) {
+            for (auto it :  xdpu_total_dpureg_map_io ) {
+              auto regid = std::get<0>(it);
+              if (regid == reg_id) {
+                if (xclUnmgdPread(xcl_handle, 0, data.get(), size, std::get<2>(it) + offset))
+                  throw std::runtime_error("Error: dump failed!");
+                std::stringstream ss;
+                ss << dump_folder_ << "/E" << std::get<1>(it) << "/" << std::get<2>(out);
+                std::ofstream ofs(ss.str(), std::ofstream::binary);
+                ofs.write(data.get(), size);
+                ofs.close();
+              }
             }
+          } else {
+            auto iter3 = workspace_addr.begin();
+            while(iter3 != workspace_addr.end() ) {
+              if(iter3->first == reg_id) {
+                for (int bz=0;bz<batch_size_;bz++) {
+                  if (xclUnmgdPread(xcl_handle, 0, data.get(), size, iter3->second[bz] + offset))
+                    throw std::runtime_error("Error: dump failed!");
+                  std::stringstream ss;
+                  ss << dump_folder_ << "/E" << bz << "/" << std::get<2>(out);
+                  std::ofstream ofs(ss.str(), std::ofstream::binary);
+                  ofs.write(data.get(), size);
+                  ofs.close();
+
+                } 
+              }
+              iter3++;
+            }
+
           }
           tensor_idx++;
         }
