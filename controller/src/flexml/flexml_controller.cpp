@@ -243,7 +243,7 @@ std::vector<vart::TensorBuffer*> FlexmlController::get_inputs(int batchsz) {/*th
 std::vector<vart::TensorBuffer*> FlexmlController::get_outputs(int batchsz) {/*throw std::runtime_error("Error: get_outputs() is not yet supported by this DPU.");*/ return {};}
 std::vector<float> FlexmlController::get_input_scale() {return inputScales_;}
 std::vector<float> FlexmlController::get_output_scale() {return outputScales_;}
-//TODO: Is this needed? 
+
 FlexmlController::FlexmlController(std::string meta,unsigned int device_index)
 : XclDpuController<IpuDeviceHandle, IpuDeviceBuffer, IpuDeviceBuffer>(meta),
 engine_(Engine::get_instance()),
