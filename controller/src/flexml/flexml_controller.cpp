@@ -29,7 +29,7 @@ namespace {
   std::vector<const xir::Tensor *> initTensorVec(const std::set<const xir::Tensor *> &tensorSet) {
     return {tensorSet.cbegin(), tensorSet.cend()};
   }
-
+}
 xrt::uuid load_xclbin(xrt::device device){
   LOG_IF(INFO, ENV_PARAM(DEBUG_DPU_CONTROLLER))
     << "FLEXML Controller: Loading XCLBIN";
