@@ -28,8 +28,7 @@ set(CONTROLLER_HDRS
   ${PROJECT_SOURCE_DIR}/controller/src/dpuv3int8
   ${PROJECT_SOURCE_DIR}/controller/src/ipuv1cnn
   ${PROJECT_SOURCE_DIR}/controller/src/flexml
-  $ENV{XILINX_VITIS}/aietools/include
-  $ENV{XILINX_VITIS}/aietools/include/drivers/aiengine
+  $ENV{XILINX_XRT}/include/experimental
   PARENT_SCOPE
   PARENT_SCOPE
   )
