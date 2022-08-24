@@ -74,7 +74,6 @@ target_link_libraries(
   PRIVATE
   XRT::xrt_hwemu
   XRT::xrt_coreutil
-  XRT::xrt++
   ${XRM_LIBRARIES}
   target-factory::target-factory 
   vart::runner
