@@ -69,10 +69,23 @@ add_library(
   ${DEVICE_SRCS}
   ${CONTROLLER_SRCS}
   )
+set(XCL_LINK_LIB XRT::xrt_core)
+
+if(DEFINED ENV{XCL_EMULATION_MODE})
+  message(STATUS "emulation mode is set, changing link libraries")
+  if($ENV{XCL_EMULATION_MODE} MATCHES "hw_emu")
+    set(XCL_LINK_LIB XRT::xrt_hwemu)
+    message(STATUS "hw emu mode set")
+  elseif($ENV{XCL_EMULATION_MODE} MATCHES "sw_emu")
+    set(XCL_LINK_LIB XRT::xrt_swemu)
+    message(STATUS "sw emu mode set")
+  endif()
+endif()
+
 target_link_libraries(
   ${PROJECT_NAME}
   PRIVATE
-  XRT::xrt_hwemu
+  ${XCL_LINK_LIB}
   XRT::xrt_coreutil
   ${XRM_LIBRARIES}
   target-factory::target-factory 
