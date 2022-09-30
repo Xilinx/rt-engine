@@ -94,9 +94,8 @@ DEF_ENV_PARAM(XLNX_ENABLE_FINGERPRINT_CHECK, "1");
 
 struct bo_share{
   int reg_id;
-  vector<int> cnt;
-  xclDeviceHandle handle;
   std::vector<xclBufferHandle> bo_handles;
+  int cnt;
 };
 struct bounding {
   size_t cu_id;
@@ -105,6 +104,7 @@ struct bounding {
 
 };
 static std::mutex bo_mtx_;
+//static std::vector<std::pair<bounding, bo_share>> xdpu_workspace_bo;
 static std::vector<std::pair<bounding, bo_share>> xdpu_workspace_bo;
 
 static uint32_t read32_dpu_reg(xclDeviceHandle dpu_handle, uint64_t offset) {
@@ -187,26 +187,34 @@ DpuCloudController::~DpuCloudController() {
   }*/
   std::unique_lock<std::mutex> lock(bo_mtx_);
   auto iter = xdpu_workspace_bo.begin();
+  int flag = 0;
   while (iter !=  xdpu_workspace_bo.end()) {
     if ((model_->get_md5())[0] == iter->first.md5value[0]) {
       if ((cu_index_ == iter->first.cu_id)&& (device_index_ == iter->first.device_id)) {
-        iter->second.cnt.erase(iter->second.cnt.begin());
-        if (iter->second.cnt.size()==0) {
-          for (unsigned int i=0;i<iter->second.bo_handles.size();i++)
-          xclFreeBO(iter->second.handle, iter->second.bo_handles[i]);
+        iter->second.cnt--;
+        if (iter->second.cnt == 0) {
+          for (unsigned int i=0;i<iter->second.bo_handles.size();i++) {
+            auto handle = contexts_[0]->get_dev_handle();
+            auto bo = xclImportBO(handle, iter->second.bo_handles[i],0);
+            xclFreeBO(handle, bo);
+          }
           LOG_IF(INFO, ENV_PARAM(DEBUG_DPU_CONTROLLER))
             << "free featuremap bo " << "cu_index: "<< iter->first.cu_id 
             << ", device_id: " << iter->first.device_id
             ;
-          xdpu_workspace_bo.erase(iter);
+          flag = 1;
         }
+  
         break;
       }
     } 
     iter++; 
   }
-
+  if (flag == 1) {
+    xdpu_workspace_bo.erase(iter);
+  }
 }
+
 std::vector<unsigned> DpuCloudController::get_hbmw() {
   vector<unsigned> hbm;
   hbm.emplace_back(handle_->get_device_info().ddr_bank);
@@ -301,6 +309,7 @@ xclBufferHandle  DpuCloudController::get_xrt_bo(void* data, int size, unsigned h
   return reg0Mem;
 
 }
+
 void DpuCloudController::init_graph(vector<unsigned> hbmw, vector<unsigned> hbmc, xir::Attrs* attrs ) {
 
   auto handle = contexts_[0]->get_dev_handle();
@@ -433,8 +442,10 @@ void DpuCloudController::init_graph(vector<unsigned> hbmw, vector<unsigned> hbmc
                  (handle_->get_device_info().device_index== iter->first.device_id)) {
               vector<uint64_t> addrs;
               for (unsigned int i=0; i< iter->second.bo_handles.size(); i++) {
+                auto handle = contexts_[0]->get_dev_handle();
                 xclBOProperties p;
-                xclGetBOProperties(iter->second.handle, iter->second.bo_handles[i], &p);
+                auto bo = xclImportBO(handle,  iter->second.bo_handles[i], 0);
+                xclGetBOProperties(handle, bo, &p);
                 LOG_IF(INFO, ENV_PARAM(DEBUG_DPU_CONTROLLER))
                   <<"Engine : " << i<<  " workspace reg_id: " 
                   << iter->second.reg_id
@@ -442,34 +453,24 @@ void DpuCloudController::init_graph(vector<unsigned> hbmw, vector<unsigned> hbmc
                   << p.paddr;
                 addrs.emplace_back(p.paddr);
               }
-              auto bos = iter->second;
-              bos.cnt.emplace_back(1);
-              bos.bo_handles =  iter->second.bo_handles;
+              workspace_addr.emplace_back(workspace.first, addrs);
+              iter->second.cnt++;
               LOG_IF(INFO, ENV_PARAM(DEBUG_DPU_CONTROLLER))
                 << "share featuremap bo " << "cu_index: "<< iter->first.cu_id 
                 << ", device_id: " << iter->first.device_id
                 ;
-              auto bd = iter->first;
-              {
-                //std::unique_lock<std::mutex> lock(bo_mtx_);
-                xdpu_workspace_bo.erase(iter);
-                xdpu_workspace_bo.emplace_back(std::make_pair(bd, bos));
-                flag++;
-              }
-              workspace_addr.emplace_back(workspace.first, addrs);
+              flag++;
               break;
             }
           }
           iter++; 
-        }  
+        }
       } 
       if (flag==0) {
          share_check = 0;
-         bo_share bo_s;
          bounding bd;
          bd.md5value = model_->get_md5();
          bd.cu_id = handle_->get_device_info().cu_index;
-         bo_s.cnt.emplace_back(1);
          bd.device_id = handle_->get_device_info().device_index;
          std::vector<xclBufferHandle> handles;
          vector<uint64_t> addrs;
@@ -502,7 +503,8 @@ void DpuCloudController::init_graph(vector<unsigned> hbmw, vector<unsigned> hbmc
              }
            }
            xclGetBOProperties(handle, ioMem, &p);
-           handles.emplace_back(ioMem);  
+           auto bo = xclExportBO(handle, ioMem);
+           handles.emplace_back(bo);  
            addrs.emplace_back(p.paddr);
            LOG_IF(INFO, ENV_PARAM(DEBUG_DPU_CONTROLLER))
              <<"Engine : " << i<<  " workspace reg_id: " 
@@ -511,14 +513,12 @@ void DpuCloudController::init_graph(vector<unsigned> hbmw, vector<unsigned> hbmc
              << p.paddr;
            free(ioPtr);
         }
+        bo_share bo_s;
+        bo_s.cnt = 1;
         bo_s.bo_handles = handles;
-        bo_s.handle=contexts_[0]->get_dev_handle();
         bo_s.reg_id=workspace.first;
         workspace_addr.emplace_back(workspace.first, addrs);
-        {
-          //std::unique_lock<std::mutex> lock(bo_mtx_);
-          xdpu_workspace_bo.emplace_back(std::make_pair(bd, bo_s));
-        }
+        xdpu_workspace_bo.push_back(std::make_pair(bd, bo_s));
       }
     }
   }
@@ -595,7 +595,6 @@ std::vector<vart::TensorBuffer*> DpuCloudController::get_inputs(int batchsz) {
     auto hbmio = get_hbmio();
     return get_outputs_inner(hbmio, true, batchsz);
   }
- 
 }
 
 std::vector<vart::TensorBuffer*>  DpuCloudController::create_tensor_buffers_hbm(
