@@ -43,6 +43,10 @@ std::shared_ptr<DpuController> DpuControllerFactory::get(std::string kernel, T s
   {
     return std::make_shared<Ipuv1CnnController>(subgraph);
   }
+  else if (kernel == "FlexML" )
+  {
+    return std::make_shared<FlexmlController>(subgraph);
+  }
   else
     throw std::runtime_error("Error: no DpuController found for " + kernel);
 }

@@ -74,11 +74,30 @@ add_library(
   ${DEVICE_SRCS}
   ${CONTROLLER_SRCS}
   )
+
+option(LINK_HWEMU "Directly link xrt_hwemu" OFF)
+
+option(LINK_SWEMU "Directly link xrt_swemu" OFF)
+
+option(LINK_CORE "Directly link xrt_core" ON)
+
+set(XRT_LINK_LIBS "XRT::xrt_coreutil")
+
+if(LINK_HWEMU)
+  message(STATUS "Will link xrt_hwemu library")
+  list(APPEND XRT_LINK_LIBS XRT::xrt_hwemu)
+elseif(LINK_SWEMU)
+  message(STATUS "Will link xrt_swemu library")
+  list(APPEND XRT_LINK_LIBS XRT::xrt_swemu)
+elseif(LINK_CORE)
+  message(STATUS "Will link xrt_core library")
+  list(APPEND XRT_LINK_LIBS XRT::xrt_core)
+endif()
+
 target_link_libraries(
   ${PROJECT_NAME}
   PRIVATE
-  XRT::xrt_core
-  XRT::xrt_coreutil
+  ${XRT_LINK_LIBS}
   ${XRM_LIBRARIES}
   target-factory::target-factory 
   vart::runner
