@@ -23,9 +23,9 @@ std::shared_ptr<DpuController> DpuControllerFactory::get(std::string kernel, T s
       std::getenv("DPUV3INT8_DEBUGMODE") ? atoi(std::getenv("DPUV3INT8_DEBUGMODE")) == 1 : false;
 
     if(DPUV3INT8_DEBUGMODE==1)
-      return std::make_shared<Dpuv3Int8DebugController>(subgraph);
+      return std::make_shared<Dpuv3Int8DebugController>(subgraph, attrs);
     else
-      return std::make_shared<Dpuv3Int8Controller>(subgraph);
+      return std::make_shared<Dpuv3Int8Controller>(subgraph, attrs);
   }
   else if (kernel == "DPUCVDX8H")
   {

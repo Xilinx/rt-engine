@@ -33,8 +33,8 @@
 
 class Dpuv3Int8Controller : public XclDpuController<XrtDeviceHandle, XrtDeviceBuffer, XrtDeviceBuffer> {
  public:
-  Dpuv3Int8Controller(std::string meta);
-  Dpuv3Int8Controller(const xir::Subgraph *subgraph);
+  Dpuv3Int8Controller(std::string meta, xir::Attrs* attrs=nullptr);
+  Dpuv3Int8Controller(const xir::Subgraph *subgraph, xir::Attrs* attrs=nullptr);
   virtual ~Dpuv3Int8Controller() override;
   virtual void run(const std::vector<vart::TensorBuffer*> &inputs, 
            const std::vector<vart::TensorBuffer*> &outputs) override;
@@ -108,8 +108,8 @@ class Dpuv3Int8Controller : public XclDpuController<XrtDeviceHandle, XrtDeviceBu
 class Dpuv3Int8DebugController : public Dpuv3Int8Controller {
 
   public:
-    Dpuv3Int8DebugController(std::string meta);
-    Dpuv3Int8DebugController(const xir::Subgraph *subgraph);
+    Dpuv3Int8DebugController(std::string meta, xir::Attrs* attrs=nullptr);
+    Dpuv3Int8DebugController(const xir::Subgraph *subgraph, xir::Attrs* attrs=nullptr);
 
   private:
     virtual void preprocess(vart::TensorBuffer*, vart::TensorBuffer*);

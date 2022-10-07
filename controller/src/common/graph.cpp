@@ -75,7 +75,11 @@ DEF_ENV_PARAM(XLNX_ENABLE_FINGERPRINT_CHECK, "1");
 #define VERSION_CODE_L 0x1f0
 #define VERSION_CODE_H 0x1f4
 
-
+#include <xir/util/tool_function.hpp>
+static std::string md5sum(const char* val, size_t s) {
+  
+  return xir::get_md5_of_buffer(val, s);
+}
 DpuXmodel::DpuXmodel(const xir::Subgraph *subgraph) : dump_mode_(false),debug_mode_(false) {
   init(subgraph);
 }
@@ -328,15 +332,29 @@ void DpuXmodel::init_graph(const xir::Subgraph* subgraph) {
         int reg_id = reg_id_str[reg_id_str.length()-1]-'0';
         parameter_value = (const char *)&c.second[0];
         //// reg0
+        LOG_IF(INFO, ENV_PARAM(DEBUG_DPU_CONTROLLER)) << "parameter size is : " 
+          << parameter_size << " for "
+          << subgraph_->get_name() << c.first;
         if (parameter_size) {
+          md5value.emplace_back(md5sum(parameter_value, parameter_size));
           void *reg0Ptr = NULL; 
           if (rte::posix_memalign(&reg0Ptr, rte::getpagesize(), parameter_size))
             throw std::bad_alloc();
           for (unsigned i=0; i < parameter_size; i++) ((char*)reg0Ptr)[i] = parameter_value[i];
           xdpu_parameter_map.emplace_back(std::make_tuple((char*)reg0Ptr, parameter_size,reg_id));
+        } else {
+          std::string value = subgraph_->get_name() + c.first;
+          md5value.emplace_back(md5sum(value.data(), value.length()));
+
         }
       }
     }
+  } else {
+    LOG_IF(INFO, ENV_PARAM(DEBUG_DPU_CONTROLLER)) << "no parameter in thie subgraph: " 
+      << subgraph_->get_name();
+    std::string value = subgraph_->get_name();
+    md5value.emplace_back(md5sum(value.data(), value.length()));
+
   }
   
   layer_info layer(subgraph_->get_name());

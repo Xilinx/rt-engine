@@ -23,7 +23,7 @@
 using namespace std;
 std::mutex globalMutex;
 
-Dpuv3Int8Controller::Dpuv3Int8Controller(std::string meta) : XclDpuController<XrtDeviceHandle, XrtDeviceBuffer, XrtDeviceBuffer>(meta) {
+Dpuv3Int8Controller::Dpuv3Int8Controller(std::string meta, xir::Attrs* attrs) : XclDpuController<XrtDeviceHandle, XrtDeviceBuffer, XrtDeviceBuffer>(meta, attrs) {
 
   Engine& engine = Engine::get_instance();
   for (unsigned i=0; i < engine.get_num_workers(); i++)
@@ -37,7 +37,7 @@ Dpuv3Int8Controller::Dpuv3Int8Controller(std::string meta) : XclDpuController<Xr
   initCreateBuffers();
 }
 
-Dpuv3Int8Controller::Dpuv3Int8Controller(const xir::Subgraph *subgraph) : XclDpuController<XrtDeviceHandle, XrtDeviceBuffer, XrtDeviceBuffer>(subgraph)
+Dpuv3Int8Controller::Dpuv3Int8Controller(const xir::Subgraph *subgraph, xir::Attrs* attrs) : XclDpuController<XrtDeviceHandle, XrtDeviceBuffer, XrtDeviceBuffer>(subgraph, attrs)
 {
 
   Engine& engine = Engine::get_instance();
@@ -45,7 +45,7 @@ Dpuv3Int8Controller::Dpuv3Int8Controller(const xir::Subgraph *subgraph) : XclDpu
     contexts_.emplace_back(new XrtContext(*handle_));
   inputsTBfs_.resize(engine.get_num_workers());
   outputsTBfs_.resize(engine.get_num_workers());
-  xmodel_ = std::make_unique<Xmodel>(subgraph, false);
+  xmodel_ = std::make_unique<Xmodel>(subgraph, attrs, false);
  
   initializeTensors();
   initializeTaskDRUVariables();
@@ -58,6 +58,9 @@ void Dpuv3Int8Controller::initializeTensors()
     std::vector<std::int32_t> inHwDims = { int32_t(BATCH_SIZE*xmodel_->getInH()*xmodel_->getInW()*xmodel_->getInCh())};
     if(!xmodel_->getDruMode())
       inHwDims = { int32_t(xmodel_->getInH()*xmodel_->getInW()*BATCH_SIZE*ceil((float)xmodel_->getInCh()/16)*16)};
+    else
+      inHwDims = { int32_t((ceil((xmodel_->getInH()*xmodel_->getInW()*xmodel_->getInCh())/64.0)*64.0)*BATCH_SIZE)};
+
     const std::vector<std::int32_t> outHwDims = { BATCH_SIZE, 1, 1, int32_t(xmodel_->getOutDdrSize())};
    
     xir::Tensor *in_t = xir::Tensor::create(xmodel_->getInTensorsNames()[0], indims, xir::DataType{xir::DataType::XINT, 8}).release();
@@ -233,8 +236,11 @@ void Dpuv3Int8Controller::initializeTaskDRUVariables()
         druOw = outW-1;
 
       //Initialize register value
+      if(((inH*inW*inCh)%64)!=0)
+         reg_val[REG_IDX_TASK_DRU_ADDR_STRD]      = int32_t(ceil((xmodel_->getInH()*xmodel_->getInW()*xmodel_->getInCh())/64.0)*64.0);
+      else
+        reg_val[REG_IDX_TASK_DRU_ADDR_STRD]      = druAddr;
   
-      reg_val[REG_IDX_TASK_DRU_ADDR_STRD]      = druAddr;
       reg_val[REG_IDX_TASK_DRU_KW]             = kW-1;
       reg_val[REG_IDX_TASK_DRU_SW]             = sW-1;
       reg_val[REG_IDX_TASK_DRU_IC]             = inCh-1;
@@ -411,7 +417,7 @@ Dpuv3Int8Controller::get_inputs(int batchsz) {
   if (batchsz != -1)
     throw std::runtime_error("Error: custom batch size not supported for this DPU");
 
-  auto stdBufs = create_tensor_buffers(get_input_tensors(), /*isInput*/true, -1, false);
+  auto stdBufs = create_tensor_buffers(get_input_tensors(), /*isInput*/true, -1, true);
   auto hwBufs = create_hw_buffers(stdBufs, /*isInput*/true);
   return stdBufs;
  
@@ -655,28 +661,33 @@ void Dpuv3Int8Controller::preprocess(vart::TensorBuffer* stdbuf, vart::TensorBuf
     {
 
       void* std_data = (void*)stdbuf->data().first;
-      std::vector<uint8_t> flattenedData(xmodel_->getInW()*xmodel_->getInH()*xmodel_->getInCh()*BATCH_SIZE,0);
+      
+      int hwSize = int32_t((ceil((xmodel_->getInH()*xmodel_->getInW()*xmodel_->getInCh())/64.0)*64.0)*BATCH_SIZE);
+      std::vector<uint8_t> flattenedData(hwSize,0);
+      uint32_t oneImgSize = xmodel_->getInW()*xmodel_->getInH()*xmodel_->getInCh();
+      int numZeroesToFill = (hwSize/BATCH_SIZE)-oneImgSize;
+      
+      uint32_t stdI = 0;      
       for(uint32_t i=0; i<flattenedData.size(); i++)
       {
-        flattenedData[i]=*(int8_t *)((long long) std_data+i);
-      }
-  
-      std::vector<int,rte::AlignedAllocator<int>> hwDinVector(flattenedData.size()/4,0);
-  
-      int j=0;
-      
-      for(uint32_t i=0; i<flattenedData.size(); i=i+BATCH_SIZE)
-      {
-        uint8_t *ptr = (uint8_t*)&(hwDinVector[j]);
-        for(int o=0; o<BATCH_SIZE; o++)
+        flattenedData[i]=*(int8_t *)((long long) std_data+stdI);
+        if(numZeroesToFill>0)
         {
-          ptr[o] = flattenedData[i+o];
-  
+          if(i==oneImgSize || i==((2*oneImgSize)+numZeroesToFill) || i==((3*oneImgSize)+(2*numZeroesToFill)) || i==((4*oneImgSize)+(3*numZeroesToFill)))
+          {
+            for(int u=0; u<numZeroesToFill; u++)
+            {
+               flattenedData[i] = 0;
+               i++;
+            }
+            i--;
+            stdI--;
+          }
         }
-        j++;
+        stdI++;
       }
-      
-      memcpy((void*)hwbuf->data().first, (void*)hwDinVector.data(), hwDinVector.size()*BATCH_SIZE);
+  
+      memcpy((void*)hwbuf->data().first, (void*)flattenedData.data(), flattenedData.size());
 
     }
 }
@@ -778,6 +789,18 @@ void Dpuv3Int8Controller::run(const std::vector<vart::TensorBuffer*> &inputs,
   auto *swapBuf = dynamic_cast<XrtDeviceBuffer*>(get_device_buffer(swapTbuf));
   auto *druSrcBuf = dynamic_cast<XrtDeviceBuffer*>(get_device_buffer(druSrcTbuf));
   auto *druDstBuf = dynamic_cast<XrtDeviceBuffer*>(get_device_buffer(druDstTbuf));
+
+  if(xmodel_->get_zero_copy())
+  { 
+    uint64_t data;
+    size_t size;
+
+    std::tie(data, size) = input_tensor_buffers[0]->data();
+    auto *hwbuf = dynamic_cast<XrtDeviceBuffer*>(get_device_buffer(input_tensor_buffers[0]));
+    if (xclUnmgdPread(xcl_handle, 0, reinterpret_cast<void*>(data), size, hwbuf->get_phys_addr()))
+      throw std::runtime_error("Error: dump failed!");
+
+  }
 
   preprocess(input_tensor_buffers[0], inHwTbuf);
 

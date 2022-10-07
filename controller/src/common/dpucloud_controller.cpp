@@ -92,6 +92,21 @@ DEF_ENV_PARAM(XLNX_ENABLE_FINGERPRINT_CHECK, "1");
 #define VERSION_CODE_L 0x1f0
 #define VERSION_CODE_H 0x1f4
 
+struct bo_share{
+  int reg_id;
+  std::vector<xclBufferHandle> bo_handles;
+  int cnt;
+};
+struct bounding {
+  size_t cu_id;
+  size_t device_id;
+  std::vector<string> md5value;
+
+};
+static std::mutex bo_mtx_;
+//static std::vector<std::pair<bounding, bo_share>> xdpu_workspace_bo;
+static std::vector<std::pair<bounding, bo_share>> xdpu_workspace_bo;
+
 static uint32_t read32_dpu_reg(xclDeviceHandle dpu_handle, uint64_t offset) {
   uint32_t val;
   xclRead(dpu_handle, XCL_ADDR_KERNEL_CTRL, offset, (void *)(&val), 4);
@@ -159,7 +174,7 @@ void DpuCloudController::init_profiler() {
 }
 
 DpuCloudController::~DpuCloudController() {
-  auto iter = xdpu_workspace_dpu.begin();
+  /*auto iter = xdpu_workspace_dpu.begin();
   if (iter != xdpu_workspace_dpu.end()) {
    for (unsigned i=0;i<iter->second.size(); i++) {
      auto buf = (iter->second)[i];
@@ -169,8 +184,37 @@ DpuCloudController::~DpuCloudController() {
      //free(reinterpret_cast<void*>(buf->data().first));
    }
   
+  }*/
+  std::unique_lock<std::mutex> lock(bo_mtx_);
+  auto iter = xdpu_workspace_bo.begin();
+  int flag = 0;
+  while (iter !=  xdpu_workspace_bo.end()) {
+    if ((model_->get_md5())[0] == iter->first.md5value[0]) {
+      if ((cu_index_ == iter->first.cu_id)&& (device_index_ == iter->first.device_id)) {
+        iter->second.cnt--;
+        if (iter->second.cnt == 0) {
+          for (unsigned int i=0;i<iter->second.bo_handles.size();i++) {
+            auto handle = contexts_[0]->get_dev_handle();
+            auto bo = xclImportBO(handle, iter->second.bo_handles[i],0);
+            xclFreeBO(handle, bo);
+          }
+          LOG_IF(INFO, ENV_PARAM(DEBUG_DPU_CONTROLLER))
+            << "free featuremap bo " << "cu_index: "<< iter->first.cu_id 
+            << ", device_id: " << iter->first.device_id
+            ;
+          flag = 1;
+        }
+  
+        break;
+      }
+    } 
+    iter++; 
+  }
+  if (flag == 1) {
+    xdpu_workspace_bo.erase(iter);
   }
 }
+
 std::vector<unsigned> DpuCloudController::get_hbmw() {
   vector<unsigned> hbm;
   hbm.emplace_back(handle_->get_device_info().ddr_bank);
@@ -265,6 +309,7 @@ xclBufferHandle  DpuCloudController::get_xrt_bo(void* data, int size, unsigned h
   return reg0Mem;
 
 }
+
 void DpuCloudController::init_graph(vector<unsigned> hbmw, vector<unsigned> hbmc, xir::Attrs* attrs ) {
 
   auto handle = contexts_[0]->get_dev_handle();
@@ -384,14 +429,103 @@ void DpuCloudController::init_graph(vector<unsigned> hbmw, vector<unsigned> hbmc
 
   }
   if (model_->get_xdpu_workspace_reg_map().size()>0) {
+    int share_check=1;
     for(auto workspace : model_->get_xdpu_workspace_reg_map()) {
-       auto buf = create_tensor_buffers_hbm(get_merged_io_tensors(workspace.first),false, get_hbmio(),1);
-       if (!buf.empty()) {
-         xdpu_workspace_dpu.emplace(workspace.first,buf);
-       }
+      int flag = 0;
+      vector<std::pair<bounding, bo_share>>::iterator iter;
+      std::unique_lock<std::mutex> lock(bo_mtx_);
+      iter = xdpu_workspace_bo.begin();
+      if (share_check) {
+        while ( iter !=  xdpu_workspace_bo.end()) {
+          if ((model_->get_md5())[0] == iter->first.md5value[0]) {
+            if ((handle_->get_device_info().cu_index == iter->first.cu_id) && 
+                 (handle_->get_device_info().device_index== iter->first.device_id)) {
+              vector<uint64_t> addrs;
+              for (unsigned int i=0; i< iter->second.bo_handles.size(); i++) {
+                auto handle = contexts_[0]->get_dev_handle();
+                xclBOProperties p;
+                auto bo = xclImportBO(handle,  iter->second.bo_handles[i], 0);
+                xclGetBOProperties(handle, bo, &p);
+                LOG_IF(INFO, ENV_PARAM(DEBUG_DPU_CONTROLLER))
+                  <<"Engine : " << i<<  " workspace reg_id: " 
+                  << iter->second.reg_id
+                  << " phy_addr: "
+                  << p.paddr;
+                addrs.emplace_back(p.paddr);
+              }
+              workspace_addr.emplace_back(workspace.first, addrs);
+              iter->second.cnt++;
+              LOG_IF(INFO, ENV_PARAM(DEBUG_DPU_CONTROLLER))
+                << "share featuremap bo " << "cu_index: "<< iter->first.cu_id 
+                << ", device_id: " << iter->first.device_id
+                ;
+              flag++;
+              break;
+            }
+          }
+          iter++; 
+        }
+      } 
+      if (flag==0) {
+         share_check = 0;
+         bounding bd;
+         bd.md5value = model_->get_md5();
+         bd.cu_id = handle_->get_device_info().cu_index;
+         bd.device_id = handle_->get_device_info().device_index;
+         std::vector<xclBufferHandle> handles;
+         vector<uint64_t> addrs;
+         LOG_IF(INFO, ENV_PARAM(DEBUG_DPU_CONTROLLER))
+           << "generate new featuremap bo " << "cu_index: "<< bd.cu_id 
+           << ", device_id: " << bd.device_id
+           ;
+         auto hbm = get_hbmio();
+         for (int i=0;i<batch_size_;i++) {
+           void *ioPtr = NULL;
+           
+           xclBOProperties p;
+           if (posix_memalign(&ioPtr, getpagesize(),workspace.second ))
+             throw std::bad_alloc();
+           xclBufferHandle ioMem;
+           if (hbm.size() >= (unsigned int)batch_size_) {
+             ioMem = get_xrt_bo(ioPtr, workspace.second, hbm[i]);
+           } else {
+             ioMem = get_xrt_bo(ioPtr, workspace.second, hbm[0]);
+           }
+           if (ioMem == NULLBO) {
+             if (hbm.size() >= (unsigned int)batch_size_) { 
+       	       // V3E has multipe hbms for featuremap, if bouding alloc fail, we can try to use other hbm
+               ioMem = get_xrt_bo(ioPtr, workspace.second, hbm);
+               if (ioMem == NULLBO)
+                 throw std::bad_alloc();
+             } else {
+               throw std::bad_alloc();
+             
+             }
+           }
+           xclGetBOProperties(handle, ioMem, &p);
+           auto bo = xclExportBO(handle, ioMem);
+           handles.emplace_back(bo);  
+           addrs.emplace_back(p.paddr);
+           LOG_IF(INFO, ENV_PARAM(DEBUG_DPU_CONTROLLER))
+             <<"Engine : " << i<<  " workspace reg_id: " 
+             << workspace.first
+             << " phy_addr: "
+             << p.paddr;
+           free(ioPtr);
+        }
+        bo_share bo_s;
+        bo_s.cnt = 1;
+        bo_s.bo_handles = handles;
+        bo_s.reg_id=workspace.first;
+        workspace_addr.emplace_back(workspace.first, addrs);
+        xdpu_workspace_bo.push_back(std::make_pair(bd, bo_s));
+      }
     }
   }
   model_->init_vitis_tensors(batch_size_, handle_->get_device_info().device_index);
+  cu_index_=handle_->get_device_info().cu_index;
+  device_index_=handle_->get_device_info().device_index;
+
   program_once_complete = 0;
   //tensorbufferPool& pool = tensorbufferPool::Instance();
   if (ENV_PARAM(XLNX_BUFFER_POOL))  {
@@ -461,7 +595,6 @@ std::vector<vart::TensorBuffer*> DpuCloudController::get_inputs(int batchsz) {
     auto hbmio = get_hbmio();
     return get_outputs_inner(hbmio, true, batchsz);
   }
- 
 }
 
 std::vector<vart::TensorBuffer*>  DpuCloudController::create_tensor_buffers_hbm(
@@ -520,15 +653,30 @@ std::vector<vart::TensorBuffer*> DpuCloudController::create_tensorbuffer_for_bat
     tensor_batch = batch_size_;
   auto iter = xdpu_total_reg_map.begin();
   while(iter !=xdpu_total_reg_map.end()) {
-    auto reg_workspace = xdpu_workspace_dpu.find(iter->first);
-    if (reg_workspace != xdpu_workspace_dpu.end()) { //featuremap (io-split)
-      if (!isInputs) {
-        hwbuf.emplace(std::make_pair(iter->first,reg_workspace->second));
-        iter++;
-      } else {
-        iter++;
-      } 
+    int is_workspace=0;
+    auto reg_workspace = workspace_addr.begin();
+    while (reg_workspace != workspace_addr.end()) {
+      if (reg_workspace->first == iter->first) {
+        is_workspace=1;
+        break;
+      }
+      reg_workspace++;
+    }
+    if (is_workspace) {
+      iter++;
     } else {
+
+    //}
+
+    //auto reg_workspace = xdpu_workspace_dpu.find(iter->first);
+    //if (reg_workspace != xdpu_workspace_dpu.end()) { //featuremap (io-split)
+    //  if (!isInputs) {
+    //    hwbuf.emplace(std::make_pair(iter->first,reg_workspace->second));
+    //    iter++;
+    //  } else {
+    //    iter++;
+    //  } 
+    //} else {
       
       if ((!check_exist(iter->first, model_->get_input_regid()))&& (!check_exist(iter->first , model_->get_output_regid()))) { 
         //for xmodel 1.3 with io-split 
@@ -785,7 +933,7 @@ uint32_t DpuCloudController::tensorbuffer_trans(std::vector<vart::TensorBuffer*>
     auto dims = std::vector<int>(shape.size(),0);
     auto dims_idx = std::vector<int>(shape.size(),0);
     for (unsigned j=0; j < buffers.size(); j++) {
-      if (tensors[i]->get_name().find(buffers[j]->get_tensor()->get_name()) != std::string::npos) {
+      if (tensors[i]->get_name() == buffers[j]->get_tensor()->get_name())  {
         if (ibs == inputBs) { //one tensrobuffer store batch
           for (int b=0; b < tsize; b++) {
             int idx = b*tensors.size()+i;
@@ -857,8 +1005,15 @@ vector<std::tuple<int, int,uint64_t>>  DpuCloudController::get_dpu_reg_inside(bo
       while(iter != xdpu_total_reg_map.end()) {
         if ((!check_exist(iter->first ,model_->get_input_regid())) || (!split_io)) {
           auto reg_map = hwbufs.find(iter->first);
-          if ((reg_map == hwbufs.end()))
-            throw std::runtime_error("Output TensorBuffer not found");
+          if ((reg_map == hwbufs.end())) {
+            if (check_exist(iter->first, model_->get_output_regid()))
+              throw std::runtime_error("TensorBuffer not found");
+            else {
+              iter++;
+              continue;
+            }
+          }
+            //throw std::runtime_error("Output TensorBuffer not found");
           auto buf = reg_map->second;
           for (int i=0; i < tensor_inBatch; i++) {  // i or idx is 0
             xdpu_total_dpureg_map2.push_back(std::make_tuple(iter->first, idx+i, buf[i]->data_phy(std::vector<int>{0,0}).first));
@@ -883,8 +1038,15 @@ vector<std::tuple<int, int,uint64_t>>  DpuCloudController::get_dpu_reg_inside(bo
       while(iter != xdpu_total_reg_map.end()) {
         if (check_exist(iter->first, model_->get_input_regid())) {
           auto reg_map = hwbufs.find(iter->first);
-          if ((reg_map == hwbufs.end()))
-            throw std::runtime_error("Input TensorBuffer not found");
+          if ((reg_map == hwbufs.end())) {
+            //if ((iter->first == model_->get_input_regid())|| (iter->first == model_->get_output_regid()))
+              throw std::runtime_error("input TensorBuffer not found");
+            //else {
+            //  iter++;
+            //  continue;
+            //}
+          }
+            //throw std::runtime_error("Input TensorBuffer not found");
           auto buf = reg_map->second;
           for (int i=0; i < tensor_inBatch; i++) { // i or idx is 0
             xdpu_total_dpureg_map2.push_back(std::make_tuple(iter->first, i+idx, buf[i]->data_phy(std::vector<int>{0,0}).first));
@@ -991,7 +1153,7 @@ vector<std::tuple<int, int,uint64_t>>  DpuCloudController::get_dpu_reg_outside_h
       }
     }
 
-    for (int i=0; i < batch_size_; i++) {
+   /* for (int i=0; i < batch_size_; i++) {
       auto iter = xdpu_total_reg_map.begin();
       while(iter !=xdpu_total_reg_map.end()) {
         auto reg_workspace = xdpu_workspace_dpu.find(iter->first);
@@ -1006,7 +1168,7 @@ vector<std::tuple<int, int,uint64_t>>  DpuCloudController::get_dpu_reg_outside_h
         }
         iter++;
       }
-    }
+    }*/
   } else {
     throw std::runtime_error("need enable split-io");
   }
@@ -1087,6 +1249,19 @@ void DpuCloudController::dpu_trigger_run(ert_start_kernel_cmd* ecmd, xclDeviceHa
         ;
     iter++;
   }
+  auto iter3 = workspace_addr.begin();
+  while(iter3 != workspace_addr.end() ) {
+    for (int bz=0;bz<batch_size_;bz++) {
+      regVals.push_back(  { (XDPU_CONTROL_ADDR_0_L + 8*iter3->first + bz*0x100) / 4, (iter3->second)[bz] & 0xFFFFFFFF });
+      regVals.push_back(  { (XDPU_CONTROL_ADDR_0_H + 8*iter3->first + bz*0x100) / 4, (iter3->second[bz] >> 32) & 0xFFFFFFFF });
+      LOG_IF(INFO, ENV_PARAM(DEBUG_DPU_CONTROLLER))
+        << "featuremap addr : "   //
+        << iter3->second[bz]      //
+        ;
+    }
+    iter3++;
+  }
+
   // program DPU input/output addrs
   for (auto iter2 : xdpu_total_dpureg_map_io) {
     regVals.push_back(  { (XDPU_CONTROL_ADDR_0_L + 8*std::get<0>(iter2) + std::get<1>(iter2)*0x100) / 4, std::get<2>(iter2) & 0xFFFFFFFF });
@@ -1344,18 +1519,37 @@ void DpuCloudController::run(const std::vector<vart::TensorBuffer*> &inputs,
           auto size = std::get<1>(out);
           auto reg_id = std::get<3>(out);
           auto data = std::make_unique<char[]>(size);
-          //for (unsigned i=0; i < io_bufs.size(); i++) {
-          for (auto it :  xdpu_total_dpureg_map_io ) {
-            auto regid = std::get<0>(it);
-            if (regid == reg_id) {
-              if (xclUnmgdPread(xcl_handle, 0, data.get(), size, std::get<2>(it) + offset))
-                throw std::runtime_error("Error: dump failed!");
-              std::stringstream ss;
-              ss << dump_folder_ << "/E" << std::get<1>(it) << "/" << std::get<2>(out);
-              std::ofstream ofs(ss.str(), std::ofstream::binary);
-              ofs.write(data.get(), size);
-              ofs.close();
+          if(check_exist(reg_id, model_->get_output_regid())) {
+            for (auto it :  xdpu_total_dpureg_map_io ) {
+              auto regid = std::get<0>(it);
+              if (regid == reg_id) {
+                if (xclUnmgdPread(xcl_handle, 0, data.get(), size, std::get<2>(it) + offset))
+                  throw std::runtime_error("Error: dump failed!");
+                std::stringstream ss;
+                ss << dump_folder_ << "/E" << std::get<1>(it) << "/" << std::get<2>(out);
+                std::ofstream ofs(ss.str(), std::ofstream::binary);
+                ofs.write(data.get(), size);
+                ofs.close();
+              }
             }
+          } else {
+            auto iter3 = workspace_addr.begin();
+            while(iter3 != workspace_addr.end() ) {
+              if(iter3->first == reg_id) {
+                for (int bz=0;bz<batch_size_;bz++) {
+                  if (xclUnmgdPread(xcl_handle, 0, data.get(), size, iter3->second[bz] + offset))
+                    throw std::runtime_error("Error: dump failed!");
+                  std::stringstream ss;
+                  ss << dump_folder_ << "/E" << bz << "/" << std::get<2>(out);
+                  std::ofstream ofs(ss.str(), std::ofstream::binary);
+                  ofs.write(data.get(), size);
+                  ofs.close();
+
+                } 
+              }
+              iter3++;
+            }
+
           }
           tensor_idx++;
         }
