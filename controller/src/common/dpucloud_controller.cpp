@@ -1521,10 +1521,6 @@ void DpuCloudController::run(const std::vector<vart::TensorBuffer*> &inputs,
           auto size = std::get<1>(out);
           auto reg_id = std::get<3>(out);
           auto data = std::make_unique<char[]>(size);
-<<<<<<< HEAD
-=======
-          //for (unsigned i=0; i < io_bufs.size(); i++) {
->>>>>>> fix bug in debug dump mode dump error
           if(check_exist(reg_id, model_->get_output_regid())) {
             for (auto it :  xdpu_total_dpureg_map_io ) {
               auto regid = std::get<0>(it);
