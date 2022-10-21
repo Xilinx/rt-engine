@@ -19,6 +19,7 @@
 #include <assert.h>
 #include <ert.h>
 #include <xrt.h>
+#include <experimental/xrt-next.h>
 #include <algorithm>
 #include <chrono>
 #include <regex>
@@ -107,9 +108,9 @@ static std::mutex bo_mtx_;
 //static std::vector<std::pair<bounding, bo_share>> xdpu_workspace_bo;
 static std::vector<std::pair<bounding, bo_share>> xdpu_workspace_bo;
 
-static uint32_t read32_dpu_reg(xclDeviceHandle dpu_handle, uint64_t offset) {
+static uint32_t read32_dpu_reg(xclDeviceHandle dpu_handle,int cu_index, uint64_t offset) {
   uint32_t val;
-  xclRead(dpu_handle, XCL_ADDR_KERNEL_CTRL, offset, (void *)(&val), 4);
+  xclRegRead(dpu_handle, cu_index, offset, &val);
   return val;
 }
 static bool check_exist(int regid, std::vector<int> regids) {
@@ -313,12 +314,13 @@ xclBufferHandle  DpuCloudController::get_xrt_bo(void* data, int size, unsigned h
 void DpuCloudController::init_graph(vector<unsigned> hbmw, vector<unsigned> hbmc, xir::Attrs* attrs ) {
 
   auto handle = contexts_[0]->get_dev_handle();
-  auto cu_base_addr = handle_->get_device_info().cu_base_addr;
+  auto cu_index = handle_->get_device_info().cu_index;
+  xclIPSetReadRange(handle, cu_index, 0x10, 0x200);
+  //auto cu_base_addr = handle_->get_device_info().cu_base_addr;
   uint64_t fingerprint = model_->get_fingerprint();
-
   if(ENV_PARAM(XLNX_ENABLE_FINGERPRINT_CHECK)) {
-      uint32_t low = read32_dpu_reg(handle,  cu_base_addr + VERSION_CODE_L);
-      uint32_t high = read32_dpu_reg(handle,  cu_base_addr + VERSION_CODE_H);
+      uint32_t low = read32_dpu_reg(handle, cu_index, VERSION_CODE_L);
+      uint32_t high = read32_dpu_reg(handle, cu_index, VERSION_CODE_H);
       uint64_t version = high;
       version = (version << 32) + low;
       LOG_IF(INFO, ENV_PARAM(DEBUG_DPU_CONTROLLER))
@@ -332,7 +334,7 @@ void DpuCloudController::init_graph(vector<unsigned> hbmw, vector<unsigned> hbmc
 
   }
   
-  batch_size_ = read32_dpu_reg(handle,  cu_base_addr + DPUREG_ENGINE_NUM);
+  batch_size_ = read32_dpu_reg(handle, cu_index, DPUREG_ENGINE_NUM);
   if(attrs != nullptr) {
     if (!attrs->has_attr("__batch__")) {
       attrs->set_attr<size_t>("__batch__", batch_size_);
@@ -1179,7 +1181,7 @@ void DpuCloudController::dpu_trigger_run(ert_start_kernel_cmd* ecmd, xclDeviceHa
   int p;
   int exec_buf_result;
   auto dev_info = handle_->get_device_info();
-  auto cu_base_addr = dev_info.cu_base_addr;
+  //auto cu_base_addr = dev_info.cu_base_addr;
   auto core_idx = dev_info.cu_index;
 
   std::vector<std::pair<int, int> > regVals;
@@ -1221,14 +1223,14 @@ void DpuCloudController::dpu_trigger_run(ert_start_kernel_cmd* ecmd, xclDeviceHa
               && ecmd->state != ERT_CMD_STATE_COMPLETED; wait_count++);
 
       if (ecmd->state != ERT_CMD_STATE_COMPLETED) {
-        std::cout << "LOAD START:" << read32_dpu_reg(xcl_handle, cu_base_addr + DPUREG_LOAD_START) << std::endl;
-        std::cout << "LOAD END  :" << read32_dpu_reg(xcl_handle, cu_base_addr + DPUREG_LOAD_END) << std::endl;
-        std::cout << "SAVE START:" << read32_dpu_reg(xcl_handle, cu_base_addr + DPUREG_SAVE_START) << std::endl;
-        std::cout << "SAVE END  :" << read32_dpu_reg(xcl_handle, cu_base_addr + DPUREG_SAVE_END) << std::endl;
-        std::cout << "CONV START:" << read32_dpu_reg(xcl_handle, cu_base_addr + DPUREG_CONV_START) << std::endl;
-        std::cout << "CONV END  :" << read32_dpu_reg(xcl_handle, cu_base_addr + DPUREG_CONV_END) << std::endl;
-        std::cout << "MISC START:" << read32_dpu_reg(xcl_handle, cu_base_addr + DPUREG_MISC_START) << std::endl;
-        std::cout << "MISC END  :" << read32_dpu_reg(xcl_handle, cu_base_addr + DPUREG_MISC_END) << std::endl;
+        std::cout << "LOAD START:" << read32_dpu_reg(xcl_handle, core_idx, DPUREG_LOAD_START) << std::endl;
+        std::cout << "LOAD END  :" << read32_dpu_reg(xcl_handle, core_idx, DPUREG_LOAD_END) << std::endl;
+        std::cout << "SAVE START:" << read32_dpu_reg(xcl_handle, core_idx, DPUREG_SAVE_START) << std::endl;
+        std::cout << "SAVE END  :" << read32_dpu_reg(xcl_handle, core_idx, DPUREG_SAVE_END) << std::endl;
+        std::cout << "CONV START:" << read32_dpu_reg(xcl_handle, core_idx, DPUREG_CONV_START) << std::endl;
+        std::cout << "CONV END  :" << read32_dpu_reg(xcl_handle, core_idx, DPUREG_CONV_END) << std::endl;
+        std::cout << "MISC START:" << read32_dpu_reg(xcl_handle, core_idx, DPUREG_MISC_START) << std::endl;
+        std::cout << "MISC END  :" << read32_dpu_reg(xcl_handle, core_idx, DPUREG_MISC_END) << std::endl;
         std::cout << "Error: CU timeout when do preload " << std::endl;
         throw std::runtime_error("Error: CU timeout when do preload "
           + std::to_string(handle_->get_device_info().cu_index));
@@ -1300,18 +1302,18 @@ vitis::ai::trace::add_trace("dpu-controller", vitis::ai::trace::func_end, core_i
   if (ecmd->state != ERT_CMD_STATE_COMPLETED) {
     std::cout << "Error: CU timeout " << std::endl;
 
-    std::cout << "LOAD START:" << read32_dpu_reg(xcl_handle, cu_base_addr + DPUREG_LOAD_START) << std::endl;
-    std::cout << "LOAD END  :" << read32_dpu_reg(xcl_handle, cu_base_addr + DPUREG_LOAD_END) << std::endl;
-    std::cout << "SAVE START:" << read32_dpu_reg(xcl_handle, cu_base_addr + DPUREG_SAVE_START) << std::endl;
-    std::cout << "SAVE END  :" << read32_dpu_reg(xcl_handle, cu_base_addr + DPUREG_SAVE_END) << std::endl;
-    std::cout << "CONV START:" << read32_dpu_reg(xcl_handle, cu_base_addr + DPUREG_CONV_START) << std::endl;
-    std::cout << "CONV END  :" << read32_dpu_reg(xcl_handle, cu_base_addr + DPUREG_CONV_END) << std::endl;
-    std::cout << "MISC START:" << read32_dpu_reg(xcl_handle, cu_base_addr + DPUREG_MISC_START) << std::endl;
-    std::cout << "MISC END  :" << read32_dpu_reg(xcl_handle, cu_base_addr + DPUREG_MISC_END) << std::endl;
+    std::cout << "LOAD START:" << read32_dpu_reg(xcl_handle, core_idx, DPUREG_LOAD_START) << std::endl;
+    std::cout << "LOAD END  :" << read32_dpu_reg(xcl_handle, core_idx, DPUREG_LOAD_END) << std::endl;
+    std::cout << "SAVE START:" << read32_dpu_reg(xcl_handle, core_idx, DPUREG_SAVE_START) << std::endl;
+    std::cout << "SAVE END  :" << read32_dpu_reg(xcl_handle, core_idx, DPUREG_SAVE_END) << std::endl;
+    std::cout << "CONV START:" << read32_dpu_reg(xcl_handle, core_idx, DPUREG_CONV_START) << std::endl;
+    std::cout << "CONV END  :" << read32_dpu_reg(xcl_handle, core_idx, DPUREG_CONV_END) << std::endl;
+    std::cout << "MISC START:" << read32_dpu_reg(xcl_handle, core_idx, DPUREG_MISC_START) << std::endl;
+    std::cout << "MISC END  :" << read32_dpu_reg(xcl_handle, core_idx, DPUREG_MISC_END) << std::endl;
     throw std::runtime_error("Error: CU timeout " + std::to_string(handle_->get_device_info().cu_index));
   }
   if(ENV_PARAM(XLNX_SHOW_DPU_COUNTER))
-    std::cout << "IP COUNTER:" << read32_dpu_reg(xcl_handle, cu_base_addr + DPUREG_CYCLE_COUNTER) <<std::endl;
+    std::cout << "IP COUNTER:" << read32_dpu_reg(xcl_handle, core_idx, DPUREG_CYCLE_COUNTER) <<std::endl;
 
 
 }
@@ -1519,6 +1521,10 @@ void DpuCloudController::run(const std::vector<vart::TensorBuffer*> &inputs,
           auto size = std::get<1>(out);
           auto reg_id = std::get<3>(out);
           auto data = std::make_unique<char[]>(size);
+<<<<<<< HEAD
+=======
+          //for (unsigned i=0; i < io_bufs.size(); i++) {
+>>>>>>> fix bug in debug dump mode dump error
           if(check_exist(reg_id, model_->get_output_regid())) {
             for (auto it :  xdpu_total_dpureg_map_io ) {
               auto regid = std::get<0>(it);
@@ -1551,6 +1557,18 @@ void DpuCloudController::run(const std::vector<vart::TensorBuffer*> &inputs,
             }
 
           }
+          //for (auto it :  xdpu_total_dpureg_map_io ) {
+          //  auto regid = std::get<0>(it);
+          //  if (regid == reg_id) {
+          //    if (xclUnmgdPread(xcl_handle, 0, data.get(), size, std::get<2>(it) + offset))
+          //      throw std::runtime_error("Error: dump failed!");
+          //    std::stringstream ss;
+          //    ss << dump_folder_ << "/E" << std::get<1>(it) << "/" << std::get<2>(out);
+          //    std::ofstream ofs(ss.str(), std::ofstream::binary);
+          //    ofs.write(data.get(), size);
+          //    ofs.close();
+          //  }
+          //}
           tensor_idx++;
         }
       }
