@@ -934,6 +934,11 @@ uint32_t DpuCloudController::tensorbuffer_trans(std::vector<vart::TensorBuffer*>
     //  shape = input_tensor_buffers[i]->get_tensor()->get_shape();
     auto dims = std::vector<int>(shape.size(),0);
     auto dims_idx = std::vector<int>(shape.size(),0);
+    float scale = 0.0;
+    if (!is_input)
+      scale = pow(2,(-1)*tensors[i]->get_attr<std::int32_t>("fix_point"));
+    else
+      scale = pow(2,tensors[i]->get_attr<std::int32_t>("fix_point"));
     for (unsigned j=0; j < buffers.size(); j++) {
       if (tensors[i]->get_name() == buffers[j]->get_tensor()->get_name())  {
         if (ibs == inputBs) { //one tensrobuffer store batch
@@ -945,13 +950,15 @@ uint32_t DpuCloudController::tensorbuffer_trans(std::vector<vart::TensorBuffer*>
               if (buffers[j]->get_tensor()->get_data_type().type == xir::DataType::FLOAT) {
                 if (is_input) {
                   if (input_tensor_buffers[c]->get_tensor()->get_name() == buffers[j]->get_tensor()->get_name())  {
-                    data_float2fix((int8_t*)input_tensor_buffers[c]->data(dims).first,(float*)inputs[j]->data(dims_idx).first,tensor_size,  model_->get_input_scales()[i]);
+                    //data_float2fix((int8_t*)input_tensor_buffers[c]->data(dims).first,(float*)inputs[j]->data(dims_idx).first,tensor_size,  model_->get_input_scales()[i]);
+                    data_float2fix((int8_t*)input_tensor_buffers[c]->data(dims).first,(float*)inputs[j]->data(dims_idx).first,tensor_size, scale);
 	            cnt = c+1;
 	            break;
                   }
 	        } else {
                   if (output_tensor_buffers[c]->get_tensor()->get_name() == buffers[j]->get_tensor()->get_name())  {
-                    data_fix2float((float*)outputs[j]->data(dims_idx).first, (int8_t*)output_tensor_buffers[c]->data(dims).first,tensor_size,model_->get_output_scales()[i]);
+                    data_fix2float((float*)outputs[j]->data(dims_idx).first, (int8_t*)output_tensor_buffers[c]->data(dims).first,tensor_size,scale);
+                    //data_fix2float((float*)outputs[j]->data(dims_idx).first, (int8_t*)output_tensor_buffers[c]->data(dims).first,tensor_size,model_->get_output_scales()[i]);
 	            cnt = c+1;
 	            break;
                   }
@@ -979,9 +986,11 @@ uint32_t DpuCloudController::tensorbuffer_trans(std::vector<vart::TensorBuffer*>
           int idx = tensor_idx*tensors.size()+i;
           if (buffers[j]->get_tensor()->get_data_type().type == xir::DataType::FLOAT) {    
             if (is_input)
-    	      data_float2fix((int8_t*)input_tensor_buffers[idx]->data(dims).first,(float*)inputs[j]->data(dims).first,tensor_size, model_->get_input_scales()[i]);
+    	      data_float2fix((int8_t*)input_tensor_buffers[idx]->data(dims).first,(float*)inputs[j]->data(dims).first,tensor_size, scale);
+    	      //data_float2fix((int8_t*)input_tensor_buffers[idx]->data(dims).first,(float*)inputs[j]->data(dims).first,tensor_size, model_->get_input_scales()[i]);
             else
-              data_fix2float((float*)outputs[j]->data(dims).first,(int8_t*)output_tensor_buffers[idx]->data(dims).first,tensor_size,model_->get_output_scales()[i]);
+              //data_fix2float((float*)outputs[j]->data(dims).first,(int8_t*)output_tensor_buffers[idx]->data(dims).first,tensor_size,model_->get_output_scales()[i]);
+              data_fix2float((float*)outputs[j]->data(dims).first,(int8_t*)output_tensor_buffers[idx]->data(dims).first,tensor_size, scale);
           } else {
             if (is_input)
     	      memcpy((int8_t*)input_tensor_buffers[idx]->data(dims).first,(int8_t*)inputs[j]->data(dims).first,tensor_size);
