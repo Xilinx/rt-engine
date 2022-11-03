@@ -73,6 +73,7 @@ std::pair<uint64_t, size_t> TensorBufferExtImpView::data_x(
     idx = std::vector<int32_t>(dims.size(), 0);
   }
   auto batch_idx = idx[0];
+  CHECK_LT(batch_idx, dims[0]);
   const auto batch = dims[0];
   idx[0] = 0;
   dims[0] = 1;

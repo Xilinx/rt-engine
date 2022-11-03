@@ -25,6 +25,9 @@
 #include <string>
 #include <xrt.h>
 #include "xir/attrs/attrs.hpp"
+#include <experimental/xrt-next.h>
+#include <xrt/xrt_kernel.h>
+#include <experimental/xrt_ip.h>
 
 namespace xir {
 //class Subgraph;
@@ -39,6 +42,7 @@ struct DeviceInfo {
   unsigned int cu_mask;
   std::string xclbin_path;
   std::string full_name;
+  std::string kernel_name;
   xclDeviceHandle device_handle;
   unsigned char*  uuid;
   uint32_t fingerprint;
@@ -89,6 +93,7 @@ class DeviceHandle {
 };
 
 class XrtContext;
+
 class XrtDeviceHandle : public DeviceHandle {
  public:
   XrtDeviceHandle(std::string kernelName, std::string xclbin, xir::Attrs* attrs);
@@ -102,6 +107,39 @@ class XrtDeviceHandle : public DeviceHandle {
   std::unique_ptr<XrtContext> context_;
 };
 
+class XrtNativeContext;
+class XrtNativeDeviceHandle : public DeviceHandle {
+ public:
+  XrtNativeDeviceHandle(std::string kernelName, std::string xclbin, xir::Attrs* attrs);
+  virtual ~XrtNativeDeviceHandle();
+
+  // a convenience context for basic work 
+  // IMPORTANT: each worker thread must alloc its own context for exec()/wait()
+  const XrtNativeContext& get_context() const { return *context_; }
+  xrt::uuid get_uuid()  {return uuid_;}
+  xrt::device get_device() {return device_;}
+ private:
+  std::unique_ptr<XrtNativeContext> context_;
+  xrt::uuid uuid_;
+  xrt::device device_;
+};
+
+class XrtNativeContext {
+ // must create a separate XrtNativeContext for each hostcode worker thread
+ public: 
+  XrtNativeContext(XrtNativeDeviceHandle &);
+  virtual ~XrtNativeContext();
+  xrt::kernel get_dev_kernel() const { return kernel_; }
+  xrt::device get_dev_device() const { return device_; }
+
+ private:
+  XrtNativeContext() = delete;
+  XrtNativeContext(const XrtNativeContext &) = delete;
+
+  XrtNativeDeviceHandle &handle_;
+  xrt::kernel kernel_;
+  xrt::device device_;
+};
 
 class XrtContext {
  // must create a separate XrtContext for each hostcode worker thread
