@@ -939,6 +939,7 @@ uint32_t DpuCloudController::tensorbuffer_trans(std::vector<vart::TensorBuffer*>
       scale = pow(2,(-1)*tensors[i]->get_attr<std::int32_t>("fix_point"));
     else
       scale = pow(2,tensors[i]->get_attr<std::int32_t>("fix_point"));
+    std::cout << tsize << " here get " << scale << " tensor name: " << tensors[i]->get_name() <<  std::endl;
     for (unsigned j=0; j < buffers.size(); j++) {
       if (tensors[i]->get_name() == buffers[j]->get_tensor()->get_name())  {
         if (ibs == inputBs) { //one tensrobuffer store batch
@@ -950,6 +951,7 @@ uint32_t DpuCloudController::tensorbuffer_trans(std::vector<vart::TensorBuffer*>
               if (buffers[j]->get_tensor()->get_data_type().type == xir::DataType::FLOAT) {
                 if (is_input) {
                   if (input_tensor_buffers[c]->get_tensor()->get_name() == buffers[j]->get_tensor()->get_name())  {
+		    std::cout << "tensor name in memcpy " << input_tensor_buffers[c]->get_tensor()->get_name() << " source index  " <<  b << " " << "copy size " << tensor_size << " scale" << scale<< std::endl; 
                     //data_float2fix((int8_t*)input_tensor_buffers[c]->data(dims).first,(float*)inputs[j]->data(dims_idx).first,tensor_size,  model_->get_input_scales()[i]);
                     data_float2fix((int8_t*)input_tensor_buffers[c]->data(dims).first,(float*)inputs[j]->data(dims_idx).first,tensor_size, scale);
 	            cnt = c+1;
@@ -957,6 +959,7 @@ uint32_t DpuCloudController::tensorbuffer_trans(std::vector<vart::TensorBuffer*>
                   }
 	        } else {
                   if (output_tensor_buffers[c]->get_tensor()->get_name() == buffers[j]->get_tensor()->get_name())  {
+		    std::cout << "tensor name in memcpy " << output_tensor_buffers[c]->get_tensor()->get_name() << " source index  " <<  b << " " << "copy size " << tensor_size << " scale" << scale<< std::endl; 
                     data_fix2float((float*)outputs[j]->data(dims_idx).first, (int8_t*)output_tensor_buffers[c]->data(dims).first,tensor_size,scale);
                     //data_fix2float((float*)outputs[j]->data(dims_idx).first, (int8_t*)output_tensor_buffers[c]->data(dims).first,tensor_size,model_->get_output_scales()[i]);
 	            cnt = c+1;
@@ -1417,7 +1420,16 @@ void DpuCloudController::run(const std::vector<vart::TensorBuffer*> &inputs,
   }
   if (!tensorbuffer_phy) {
   __TIC__(INPUT_H2D)
-    for (int i=0; i < inputBs; i++)
+	  for (unsigned i = 0; i < input_tensor_buffers.size(); i++) {
+	      input_tensor_buffers[i]->sync_for_write(0,input_tensor_buffers[i]->get_tensor()->get_element_num());
+    //const auto mode = std::ios_base::out | std::ios_base::binary | std::ios_base::trunc;
+    //    auto output_file = "./c_input" +to_string(i)+ ".bin";
+//	auto dims = std::vector<int>(input_tensor_buffers[i]->get_tensor()->get_shape().size(),0);
+//	std::cout << input_tensor_buffers[i]->get_tensor()->get_name() << " " <<  input_tensor_buffers[i]->get_tensor()->get_element_num() << std::endl;
+//        std::ofstream(output_file, mode).write((char*)input_tensor_buffers[i]->data(dims).first, input_tensor_buffers[i]->get_tensor()->get_element_num());
+	  
+	  }
+/*    for (int i=0; i < inputBs; i++)
     {
       for (unsigned j=0; j < model_->get_input_offset().size(); j++) {
         uint8_t* dataPtr;
@@ -1439,7 +1451,7 @@ void DpuCloudController::run(const std::vector<vart::TensorBuffer*> &inputs,
           throw std::runtime_error("Error: upload failed");
       }
 
-    }
+    }*/
   __TOC__(INPUT_H2D)
   }
   auto ecmd = reinterpret_cast<ert_start_kernel_cmd*>(bo_addr);
@@ -1592,7 +1604,7 @@ void DpuCloudController::run(const std::vector<vart::TensorBuffer*> &inputs,
 
   if (!tensorbuffer_phy) {
   __TIC__(OUTPUT_D2H)
-    for (int i=0; i < inputBs; i++)
+/*    for (int i=0; i < inputBs; i++)
     {
       auto output_size = model_->get_output_offset().size();
       for (unsigned j=0; j< output_size; j++) {
@@ -1618,7 +1630,11 @@ void DpuCloudController::run(const std::vector<vart::TensorBuffer*> &inputs,
           throw std::runtime_error("Error: download failed");
         //__TOC_PROFILING__(OUTPUT)
       }
-    }
+    }*/
+	  for (unsigned i = 0; i < output_tensor_buffers.size(); i++) {
+	      output_tensor_buffers[i]->sync_for_read(0,output_tensor_buffers[i]->get_tensor()->get_element_num());
+	  
+	  }
   __TOC__(OUTPUT_D2H)
   }
   if((!tensorbuffer_phy) &&create_tb_outside) {
