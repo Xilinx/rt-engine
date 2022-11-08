@@ -1026,7 +1026,7 @@ uint32_t DpuXrtCloudController::tensorbuffer_trans(std::vector<vart::TensorBuffe
 vector<std::tuple<int, int,uint64_t>>  DpuXrtCloudController::get_dpu_reg_inside(bool create_tb_batch, std::vector<vart::TensorBuffer*> &output_tensor_buffers, std::vector<vart::TensorBuffer*> &input_tensor_buffers, std::vector<std::tuple<int, int,vart::TensorBuffer*>>& xdpu_total_buffer_dump ) {
   
   vector<std::tuple<int, int,uint64_t>> xdpu_total;
-  vector<uint8_t*> addrs_vir;
+  //vector<uint8_t*> addrs_vir;
   //vector<std::tuple<int, int,uint64_t>> xdpu_total_dpureg_map2;
   vector<xrt::bo> bos;
   {
@@ -1039,9 +1039,8 @@ vector<std::tuple<int, int,uint64_t>>  DpuXrtCloudController::get_dpu_reg_inside
   }
   for (int i = 0; i< batch_size_; i++) {
      xdpu_total.push_back(std::make_tuple(i, 0, bos[i].address()));
-     unsigned char* bo_map = bos[i].map<unsigned char*>();
-
-     addrs_vir.push_back(bo_map);
+     //unsigned char* bo_map = bos[i].map<unsigned char*>();
+     //addrs_vir.push_back(bo_map);
   }
   std::vector<XrtDeviceBuffer*> io_bufs(batch_size_);
   int tensors_sz =batch_size_;  
@@ -1076,7 +1075,8 @@ vector<std::tuple<int, int,uint64_t>>  DpuXrtCloudController::get_dpu_reg_inside
             xdpu_total_buffer_dump.push_back(std::make_tuple(iter->first, idx+i, buf[i]));
             uint64_t data[1];
             data[0] = buf[i]->data_phy(std::vector<int>{0,0}).first; 
-            memcpy(addrs_vir[idx+i] + iter->first*sizeof(uint64_t), (uint8_t*)(data), sizeof(uint64_t));
+            //memcpy(addrs_vir[idx+i] + iter->first*sizeof(uint64_t), (uint8_t*)(data), sizeof(uint64_t));
+            memcpy( bos[idx+i].map<unsigned char*>() + iter->first*sizeof(uint64_t), (uint8_t*)(data), sizeof(uint64_t));
             LOG_IF(INFO, ENV_PARAM(DEBUG_DPU_CONTROLLER))
               <<"Engine : " << i<<  " workspace reg_id: " 
               << iter->first
@@ -1108,7 +1108,8 @@ vector<std::tuple<int, int,uint64_t>>  DpuXrtCloudController::get_dpu_reg_inside
             xdpu_total_buffer_dump.push_back(std::make_tuple(iter->first, idx+i, buf[i]));
             uint64_t data[1];
             data[0] = buf[i]->data_phy(std::vector<int>{0,0}).first; 
-            memcpy(addrs_vir[idx+i] + iter->first*sizeof(uint64_t),(uint8_t*)data , sizeof(uint64_t));
+            //memcpy(addrs_vir[idx+i] + iter->first*sizeof(uint64_t),(uint8_t*)data , sizeof(uint64_t));
+            memcpy( bos[idx+i].map<unsigned char*>() + iter->first*sizeof(uint64_t),(uint8_t*)data , sizeof(uint64_t));
             LOG_IF(INFO, ENV_PARAM(DEBUG_DPU_CONTROLLER))
               <<"Engine : " << i<<  " workspace reg_id: " 
               << iter->first
@@ -1125,7 +1126,8 @@ vector<std::tuple<int, int,uint64_t>>  DpuXrtCloudController::get_dpu_reg_inside
     for (int i = 0; i< batch_size_; i++) {
       uint64_t data[1];
       data[0] = iter->second; 
-      memcpy(addrs_vir[i] + iter->first*sizeof(uint64_t),(uint8_t*)data, sizeof(uint64_t));
+      //memcpy(addrs_vir[i] + iter->first*sizeof(uint64_t),(uint8_t*)data, sizeof(uint64_t));
+      memcpy( bos[i].map<unsigned char*>() + iter->first*sizeof(uint64_t),(uint8_t*)data, sizeof(uint64_t));
 
     }
     LOG_IF(INFO, ENV_PARAM(DEBUG_DPU_CONTROLLER))
@@ -1140,7 +1142,8 @@ vector<std::tuple<int, int,uint64_t>>  DpuXrtCloudController::get_dpu_reg_inside
     for (int bz=0;bz<batch_size_;bz++) {
       uint64_t data[1];
       data[0] = (iter3->second)[bz]; 
-      memcpy(addrs_vir[bz] + iter3->first*sizeof(uint64_t),(uint8_t*)data, sizeof(uint64_t));
+      //memcpy(addrs_vir[bz] + iter3->first*sizeof(uint64_t),(uint8_t*)data, sizeof(uint64_t));
+      memcpy( bos[bz].map<unsigned char*>() + iter3->first*sizeof(uint64_t),(uint8_t*)data, sizeof(uint64_t));
       LOG_IF(INFO, ENV_PARAM(DEBUG_DPU_CONTROLLER))
         << std::hex << "featuremap addr : "   //
         << iter3->second[bz]     //
@@ -1449,15 +1452,16 @@ void DpuXrtCloudController::run(const std::vector<vart::TensorBuffer*> &inputs,
     vitis::ai::trace::add_trace("dpu-runner", info.name, batch_size_, info.workload, info.depth);
 #endif
     dpu->dpu_trigger_run(kernel, xdpu_total_dpureg_map_io, xdpu_total_dpureg_map, workspace_addr, preload_code_addr_, code_addr_);
-//  const auto mode = std::ios_base::out | std::ios_base::binary | std::ios_base::trunc;
-//    std::unique_lock<std::mutex> lock(hwbufio_mtx_);
-//    auto it = tbuf2reg_.find(output_tensor_buffers[0]);
-//    if ((it == tbuf2reg_.end()))
-//      throw std::runtime_error("TensorBuffer not found for reg");
-//    auto bos = it->second;
-//  auto output_file1 = "./reg.bin";
-//  std::cout <<"bos" <<std::hex <<   bos[0].size() << std::endl;
-//  std::ofstream(output_file1, mode).write(bos[0].map<const char*>(), bos[0].size());
+    //const auto mode = std::ios_base::out | std::ios_base::binary | std::ios_base::trunc;
+    //std::unique_lock<std::mutex> lock(hwbufio_mtx_);
+    //auto it = tbuf2reg_.find(output_tensor_buffers[0]);
+    //if ((it == tbuf2reg_.end()))
+    //  throw std::runtime_error("TensorBuffer not found for reg");
+    //auto bos = it->second;
+    //for (int i = 0; i< batch_size_ ; i++) {
+    //  auto output_file1 = "./reg_" + to_string(i)+ ".bin";
+    //  std::ofstream(output_file1, mode).write(bos[i].map<const char*>(), bos[i].size());
+    //}
     if(dump_mode_ ) {  // dump final output
       int tensor_idx = 0;
       for(auto& out: dbg_layers[0].outputs) {
@@ -1603,6 +1607,7 @@ void Dpu::dpu_trigger_run(xrt::kernel kernel,
   ecmd->state = ERT_CMD_STATE_NEW;
   ecmd->opcode = ERT_EXEC_WRITE;
   ecmd->type = ERT_CTRL;
+  //xrt::set_read_range(kernel, 0x10, 0x1f0);
 
   std::vector<std::pair<int, int> > regVals;
   if (0 == program_once_complete) {
@@ -1614,8 +1619,9 @@ void Dpu::dpu_trigger_run(xrt::kernel kernel,
     regVals.push_back({ XDPU_CONTROL_AP, XDPU_CONTROL_AP_START });
     regVals.push_back({ XDPU_CONTROL_GIE / 4, XDPU_GLOBAL_INT_ENABLE });
     regVals.push_back(  { XDPU_CONTROL_IER / 4, 1 });
-    regVals.push_back(  { XDPU_CONTROL_ISR / 4, 3 });
-    regVals.push_back({ 0x40 / 4, 1 });
+    //regVals.push_back(  { XDPU_CONTROL_ISR / 4, 3 });
+    //regVals.push_back({ 0x40 / 4, 1 });
+    //regVals.push_back({ 0x44 / 4, 0 });
     if (preload_code_addr){
       // do preload
       regVals.push_back( { XDPU_CONTROL_INSTR_L / 4, preload_code_addr & 0xFFFFFFFF });
@@ -1697,6 +1703,8 @@ void Dpu::dpu_trigger_run(xrt::kernel kernel,
 #ifndef _WIN32
 vitis::ai::trace::add_trace("dpu-controller", vitis::ai::trace::func_end, core_idx);
 #endif
+  //for (unsigned off=0x10; off<0x200; off+=0x04)
+  //    std::cout << std::hex << off << " : " << read32_dpu_reg(kernel, off) << std::endl;
   if (ecmd->state != ERT_CMD_STATE_COMPLETED) {
     std::cout << "Error: CU timeout " << std::endl;
 
@@ -1708,6 +1716,7 @@ vitis::ai::trace::add_trace("dpu-controller", vitis::ai::trace::func_end, core_i
     std::cout << "CONV END  :" << read32_dpu_reg(kernel, DPUREG_CONV_END) << std::endl;
     std::cout << "MISC START:" << read32_dpu_reg(kernel, DPUREG_MISC_START) << std::endl;
     std::cout << "MISC END  :" << read32_dpu_reg(kernel, DPUREG_MISC_END) << std::endl;
+    std::cout << "IP COUNTER:" << read32_dpu_reg(kernel, DPUREG_CYCLE_COUNTER) <<std::endl;
     throw std::runtime_error("Error: CU timeout " + std::to_string(info_.cu_index));
   }
 
