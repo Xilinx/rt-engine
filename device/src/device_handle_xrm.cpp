@@ -54,7 +54,7 @@ int XrmResource::alloc_from_attrs(std::string kernelName, char* xclbinPath, xir:
   bool cu_correct=false;
   std::vector<std::unique_ptr<xrmCuResource>> cu_rsrc;
   std::string fnm = std::string(xclbinPath);
-  xir::XrtBinStream binstream(fnm);
+  XrtBinStream binstream(fnm);
   std::unordered_map<int, int> allocedCus;
   auto cu_num = binstream.get_num_of_cu();
   while(!cu_correct) {
