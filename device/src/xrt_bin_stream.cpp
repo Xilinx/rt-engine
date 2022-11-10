@@ -14,7 +14,7 @@
 
 #include "xrt_bin_stream.hpp"
 
-namespace xir {
+//namespace xir {
 
 XrtBinStream::XrtBinStream(const std::string filename) {
   init_fd(filename);
@@ -132,4 +132,4 @@ uint64_t XrtBinStream::get_cu_base_addr(size_t idx) const {
   return ip_layout_->m_ip_data[indices_[idx]].m_base_address;
 }
 std::string XrtBinStream::get_dsa() const { return dsa_; }
-}  // namespace xir
+//}  // namespace xir

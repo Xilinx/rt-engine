@@ -964,46 +964,57 @@ uint32_t DpuXrtCloudController::tensorbuffer_trans(std::vector<vart::TensorBuffe
     int tensor_size = tensors[i]->get_element_num()/batch_size_;
     unsigned tensor_idx=0;
     vector<int> shape;
-    if (!is_input)
-      shape = output_tensor_buffers[i]->get_tensor()->get_shape();
-    else
-      shape = input_tensor_buffers[i]->get_tensor()->get_shape();
+    shape = tensors[i]->get_shape();
     auto dims = std::vector<int>(shape.size(),0);
     auto dims_idx = std::vector<int>(shape.size(),0);
+    float scale = 0.0;
+    if (!is_input)
+      scale = pow(2,(-1)*tensors[i]->get_attr<std::int32_t>("fix_point"));
+    else
+      scale = pow(2,tensors[i]->get_attr<std::int32_t>("fix_point"));
+
     for (unsigned j=0; j < buffers.size(); j++) {
       if (tensors[i]->get_name().find(buffers[j]->get_tensor()->get_name()) != std::string::npos) {
         if (ibs == inputBs) { //one tensrobuffer store batch
+          int cnt = 0;
           for (int b=0; b < tsize; b++) {
-            int idx = b*tensors.size()+i;
             dims_idx[0] = b;
-            if (buffers[j]->get_tensor()->get_data_type().type == xir::DataType::FLOAT) {
-              if (is_input)
-                data_float2fix((int8_t*)input_tensor_buffers[idx]->data(dims).first,(float*)inputs[j]->data(dims_idx).first,tensor_size,  model_->get_input_scales()[i]);
-              else
-                data_fix2float((float*)outputs[j]->data(dims_idx).first, (int8_t*)output_tensor_buffers[idx]->data(dims).first,tensor_size,model_->get_output_scales()[i]);
-            } else {
-              if (is_input)
-                memcpy((int8_t*)input_tensor_buffers[idx]->data(dims).first,(int8_t*)inputs[j]->data(dims_idx).first,tensor_size);
-              else
-                memcpy((char*)outputs[j]->data(dims_idx).first, (void*)output_tensor_buffers[idx]->data(dims).first,tensor_size);
-            }
+            for (unsigned c=cnt; c < tsize*tensors.size(); c++) {
+              if (buffers[j]->get_tensor()->get_data_type().type == xir::DataType::FLOAT) {
+                if (is_input) {
+                  if (input_tensor_buffers[c]->get_tensor()->get_name() == buffers[j]->get_tensor()->get_name())  {
+	            data_float2fix((int8_t*)input_tensor_buffers[c]->data(dims).first,(float*)inputs[j]->data(dims_idx).first,tensor_size, scale);
+                    cnt = c+1;
+	            break;
+                  }
+	        } else {
+                  if (output_tensor_buffers[c]->get_tensor()->get_name() == buffers[j]->get_tensor()->get_name())  {
+                    data_fix2float((float*)outputs[j]->data(dims_idx).first, (int8_t*)output_tensor_buffers[c]->data(dims).first,tensor_size,scale);
+	            cnt = c+1;
+	            break;
+                  }
+	        }
+              } else {
+                if (is_input) {
+                  if (input_tensor_buffers[c]->get_tensor()->get_name() == buffers[j]->get_tensor()->get_name())  {
+                    memcpy((int8_t*)input_tensor_buffers[c]->data(dims).first,(int8_t*)inputs[j]->data(dims_idx).first,tensor_size);
+	            cnt = c+1;
+	            break;
+                  }
+	        } else {
+                  if (output_tensor_buffers[c]->get_tensor()->get_name() == buffers[j]->get_tensor()->get_name())  {
+                    memcpy((char*)outputs[j]->data(dims_idx).first, (void*)output_tensor_buffers[c]->data(dims).first,tensor_size);
+	            cnt = c+1;
+	            break;
+                  }
+	        }
+              }
+	    }
             tensor_idx++;
           }
         }
         else {
-          int idx = tensor_idx*tensors.size()+i;
-          if (buffers[j]->get_tensor()->get_data_type().type == xir::DataType::FLOAT) {    
-            if (is_input)
-    	      data_float2fix((int8_t*)input_tensor_buffers[idx]->data(dims).first,(float*)inputs[j]->data(dims).first,tensor_size, model_->get_input_scales()[i]);
-            else
-              data_fix2float((float*)outputs[j]->data(dims).first,(int8_t*)output_tensor_buffers[idx]->data(dims).first,tensor_size,model_->get_output_scales()[i]);
-          } else {
-            if (is_input)
-    	      memcpy((int8_t*)input_tensor_buffers[idx]->data(dims).first,(int8_t*)inputs[j]->data(dims).first,tensor_size);
-            else
-              memcpy((int8_t*)outputs[j]->data(dims).first,(int8_t*)output_tensor_buffers[idx]->data(dims).first,tensor_size);
-          }
-          tensor_idx++;
+          throw std::runtime_error("Error: invilad tensorbuffer input or output");
         }
       } 
     }

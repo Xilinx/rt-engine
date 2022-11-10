@@ -46,7 +46,7 @@ DeviceResource::DeviceResource(std::string kernelName, std::string xclbin, xir::
   // cuIdx_xrt is for cu index from XRT side
   size_t cuIdx=0;
   size_t cuIdx_xrt=0;
-  xir::XrtBinStream binstream(xclbin);
+  XrtBinStream binstream(xclbin);
   auto handle = xclOpen(deviceIdx, NULL, XCL_INFO);
   static std::unordered_map<size_t,size_t> cuIdxMap;
   cuIdx = naive_resource_mgr_cu_idx_.fetch_add(1);
@@ -128,7 +128,7 @@ static const std::string find_kernel_name(std::string name) {
 }
 
 std::string KernelNameManager::getRealKernelName(std::string xclbinPath, std::string kernelName) {
-  xir::XrtBinStream binstream(xclbinPath);
+  XrtBinStream binstream(xclbinPath);
   auto cu_num = binstream.get_num_of_cu();
   std::string realKernelName; 
   for(unsigned int nameIdx=0; nameIdx < cu_num; nameIdx++) { //for TRD if there is other IP with differnet CU name, need to loop 
