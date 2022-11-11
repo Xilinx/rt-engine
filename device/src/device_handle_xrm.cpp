@@ -54,7 +54,7 @@ int XrmResource::alloc_from_attrs(std::string kernelName, char* xclbinPath, xir:
   bool cu_correct=false;
   std::vector<std::unique_ptr<xrmCuResource>> cu_rsrc;
   std::string fnm = std::string(xclbinPath);
-  xir::XrtBinStream binstream(fnm);
+  XrtBinStream binstream(fnm);
   std::unordered_map<int, int> allocedCus;
   auto cu_num = binstream.get_num_of_cu();
   while(!cu_correct) {
@@ -181,6 +181,7 @@ XrmResource::XrmResource(std::string kernelName, std::string xclbin, xir::Attrs*
                         std::to_string(cu_rsrc_->deviceId) + ":" +
                         std::to_string(cu_rsrc_->cuId);
     auto kernel_name = get_kernel_name(xclbinPath, cu_prop_->kernelName);
+    //auto kernel_name = std::string(cu_prop_->kernelName) + ":" + std::string(cu_rsrc_->instanceName);
     info_.reset(new DeviceInfo{
         /* cu_base_addr */  cu_rsrc_->baseAddr,
         /* ddr_bank */      cu_rsrc_->membankId,
