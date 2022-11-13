@@ -1162,9 +1162,11 @@ vector<std::tuple<int, int,uint64_t>>  DpuXrtCloudController::get_dpu_reg_inside
     }
     iter3++;
   }
+  __TIC__(REG)
   for (int i = 0; i < batch_size_; i++) {
     bos[i].sync(XCL_BO_SYNC_BO_TO_DEVICE);
   }
+  __TOC__(REG)
   return xdpu_total;
 }
 vart::TensorBuffer* DpuXrtCloudController::get_buffer(int32_t regid, int idx,vector<std::tuple<int, int,vart::TensorBuffer*>>& xdpu_total_buffer_dump) {
@@ -1399,41 +1401,41 @@ void DpuXrtCloudController::run(const std::vector<vart::TensorBuffer*> &inputs,
     //}
   __TOC__(INPUT_H2D)
   }
-  {
-    //std::vector<xrt::queue::event> events;
-    //xrt::queue task;
-  __TIC__(sync_H2D)
-    for (int i=0; i < inputBs; i++)
-    {
-      for (unsigned j=0; j < model_->get_input_offset().size(); j++) {
-        uint8_t* dataPtr;
-        auto tensor = get_input_tensors()[j];
-        auto reg_id = tensor->get_attr<int32_t>("reg_id"); 
-        const auto inSize = tensor->get_element_num()/batch_size_;
-        if (create_tb_batch) {
-          auto dims_size = (tensor->get_shape()).size();
-          auto dims = std::vector<int32_t>(dims_size, 0);
-          dims[0] = i;
-          dataPtr = ((uint8_t*)input_tensor_buffers[j]->data(dims).first);
-        } else {
-          auto dims = input_tensor_buffers[i*model_->get_input_offset().size()+j]->get_tensor()->get_shape();
-          auto idx = std::vector<int32_t>(dims.size(), 0);
-          dataPtr =(uint8_t*)input_tensor_buffers[i*model_->get_input_offset().size()+j]->data(idx).first;
-        }
-	//auto sync_event = task.enqueue([=,&xdpu_total_buffer_dump]{
-        get_buffer(reg_id, i, xdpu_total_buffer_dump)->copy_from_host(0, dataPtr, inSize,  model_->get_input_offset()[j]);
-        //get_buffer(reg_id, i, xdpu_total_buffer_dump)->copy_from_host(0, dataPtr, inSize,  model_->get_input_offset()[j]);});
-	//events.emplace_back(sync_event);	
-      }
+  //{
+  //  //std::vector<xrt::queue::event> events;
+  //  //xrt::queue task;
+  //__TIC__(sync_H2D)
+  //  for (int i=0; i < inputBs; i++)
+  //  {
+  //    for (unsigned j=0; j < model_->get_input_offset().size(); j++) {
+  //      uint8_t* dataPtr;
+  //      auto tensor = get_input_tensors()[j];
+  //      auto reg_id = tensor->get_attr<int32_t>("reg_id"); 
+  //      const auto inSize = tensor->get_element_num()/batch_size_;
+  //      if (create_tb_batch) {
+  //        auto dims_size = (tensor->get_shape()).size();
+  //        auto dims = std::vector<int32_t>(dims_size, 0);
+  //        dims[0] = i;
+  //        dataPtr = ((uint8_t*)input_tensor_buffers[j]->data(dims).first);
+  //      } else {
+  //        auto dims = input_tensor_buffers[i*model_->get_input_offset().size()+j]->get_tensor()->get_shape();
+  //        auto idx = std::vector<int32_t>(dims.size(), 0);
+  //        dataPtr =(uint8_t*)input_tensor_buffers[i*model_->get_input_offset().size()+j]->data(idx).first;
+  //      }
+  //      //auto sync_event = task.enqueue([=,&xdpu_total_buffer_dump]{
+  //      get_buffer(reg_id, i, xdpu_total_buffer_dump)->copy_from_host(0, dataPtr, inSize,  model_->get_input_offset()[j]);
+  //      //get_buffer(reg_id, i, xdpu_total_buffer_dump)->copy_from_host(0, dataPtr, inSize,  model_->get_input_offset()[j]);});
+  //      //events.emplace_back(sync_event);	
+  //    }
 
-    }
-    //for (unsigned tn = 0; tn < events.size(); tn++) {
-    //    events[events.size()-1].wait();
-    //}
-  __TOC__(sync_H2D)
-  
-  
-  }
+  //  }
+  //  //for (unsigned tn = 0; tn < events.size(); tn++) {
+  //  //    events[events.size()-1].wait();
+  //  //}
+  //__TOC__(sync_H2D)
+  //
+  //
+  //}
   // program DPU request
   //
   //}
