@@ -105,7 +105,7 @@ DeviceResource::DeviceResource(std::string kernelName, std::string xclbin, xir::
       /* cu_mask */       (1u << cuIdx_xrt),
       /* xclbin_path */   xclbin,
       /* full_name */     cu_full_name,
-      /* kernel_name */   binstream.get_cu(cuIdx).c_str(),
+      /* kernel_name */   kernelName,
       /* device_handle */ nullptr,
       /* uuid */          get_uuid(),
       /* fingerprint */   0,
