@@ -1733,8 +1733,17 @@ vitis::ai::trace::add_trace("dpu-controller", vitis::ai::trace::func_end, core_i
     throw std::runtime_error("Error: CU timeout " + std::to_string(info_.cu_index));
   }
 
-  if(ENV_PARAM(XLNX_SHOW_DPU_COUNTER))
+  if(ENV_PARAM(XLNX_SHOW_DPU_COUNTER)) {
+    std::cout << "LOAD START:" << read32_dpu_reg(kernel, DPUREG_LOAD_START) << std::endl;
+    std::cout << "LOAD END  :" << read32_dpu_reg(kernel, DPUREG_LOAD_END) << std::endl;
+    std::cout << "SAVE START:" << read32_dpu_reg(kernel, DPUREG_SAVE_START) << std::endl;
+    std::cout << "SAVE END  :" << read32_dpu_reg(kernel, DPUREG_SAVE_END) << std::endl;
+    std::cout << "CONV START:" << read32_dpu_reg(kernel, DPUREG_CONV_START) << std::endl;
+    std::cout << "CONV END  :" << read32_dpu_reg(kernel, DPUREG_CONV_END) << std::endl;
+    std::cout << "MISC START:" << read32_dpu_reg(kernel, DPUREG_MISC_START) << std::endl;
+    std::cout << "MISC END  :" << read32_dpu_reg(kernel, DPUREG_MISC_END) << std::endl;
     std::cout << "IP COUNTER:" << read32_dpu_reg(kernel, DPUREG_CYCLE_COUNTER) <<std::endl;
+  }
 }
 Dpu::Dpu(bool debug_mode, DeviceInfo info, int batch_size) 
 	: debug_mode_(debug_mode), info_(info), batch_size_(batch_size){
