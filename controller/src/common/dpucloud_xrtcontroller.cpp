@@ -1533,6 +1533,10 @@ void DpuXrtCloudController::run(const std::vector<vart::TensorBuffer*> &inputs,
 #ifndef _WIN32
         vitis::ai::trace::add_trace("dpu-runner", layer.name, batch_size_, layer.workload, layer.depth);
 #endif
+        	
+        if(ENV_PARAM(XLNX_SHOW_DPU_COUNTER)) {
+	  std::cout << "layer name is : " << layer.name << "  workload is : " << layer.workload << " depth is : " << layer.depth << std::endl; 
+	}
         dpu->dpu_trigger_run(kernel, xdpu_total_dpureg_map_io, xdpu_total_dpureg_map, workspace_addr, preload_code_addr_, code_addr_);
       }
 
