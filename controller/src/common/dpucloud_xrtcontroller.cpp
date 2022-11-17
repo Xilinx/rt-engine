@@ -93,7 +93,7 @@ DEF_ENV_PARAM(XLNX_ENABLE_FINGERPRINT_CHECK, "1");
 #define DPUREG_CYCLE_COUNTER_H 0x1a4
 #define VERSION_CODE_L 0x1f0
 #define VERSION_CODE_H 0x1f4
-
+#define REG_SIZE 256
 struct xrt_bo_share{
   int reg_id;
   int cnt;
@@ -819,14 +819,13 @@ std::vector<vart::TensorBuffer*> DpuXrtCloudController::get_outputs_inner(vector
   auto tbufs = create_tensorbuffer_for_batch(hbm, isInputs, tensors, tensor_offset, output_bz,isTensorsBatch);
 
   if (!isInputs) {
-    std::vector<xrt::bo> bos;
-    for (int i=0;i<batch_size_;i++) {
-      auto bo = get_xrt_bo(256*sizeof(uint64_t),hbm);
-      bos.emplace_back(bo);
-    }
+    //xrt::bo bo;
+    //for (int i=0;i<batch_size_;i++) {
+      auto bo = get_xrt_bo(batch_size_*REG_SIZE*sizeof(uint64_t),hbm);
+    //}
     {
       std::unique_lock<std::mutex> lock(hwbufio_mtx_);
-      tbuf2reg_.emplace(tbufs[0], bos);
+      tbuf2reg_.emplace(tbufs[0], bo);
     }
   }
   return tbufs;
@@ -1039,17 +1038,17 @@ vector<std::tuple<int, int,uint64_t>>  DpuXrtCloudController::get_dpu_reg_inside
   vector<std::tuple<int, int,uint64_t>> xdpu_total;
   //vector<uint8_t*> addrs_vir;
   //vector<std::tuple<int, int,uint64_t>> xdpu_total_dpureg_map2;
-  vector<xrt::bo> bos;
+  xrt::bo bo;
   {
     std::unique_lock<std::mutex> lock(hwbufio_mtx_);
     auto it = tbuf2reg_.find(output_tensor_buffers[0]);
     if ((it == tbuf2reg_.end()))
       throw std::runtime_error("TensorBuffer not found for reg");
-    bos = it->second;
+    bo = it->second;
    
   }
   for (int i = 0; i< batch_size_; i++) {
-     xdpu_total.push_back(std::make_tuple(i, 0, bos[i].address()));
+     xdpu_total.push_back(std::make_tuple(i, 0, bo.address()+i*REG_SIZE*sizeof(uint64_t)));
      //unsigned char* bo_map = bos[i].map<unsigned char*>();
      //addrs_vir.push_back(bo_map);
   }
@@ -1087,7 +1086,8 @@ vector<std::tuple<int, int,uint64_t>>  DpuXrtCloudController::get_dpu_reg_inside
             uint64_t data[1];
             data[0] = buf[i]->data_phy(std::vector<int>{0,0}).first; 
             //memcpy(addrs_vir[idx+i] + iter->first*sizeof(uint64_t), (uint8_t*)(data), sizeof(uint64_t));
-            memcpy( bos[idx+i].map<unsigned char*>() + iter->first*sizeof(uint64_t), (uint8_t*)(data), sizeof(uint64_t));
+            //memcpy( bos[idx+i].map<unsigned char*>() + iter->first*sizeof(uint64_t), (uint8_t*)(data), sizeof(uint64_t));
+            memcpy( bo.map<unsigned char*>()+ REG_SIZE*sizeof(uint64_t)*(idx+i) + iter->first*sizeof(uint64_t), (uint8_t*)(data), sizeof(uint64_t));
             LOG_IF(INFO, ENV_PARAM(DEBUG_DPU_CONTROLLER))
               <<"Engine : " << i<<  " workspace reg_id: " 
               << iter->first
@@ -1120,7 +1120,7 @@ vector<std::tuple<int, int,uint64_t>>  DpuXrtCloudController::get_dpu_reg_inside
             uint64_t data[1];
             data[0] = buf[i]->data_phy(std::vector<int>{0,0}).first; 
             //memcpy(addrs_vir[idx+i] + iter->first*sizeof(uint64_t),(uint8_t*)data , sizeof(uint64_t));
-            memcpy( bos[idx+i].map<unsigned char*>() + iter->first*sizeof(uint64_t),(uint8_t*)data , sizeof(uint64_t));
+            memcpy( bo.map<unsigned char*>() + sizeof(uint64_t)*REG_SIZE*(idx+i) + iter->first*sizeof(uint64_t),(uint8_t*)data , sizeof(uint64_t));
             LOG_IF(INFO, ENV_PARAM(DEBUG_DPU_CONTROLLER))
               <<"Engine : " << i<<  " workspace reg_id: " 
               << iter->first
@@ -1138,7 +1138,7 @@ vector<std::tuple<int, int,uint64_t>>  DpuXrtCloudController::get_dpu_reg_inside
       uint64_t data[1];
       data[0] = iter->second; 
       //memcpy(addrs_vir[i] + iter->first*sizeof(uint64_t),(uint8_t*)data, sizeof(uint64_t));
-      memcpy( bos[i].map<unsigned char*>() + iter->first*sizeof(uint64_t),(uint8_t*)data, sizeof(uint64_t));
+      memcpy( bo.map<unsigned char*>() + sizeof(uint64_t)* i * REG_SIZE+ iter->first*sizeof(uint64_t),(uint8_t*)data, sizeof(uint64_t));
 
     }
     LOG_IF(INFO, ENV_PARAM(DEBUG_DPU_CONTROLLER))
@@ -1154,7 +1154,7 @@ vector<std::tuple<int, int,uint64_t>>  DpuXrtCloudController::get_dpu_reg_inside
       uint64_t data[1];
       data[0] = (iter3->second)[bz]; 
       //memcpy(addrs_vir[bz] + iter3->first*sizeof(uint64_t),(uint8_t*)data, sizeof(uint64_t));
-      memcpy( bos[bz].map<unsigned char*>() + iter3->first*sizeof(uint64_t),(uint8_t*)data, sizeof(uint64_t));
+      memcpy( bo.map<unsigned char*>()+ sizeof(uint64_t)*REG_SIZE*bz + iter3->first*sizeof(uint64_t),(uint8_t*)data, sizeof(uint64_t));
       LOG_IF(INFO, ENV_PARAM(DEBUG_DPU_CONTROLLER))
         << std::hex << "featuremap addr : "   //
         << iter3->second[bz]     //
@@ -1163,9 +1163,9 @@ vector<std::tuple<int, int,uint64_t>>  DpuXrtCloudController::get_dpu_reg_inside
     iter3++;
   }
   __TIC__(REG)
-  for (int i = 0; i < batch_size_; i++) {
-    bos[i].sync(XCL_BO_SYNC_BO_TO_DEVICE);
-  }
+ // for (int i = 0; i < batch_size_; i++) {
+    bo.sync(XCL_BO_SYNC_BO_TO_DEVICE);
+  //}
   __TOC__(REG)
   return xdpu_total;
 }
@@ -1195,18 +1195,18 @@ vector<std::tuple<int, int,uint64_t>>  DpuXrtCloudController::get_dpu_reg_outsid
   // for the condition that alloc memory without API
   vector<std::tuple<int, int,uint64_t>> xdpu_total;
   vector<uint8_t*> addrs_vir;
-  vector<xrt::bo> bos;
+  xrt::bo bo;
   {
     std::unique_lock<std::mutex> lock(hwbufio_mtx_);
     auto it = tbuf2reg_.find(outputs[0]);
     if ((it == tbuf2reg_.end()))
       throw std::runtime_error("TensorBuffer not found for reg");
-    bos = it->second;
+    bo = it->second;
    
   }
   for (int i = 0; i< batch_size_; i++) {
-     xdpu_total.push_back(std::make_tuple(0, i, bos[i].address()));
-     unsigned char* bo_map = bos[i].map<unsigned char*>();
+     xdpu_total.push_back(std::make_tuple(0, i, bo.address()+REG_SIZE*sizeof(uint64_t)*i));
+     unsigned char* bo_map = bo.map<unsigned char*>()+REG_SIZE*sizeof(uint64_t)*i;
 
      addrs_vir.push_back(bo_map);
   }
@@ -1310,9 +1310,7 @@ vector<std::tuple<int, int,uint64_t>>  DpuXrtCloudController::get_dpu_reg_outsid
       }
       iter3++;
     }
-    for (int i = 0; i < batch_size_; i++) {
-      bos[i].sync(XCL_BO_SYNC_BO_TO_DEVICE);
-    }
+    bo.sync(XCL_BO_SYNC_BO_TO_DEVICE);
   } else {
     throw std::runtime_error("need enable split-io");
   }
@@ -1470,10 +1468,10 @@ void DpuXrtCloudController::run(const std::vector<vart::TensorBuffer*> &inputs,
     //auto it = tbuf2reg_.find(output_tensor_buffers[0]);
     //if ((it == tbuf2reg_.end()))
     //  throw std::runtime_error("TensorBuffer not found for reg");
-    //auto bos = it->second;
+    //auto bo = it->second;
     //for (int i = 0; i< batch_size_ ; i++) {
     //  auto output_file1 = "./reg_" + to_string(i)+ ".bin";
-    //  std::ofstream(output_file1, mode).write(bos[i].map<const char*>(), bos[i].size());
+    //  std::ofstream(output_file1, mode).write(bo.map<const char*>()+sizeof(uint64_t)*REG_SIZE*i, bo.size()/batch_size_);
     //}
     if(dump_mode_ ) {  // dump final output
       int tensor_idx = 0;
