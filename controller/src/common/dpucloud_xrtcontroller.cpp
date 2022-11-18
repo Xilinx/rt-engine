@@ -100,8 +100,6 @@ struct xrt_bo_share{
   //xrt::kernel handle;
   std::vector<xrt::bo> bo_handles;
 };
-  xrt::bo code_;
-  xrt::bo reg0;
 struct bounding {
   size_t cu_id;
   size_t device_id;
@@ -397,7 +395,6 @@ void DpuXrtCloudController::init_graph(vector<unsigned> hbmw, vector<unsigned> h
       //if (reg0Mem == nullptr)
         reg0Mem = get_xrt_bo(get<0>(p), get<1>(p), hbmw);
       }
-      reg0 = reg0Mem;
       bos_.emplace_back(reg0Mem);
       reg0Mem.sync(XCL_BO_SYNC_BO_TO_DEVICE, std::get<1>(p), 0);
       //xclGetBOProperties(handle, reg0Mem, &boProp);

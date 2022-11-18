@@ -142,5 +142,6 @@ class DpuXrtCloudController
   std::unordered_map<int, xir::Tensor*> tensors_map_;
   std::list<std::unique_ptr<xir::Tensor>> tensors_;
   tensorbufferPool pool;
+  xrt::bo code_;
 };
 
