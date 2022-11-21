@@ -31,6 +31,10 @@ std::shared_ptr<DpuController> DpuControllerFactory::get(std::string kernel, T s
   {
     return std::make_shared<DpuV4eController>(subgraph, attrs);
   }
+  else if (kernel == "DPUCV2DX8G")
+  {
+    return std::make_shared<DpuXvdpuController>(subgraph, attrs);
+  }
   else if (kernel == "DPUCAHX8L")
   {
     return std::make_shared<DpuV3meController>(subgraph,attrs);
@@ -42,10 +46,6 @@ std::shared_ptr<DpuController> DpuControllerFactory::get(std::string kernel, T s
   else if (kernel == "AMD_AIE2_4x5_Overlay" || kernel == "AMD_AIE2_1x4_Overlay")
   {
     return std::make_shared<Ipuv1CnnController>(subgraph);
-  }
-  else if (kernel == "FlexML" )
-  {
-    return std::make_shared<FlexmlController>(subgraph);
   }
   else
     throw std::runtime_error("Error: no DpuController found for " + kernel);

@@ -220,6 +220,10 @@ XclDpuController<Dhandle, DbufIn, DbufOut>::create_tensor_buffers(
     // allocate aligned host memory
     const size_t dataSize = std::ceil(tensors[ti]->get_data_type().bit_width / 8.f);
     size_t size = tensors[ti]->get_element_num() * dataSize;
+    if (tensors[ti]->has_attr("stride")) {
+      auto strides = tensors[ti]->get_attr<std::vector<int>>("stride");
+      size = strides[0];
+    }
     void *data;
     UNI_LOG_CHECK(rte::posix_memalign(&data, rte::getpagesize(), size) == 0, VART_CONTROLLER_VIR_MEMORY_ALLOC_ERROR);
     std::memset(data, 0, size);
@@ -296,7 +300,10 @@ XclDpuController<Dhandle, DbufIn, DbufOut>::free_tensor_buffers(std::vector<vart
  * template instantiations
  */
 template XclDpuController<XrtDeviceHandle, XrtDeviceBuffer, XrtDeviceBuffer>::XclDpuController(std::string meta, xir::Attrs* attrs);
+template XclDpuController<XrtNativeDeviceHandle, XrtNativeDeviceBuffer, XrtNativeDeviceBuffer>::XclDpuController(std::string meta, xir::Attrs* attrs);
 template XclDpuController<IpuDeviceHandle, IpuDeviceBuffer, IpuDeviceBuffer>::XclDpuController(std::string meta, xir::Attrs* attrs);
 template XclDpuController<XrtDeviceHandle, XrtDeviceBuffer, XrtDeviceBuffer>::XclDpuController(const xir::Subgraph *subgraph, xir::Attrs* attrs);
+template XclDpuController<XrtNativeDeviceHandle, XrtNativeDeviceBuffer, XrtNativeDeviceBuffer>::XclDpuController(const xir::Subgraph *subgraph, xir::Attrs* attrs);
 template XclDpuController<IpuDeviceHandle, IpuDeviceBuffer, IpuDeviceBuffer>::XclDpuController(const xir::Subgraph *subgraph, xir::Attrs* attrs);
 template DeviceBuffer* XclDpuController<XrtDeviceHandle, XrtDeviceBuffer, XrtDeviceBuffer>::get_device_buffer(vart::TensorBuffer *tb);
+template DeviceBuffer* XclDpuController<XrtNativeDeviceHandle, XrtNativeDeviceBuffer, XrtNativeDeviceBuffer>::get_device_buffer(vart::TensorBuffer *tb);

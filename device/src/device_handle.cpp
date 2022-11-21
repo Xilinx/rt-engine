@@ -100,6 +100,7 @@ DeviceResource::DeviceResource(std::string kernelName, std::string xclbin, xir::
       /* cu_mask */       (1u << cuIdx_xrt),
       /* xclbin_path */   xclbin,
       /* full_name */     cu_full_name,
+      /* kernel_name */   kernelName,
       /* device_handle */ nullptr,
       /* uuid */          get_uuid(),
       /* fingerprint */   0,
@@ -179,13 +180,40 @@ DeviceHandle::DeviceHandle(std::string kernelName, std::string xclbin, xir::Attr
 /*
  * XRT device handle
  */
-
 XrtDeviceHandle::XrtDeviceHandle(std::string kernelName, std::string xclbin, xir::Attrs* attrs)
     : DeviceHandle(kernelName, xclbin, attrs) {
   context_.reset(new XrtContext(*this));
 }
 
 XrtDeviceHandle::~XrtDeviceHandle() {
+}
+
+/*
+ * XRT native device handle
+ */
+XrtNativeDeviceHandle::XrtNativeDeviceHandle(std::string kernelName, std::string xclbin, xir::Attrs* attrs)
+    : DeviceHandle(kernelName, xclbin, attrs) {
+  //auto device = xrt::device(get_device_info().device_index);
+  int dev_index = get_device_info().device_index;
+  //TODO check if device_ can be global pointer in multiple thread mode 
+  device_ = xrt::device(dev_index);
+  auto xrt_xclbin = xrt::xclbin(xclbin);
+  uuid_ = device_.load_xclbin(xrt_xclbin);
+  context_.reset(new XrtNativeContext(*this));
+}
+
+XrtNativeDeviceHandle::~XrtNativeDeviceHandle() {
+}
+/*
+ * XRT device context with native APIs (MUST alloc one for each thread)
+ */
+XrtNativeContext::XrtNativeContext(XrtNativeDeviceHandle &handle) : handle_(handle) {
+  device_ = handle.get_device();
+  auto hwctx = xrt::hw_context(device_, handle.get_uuid());
+  kernel_ = xrt::kernel(hwctx, handle.get_device_info().kernel_name);
+}
+
+XrtNativeContext::~XrtNativeContext() {
 }
 
 /*

@@ -101,7 +101,21 @@ int XrmResource::alloc_from_attrs(std::string kernelName, char* xclbinPath, xir:
   }
   return err;
 }
+static const std::string  get_kernel_name(std::string xclbinPath, std::string kernelName) {
 
+  auto xclbin = xrt::xclbin(xclbinPath);
+  auto xkernels = xclbin.get_kernels();
+  std::string kernel_name;
+  for ( unsigned int i = 0; i < xkernels.size(); i++) {
+    auto name = xkernels[i].get_name();
+    if (name.find(kernelName) != std::string::npos) {
+      kernel_name = name;
+      break;
+    }
+  }
+  return kernel_name;
+
+}
 XrmResource::XrmResource(std::string kernelName, std::string xclbin, xir::Attrs* attrs)
     : cu_prop_(new xrmCuProperty()), cu_rsrc_(new xrmCuResource()) {
   context_ = xrmCreateContext(XRM_API_VERSION_1);
@@ -164,6 +178,8 @@ XrmResource::XrmResource(std::string kernelName, std::string xclbin, xir::Attrs*
     auto cu_full_name = std::string(cu_prop_->kernelName) + ":" + 
                         std::to_string(cu_rsrc_->deviceId) + ":" +
                         std::to_string(cu_rsrc_->cuId);
+    auto kernel_name = get_kernel_name(xclbinPath, cu_prop_->kernelName);
+    //auto kernel_name = std::string(cu_prop_->kernelName) + ":" + std::string(cu_rsrc_->instanceName);
     info_.reset(new DeviceInfo{
         /* cu_base_addr */  cu_rsrc_->baseAddr,
         /* ddr_bank */      cu_rsrc_->membankId,
@@ -172,6 +188,7 @@ XrmResource::XrmResource(std::string kernelName, std::string xclbin, xir::Attrs*
         /* cu_mask */       (1u << cu_rsrc_->cuId),
         /* xclbin_path */   cu_rsrc_->xclbinFileName,
         /* full_name */     cu_full_name,
+        /* kernel_name */   kernel_name,
         /* device_handle */ nullptr,
         /* uuid */          &(cu_rsrc_->uuid[0]),
         /* fingerprint */   0,

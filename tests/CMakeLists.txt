@@ -62,7 +62,7 @@ install(
   DESTINATION bin
   )
 
-set(TESTS "app" "dpuv3int8"  "engine"  "vart_dpuv3int8"  "vart_dpuv3me"  "vart_dpuv4e" "vart_dpuv3e" "vart_samples")
+set(TESTS "app" "dpuv3int8"  "engine"  "vart_dpuv3int8"  "vart_dpuv3me"  "vart_dpuv4e" "vart_dpuv3e" "vart_samples" "vart_xvdpu")
 foreach(test ${TESTS})
   get_filename_component(exe ${test} NAME)
   file(GLOB_RECURSE TEST_SRCS "${exe}/*.cpp")

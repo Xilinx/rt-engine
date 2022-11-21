@@ -13,7 +13,7 @@
 // limitations under the License.
 
 #include "dpu_controller.hpp"
-
+#pragma once
 class DpuXmodel  {
  public:
   DpuXmodel(const std::string meta);
