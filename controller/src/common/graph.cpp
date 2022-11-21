@@ -233,11 +233,8 @@ void DpuXmodel::init_vitis_tensors(int batch_size, size_t device_index) {
 void DpuXmodel::init_graph(const xir::Subgraph* subgraph) {
   //auto handle = contexts_[0]->get_dev_handle();
   if(ENV_PARAM(XLNX_ENABLE_FINGERPRINT_CHECK)) {
-    if (subgraph->has_attr("dpu_fingerprint")) {
-      fingerprint = subgraph->get_attr<std::uint64_t>("dpu_fingerprint");
-    } else {
-      throw std::runtime_error("Error: no hardware info in subgraph");
-    }
+    UNI_LOG_CHECK(subgraph->has_attr("dpu_fingerprint") == true, VART_GRAPH_FINGERPRINT_ERROR);
+    fingerprint = subgraph->get_attr<std::uint64_t>("dpu_fingerprint");
   }
   dump_mode_ = dump_mode_|| ENV_PARAM(XLNX_ENABLE_DUMP);
   debug_mode_ = debug_mode_|| ENV_PARAM(XLNX_ENABLE_DEBUG_MODE);
@@ -338,8 +335,7 @@ void DpuXmodel::init_graph(const xir::Subgraph* subgraph) {
         if (parameter_size) {
           md5value.emplace_back(md5sum(parameter_value, parameter_size));
           void *reg0Ptr = NULL; 
-          if (rte::posix_memalign(&reg0Ptr, rte::getpagesize(), parameter_size))
-            throw std::bad_alloc();
+          UNI_LOG_CHECK(rte::posix_memalign(&reg0Ptr, rte::getpagesize(), parameter_size) == 0, VART_CONTROLLER_VIR_MEMORY_ALLOC_ERROR);
           for (unsigned i=0; i < parameter_size; i++) ((char*)reg0Ptr)[i] = parameter_value[i];
           xdpu_parameter_map.emplace_back(std::make_tuple((char*)reg0Ptr, parameter_size,reg_id));
         } else {

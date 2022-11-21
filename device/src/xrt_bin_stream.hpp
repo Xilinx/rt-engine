@@ -24,7 +24,7 @@
 #include <sstream>
 #include <fstream>
 
-namespace xir {
+//namespace xir {
 class XrtBinStream {
  public:
   explicit XrtBinStream(const std::string filename);
@@ -60,4 +60,4 @@ class XrtBinStream {
   std::vector<size_t> indices_;
   std::string dsa_;
 };
-}  // namespace xir
+//}  // namespace xir

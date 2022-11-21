@@ -13,8 +13,8 @@
 // limitations under the License.
 
 #include "xrt_bin_stream.hpp"
-
-namespace xir {
+#include <UniLog/UniLog.hpp>
+//namespace xir {
 
 XrtBinStream::XrtBinStream(const std::string filename) {
   init_fd(filename);
@@ -32,6 +32,7 @@ XrtBinStream::~XrtBinStream() {
 
 void XrtBinStream::init_fd(const std::string fnm) {
   std::ifstream stream(fnm);
+  //UNI_LOG_CHECK(stream == 0, VART_XCLBIN_READ_ERROR);
   if (!stream)
     throw std::runtime_error("Failed to open xclbin file '" + fnm + "' for reading");
 
@@ -116,7 +117,7 @@ void XrtBinStream::burn(int device_id) {
 }
 void XrtBinStream::burn(xclDeviceHandle handle) {
   const xclBin* blob = (const xclBin*)data_;
-  if (xclLoadXclBin(handle, blob)) throw std::runtime_error("Bitstream download failed !");
+  UNI_LOG_CHECK(xclLoadXclBin(handle, blob) == 0, VART_XCLBIN_DOWNLOAD_ERROR);
 }
 std::array<unsigned char, sizeof(xuid_t)> XrtBinStream::get_uuid() const {
   auto ret = std::array<unsigned char, sizeof(xuid_t)>();
@@ -132,4 +133,4 @@ uint64_t XrtBinStream::get_cu_base_addr(size_t idx) const {
   return ip_layout_->m_ip_data[indices_[idx]].m_base_address;
 }
 std::string XrtBinStream::get_dsa() const { return dsa_; }
-}  // namespace xir
+//}  // namespace xir

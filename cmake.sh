@@ -22,7 +22,7 @@ project_name=$(basename ${script_path})
 # cmake args
 declare -a args
 args=(-DBUILD_TESTS=OFF)
-
+args+=(-DBUILD_SHARED_LIBS=ON)
 # parse options
 options=$(getopt -a -n 'parse-options' -o h \
 		 -l help,clean,conda,build-only,type:,pack:,build-dir:,install-prefix:,cmake-options: \
