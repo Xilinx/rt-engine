@@ -228,8 +228,7 @@ std::vector<vart::TensorBuffer*> DpuXrtCloudController::init_tensor_buffer(std::
       const size_t dataSize = 1;//vart::size_of(tensors[ti]->get_data_type());
       size_t size = tensors[ti]->get_element_num() * dataSize;
       void *data;
-      if (rte::posix_memalign(&data, rte::getpagesize(), size))
-        throw std::runtime_error("Error: not enough virtual addre on host");
+      UNI_LOG_CHECK(rte::posix_memalign(&data, rte::getpagesize(), size) == 0, VART_CONTROLLER_VIR_MEMORY_ALLOC_ERROR);
       std::unique_ptr<vart::TensorBufferExtImpHost> tbuf(
         new vart::TensorBufferExtImpHost(data, tensors[ti]));
       tbufs.emplace_back(tbuf.get());
@@ -253,8 +252,7 @@ std::vector<const xir::Tensor*> DpuXrtCloudController::init_tensor(std::vector<c
       const size_t dataSize = 1;//vart::size_of(tensors[ti]->get_data_type());
       size_t size = tensors[ti]->get_element_num() * dataSize/batch_size_;
       void *data;
-      if (rte::posix_memalign(&data, rte::getpagesize(), size*batchSupport))
-        throw std::runtime_error("Error: not enough virtual addre on host");
+      UNI_LOG_CHECK(rte::posix_memalign(&data, rte::getpagesize(), size*batchSupport) == 0, VART_CONTROLLER_VIR_MEMORY_ALLOC_ERROR);
       auto dims = tensors[ti]->get_shape();
       dims[0] = batchSupport;
       xir::Tensor *tensor = xir::Tensor::create(tensors[ti]->get_name(), dims, tensors[ti]->get_data_type()).release();
@@ -329,18 +327,17 @@ void DpuXrtCloudController::init_graph(vector<unsigned> hbmw, vector<unsigned> h
   uint64_t fingerprint = model_->get_fingerprint();
   xrt::set_read_range(handle, 0x10, 0x1f0);
   if(ENV_PARAM(XLNX_ENABLE_FINGERPRINT_CHECK)==1) {
-      uint32_t low = read32_dpu_reg(handle, VERSION_CODE_L);
-      uint32_t high = read32_dpu_reg(handle, VERSION_CODE_H);
-      uint64_t version = high;
-      version = (version << 32) + low;
-      LOG_IF(INFO, ENV_PARAM(DEBUG_DPU_CONTROLLER))
-        << "DPU fingerprint: "  //
-        << version      //
-        << " "       //
-        << fingerprint      //
-        ;
-      if (version != fingerprint)
-        throw std::runtime_error("Error: subgraph's version is mismatch with xclbin");
+    uint32_t low = read32_dpu_reg(handle, VERSION_CODE_L);
+    uint32_t high = read32_dpu_reg(handle, VERSION_CODE_H);
+    uint64_t version = high;
+    version = (version << 32) + low;
+    LOG_IF(INFO, ENV_PARAM(DEBUG_DPU_CONTROLLER))
+      << "DPU fingerprint: "  //
+      << version      //
+      << " "       //
+      << fingerprint      //
+      ;
+    UNI_LOG_CHECK(version == fingerprint, VART_VERSION_MISMATCH_ERROR);
 
   }
   
@@ -360,12 +357,10 @@ void DpuXrtCloudController::init_graph(vector<unsigned> hbmw, vector<unsigned> h
     std::stringstream ss;
     ss << "dump_" << std::put_time(std::localtime(&t), "%Y%m%d%H%M%S"); 
     dump_folder_ = ss.str();
-    if(!fs::create_directory(dump_folder_.c_str()))
-      throw std::runtime_error("Error: Create dump folder error");
+    UNI_LOG_CHECK(fs::create_directory(dump_folder_.c_str()) == true, VART_CONTROLLER_DUMP_FOLDER_CREATE_ERROR);
     for(auto i = 0;i<batch_size_;i++) {
       std::string tmp = dump_folder_ + "/E" + std::to_string(i);
-      if(!fs::create_directory(tmp.c_str()))
-        throw std::runtime_error("Error: Create dump sub folder error"); 
+      UNI_LOG_CHECK(fs::create_directory(tmp.c_str()) == true, VART_CONTROLLER_DUMP_SUBFOLDER_CREATE_ERROR);
     } 
   }
   for (unsigned regc=0; regc<model_->get_xdpu_total_reg_map().size(); regc++) {
@@ -661,17 +656,14 @@ std::vector<vart::TensorBuffer*>  DpuXrtCloudController::create_tensor_buffers_h
             bufs.emplace_back(buf[0]);
             break;
           }
-          if (idx == (hbm.size()-1)) { // if all bank fail, throw error
-            throw std::bad_alloc();
-          }
+          UNI_LOG_CHECK(idx != (hbm.size()-1), VART_DEVICE_MEMORY_ALLOC_ERROR);
         }
       }
     }
   } else {  //TODO  this is not used now because we need to make sure vir/phy addr aligment
     throw std::runtime_error("Error: invilad tensor in batch");
   }
-  if(bufs.empty())
-    throw std::bad_alloc();
+  UNI_LOG_CHECK(bufs.empty() == 0, VART_TENSOR_BUFFER_CREATE_ERROR);
   return bufs;
   
 }
@@ -1005,15 +997,14 @@ uint32_t DpuXrtCloudController::tensorbuffer_trans(std::vector<vart::TensorBuffe
           }
         }
         else {
-          throw std::runtime_error("Error: invilad tensorbuffer input or output");
+          UNI_LOG_CHECK(ibs == inputBs, VART_TENSOR_BUFFER_INVALID);
         }
       } 
     }
     if (tensor_idx > 0)
       tensor_find = true;
   }
-  if (!tensor_find)
-      throw std::runtime_error("Error: invilad tensorbuffer input");
+  UNI_LOG_CHECK(tensor_find == true, VART_TENSOR_BUFFER_INVALID);
   if (!is_input) {
     if(pool.get_pool_size() == 0) {
       free_buffers(input_tensor_buffers);
@@ -1034,8 +1025,7 @@ vector<std::tuple<int, int,uint64_t>>  DpuXrtCloudController::get_dpu_reg_inside
   {
     std::unique_lock<std::mutex> lock(hwbufio_mtx_);
     auto it = tbuf2reg_.find(output_tensor_buffers[0]);
-    if ((it == tbuf2reg_.end()))
-      throw std::runtime_error("TensorBuffer not found for reg");
+    UNI_LOG_CHECK(it != tbuf2reg_.end(), VART_TENSOR_BUFFER_INVALID);
     bo = it->second;
    
   }
@@ -1055,20 +1045,16 @@ vector<std::tuple<int, int,uint64_t>>  DpuXrtCloudController::get_dpu_reg_inside
     {
       std::unique_lock<std::mutex> lock(hwbufio_mtx_);
       auto it = tbuf2hwbufsio_.find(output_tensor_buffers[idx]);
-      if ((it == tbuf2hwbufsio_.end()))
-        throw std::runtime_error("TensorBuffer not found");
+      UNI_LOG_CHECK(it != tbuf2hwbufsio_.end(), VART_TENSOR_BUFFER_INVALID);
       auto  hwbufs = it->second;
       auto iter = xdpu_total_reg_map.begin();
       while(iter != xdpu_total_reg_map.end()) {
         if ((!check_exist(iter->first ,model_->get_input_regid())) || (!split_io)) {
           auto reg_map = hwbufs.find(iter->first);
           if ((reg_map == hwbufs.end())) {
-            if (check_exist(iter->first, model_->get_output_regid()))
-              throw std::runtime_error("TensorBuffer not found");
-            else {
-              iter++;
-              continue;
-            }
+            UNI_LOG_CHECK(check_exist(iter->first, model_->get_output_regid()) == 0, VART_TENSOR_BUFFER_INVALID);
+            iter++;
+            continue;
           }
             //throw std::runtime_error("Output TensorBuffer not found");
           auto buf = reg_map->second;
@@ -1094,16 +1080,13 @@ vector<std::tuple<int, int,uint64_t>>  DpuXrtCloudController::get_dpu_reg_inside
     if (split_io){
       std::unique_lock<std::mutex> lock(hwbufio_mtx_);
       auto it = tbuf2hwbufsio_.find(input_tensor_buffers[idx]);
-      if ((it == tbuf2hwbufsio_.end()))
-        throw std::runtime_error("TensorBuffer not found");
+      UNI_LOG_CHECK(it != tbuf2hwbufsio_.end(), VART_TENSOR_BUFFER_INVALID);
       auto  hwbufs = it->second;
       auto iter = xdpu_total_reg_map.begin();
       while(iter != xdpu_total_reg_map.end()) {
         if (check_exist(iter->first, model_->get_input_regid())) {
           auto reg_map = hwbufs.find(iter->first);
-          if ((reg_map == hwbufs.end())) {
-              throw std::runtime_error("input TensorBuffer not found");
-          }
+          UNI_LOG_CHECK(reg_map != hwbufs.end(), VART_TENSOR_BUFFER_INVALID);
           //throw std::runtime_error("Input TensorBuffer not found");
           auto buf = reg_map->second;
           for (int i=0; i < tensor_inBatch; i++) { // i or idx is 0
@@ -1191,8 +1174,7 @@ vector<std::tuple<int, int,uint64_t>>  DpuXrtCloudController::get_dpu_reg_outsid
   {
     std::unique_lock<std::mutex> lock(hwbufio_mtx_);
     auto it = tbuf2reg_.find(outputs[0]);
-    if ((it == tbuf2reg_.end()))
-      throw std::runtime_error("TensorBuffer not found for reg");
+    UNI_LOG_CHECK(it != tbuf2reg_.end(), VART_TENSOR_BUFFER_INVALID);
     bo = it->second;
    
   }
@@ -1314,8 +1296,7 @@ void DpuXrtCloudController::run(const std::vector<vart::TensorBuffer*> &inputs,
   std::vector<vart::TensorBuffer*> output_tensor_buffers;
   int inputBs = batch_size_;
   auto input_tensors_size = model_->get_input_tensors().size();
-  if(inputs.size()%input_tensors_size)
-    throw std::runtime_error("Error: input tensorbuffers error");
+  UNI_LOG_CHECK((inputs.size()%input_tensors_size) == 0, VART_TENSOR_BUFFER_INVALID);
   int ibs = inputs[0]->get_tensor()->get_shape()[0]*batch_size_/model_->get_input_tensors()[0]->get_shape()[0];
   //int obs = outputs[0]->get_tensor()->get_shape()[0]*batch_size_/model_->get_output_tensors()[0]->get_shape()[0];
   // check if tensorbuffer store batch inputs/outputs
@@ -1323,9 +1304,7 @@ void DpuXrtCloudController::run(const std::vector<vart::TensorBuffer*> &inputs,
     inputBs = inputs.size()/input_tensors_size;
   else
     inputBs = ibs;
-  if (inputBs > batch_size_) {
-    throw std::runtime_error("Error: size of tensorbuffer not supported");
-  }
+  UNI_LOG_CHECK(inputBs <= batch_size_, VART_TENSOR_BUFFER_INVALID);
   bool create_tb_outside=check_tensorbuffer_outside(outputs);
   bool create_tb_batch=false;
   bool tensorbuffer_phy=true;
@@ -1357,7 +1336,7 @@ void DpuXrtCloudController::run(const std::vector<vart::TensorBuffer*> &inputs,
   Engine& engine = Engine::get_instance();
   const unsigned worker_id = engine.get_my_worker_id();
   if (worker_id >= contexts_.size())
-  throw std::runtime_error("Error: worker_id too large; update controller code");
+    throw std::runtime_error("Error: worker_id too large; update controller code");
 
   auto &context = *(contexts_[worker_id]);
   auto kernel = context.get_dev_kernel();
@@ -1594,9 +1573,8 @@ void Dpu::dpu_trigger_run(xrt::kernel kernel,
         std::cout << "CONV END  :" << read32_dpu_reg(kernel, DPUREG_CONV_END) << std::endl;
         std::cout << "MISC START:" << read32_dpu_reg(kernel, DPUREG_MISC_START) << std::endl;
         std::cout << "MISC END  :" << read32_dpu_reg(kernel, DPUREG_MISC_END) << std::endl;
-        std::cout << "Error: CU timeout when do preload " << std::endl;
-        throw std::runtime_error("Error: CU timeout when do preload "
-          + std::to_string(info_.cu_index));
+        std::cout << "Error: CU timeout when do preload " << std::to_string(info_.cu_index) <<  std::endl;
+        UNI_LOG_CHECK(ecmd->state == ERT_CMD_STATE_COMPLETED, VART_DPU_TIMEOUT_ERROR);
       }
       regVals.clear();
     }
@@ -1648,7 +1626,7 @@ vitis::ai::trace::add_trace("dpu-controller", vitis::ai::trace::func_end, core_i
   //for (unsigned off=0x10; off<0x200; off+=0x04)
   //    std::cout << std::hex << off << " : " << read32_dpu_reg(kernel, off) << std::endl;
   if (ecmd->state != ERT_CMD_STATE_COMPLETED) {
-    std::cout << "Error: CU timeout " << std::endl;
+    std::cout << "Error: CU timeout " << std::to_string(info_.cu_index) << std::endl;
 
     std::cout << "LOAD START:" << read32_dpu_reg(kernel, DPUREG_LOAD_START) << std::endl;
     std::cout << "LOAD END  :" << read32_dpu_reg(kernel, DPUREG_LOAD_END) << std::endl;
@@ -1659,7 +1637,7 @@ vitis::ai::trace::add_trace("dpu-controller", vitis::ai::trace::func_end, core_i
     std::cout << "MISC START:" << read32_dpu_reg(kernel, DPUREG_MISC_START) << std::endl;
     std::cout << "MISC END  :" << read32_dpu_reg(kernel, DPUREG_MISC_END) << std::endl;
     std::cout << "IP COUNTER:" << read32_dpu_reg(kernel, DPUREG_CYCLE_COUNTER) <<std::endl;
-    throw std::runtime_error("Error: CU timeout " + std::to_string(info_.cu_index));
+    UNI_LOG_CHECK(ecmd->state == ERT_CMD_STATE_COMPLETED, VART_DPU_TIMEOUT_ERROR);
   }
 
   if(ENV_PARAM(XLNX_SHOW_DPU_COUNTER)) {

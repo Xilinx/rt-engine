@@ -1504,18 +1504,6 @@ void DpuCloudController::run(const std::vector<vart::TensorBuffer*> &inputs,
             }
 
           }
-          //for (auto it :  xdpu_total_dpureg_map_io ) {
-          //  auto regid = std::get<0>(it);
-          //  if (regid == reg_id) {
-          //    if (xclUnmgdPread(xcl_handle, 0, data.get(), size, std::get<2>(it) + offset))
-          //      throw std::runtime_error("Error: dump failed!");
-          //    std::stringstream ss;
-          //    ss << dump_folder_ << "/E" << std::get<1>(it) << "/" << std::get<2>(out);
-          //    std::ofstream ofs(ss.str(), std::ofstream::binary);
-          //    ofs.write(data.get(), size);
-          //    ofs.close();
-          //  }
-          //}
           tensor_idx++;
         }
       }
