@@ -24,6 +24,7 @@
 #include "device_memory_native.hpp"
 #include "ert.h"
 #include "common/alignment.hpp"
+#include <UniLog/UniLog.hpp>
 /*
  * DPU-specific hostcode
  */

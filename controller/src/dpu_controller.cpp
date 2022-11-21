@@ -96,8 +96,7 @@ XclDpuController<Dhandle, DbufIn, DbufOut>::XclDpuController(const xir::Subgraph
   // get xclbin path and acquire handle
   const char* xclbinPath = std::getenv("XLNX_VART_FIRMWARE");
 
-  if (xclbinPath == nullptr)
-    throw std::runtime_error("Error: xclbinPath is not set, please consider setting XLNX_VART_FIRMWARE.");
+  UNI_LOG_CHECK(xclbinPath != nullptr, VART_XCLBIN_PATH_INVALID);
 
   LOG_IF(INFO, ENV_PARAM(DEBUG_DPU_CONTROLLER))
     << "loading xclbin: "  //
@@ -226,8 +225,7 @@ XclDpuController<Dhandle, DbufIn, DbufOut>::create_tensor_buffers(
       size = strides[0];
     }
     void *data;
-    if (rte::posix_memalign(&data, rte::getpagesize(), size))
-      throw std::bad_alloc();
+    UNI_LOG_CHECK(rte::posix_memalign(&data, rte::getpagesize(), size) == 0, VART_CONTROLLER_VIR_MEMORY_ALLOC_ERROR);
     std::memset(data, 0, size);
     // make TensorBuffer to hold host memory
 

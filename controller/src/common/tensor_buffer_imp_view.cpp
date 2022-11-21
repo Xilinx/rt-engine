@@ -67,7 +67,8 @@ std::pair<uint64_t, size_t> TensorBufferExtImpView::data_x(
   auto offset = 0;
 
   if (idx_orig.size()) {
-    CHECK_EQ(dims.size(), idx_orig.size());
+    UNI_LOG_CHECK(dims.size() == idx_orig.size(), VART_TENSOR_BUFFER_DIMS_ERROR);
+    //CHECK_EQ(dims.size(), idx_orig.size());
     idx = std::vector<int32_t>(idx_orig);
   } else {
     idx = std::vector<int32_t>(dims.size(), 0);
@@ -88,7 +89,8 @@ std::pair<uint64_t, size_t> TensorBufferExtImpView::data_x(
     }
   auto offset_in_single_batch = offset;
   auto size_in_single_batch = tensor_->get_data_size() / batch;
-  CHECK_LE(offset_in_single_batch, size_in_single_batch);
+  UNI_LOG_CHECK(offset_in_single_batch <= size_in_single_batch, VART_TENSOR_BUFFER_CHECK_ERROR);
+  //CHECK_LE(offset_in_single_batch, size_in_single_batch);
   auto size_left_in_single_batch =
       size_in_single_batch - offset_in_single_batch;
   CHECK_GE(size_in_single_batch, 0);

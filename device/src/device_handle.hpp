@@ -25,9 +25,11 @@
 #include <string>
 #include <xrt.h>
 #include "xir/attrs/attrs.hpp"
+
 #include <experimental/xrt-next.h>
 #include <xrt/xrt_kernel.h>
 #include <experimental/xrt_ip.h>
+#include <UniLog/UniLog.hpp>
 
 namespace xir {
 //class Subgraph;

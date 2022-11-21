@@ -42,7 +42,8 @@ std::pair<std::uint64_t, std::size_t> TensorBufferExtImpHost::data(
               tensor_->get_element_num() * size};
     }
     auto dims = tensor_->get_shape();
-    CHECK_EQ(dims.size(), idx.size());
+    UNI_LOG_CHECK(dims.size() == idx.size(), VART_TENSOR_BUFFER_DIMS_ERROR);
+    //CHECK_EQ(dims.size(), idx.size());
     auto offset = 0;
     for (std::size_t k = 0; k < tensor_->get_shape().size(); k++) {
       auto stride = 1;

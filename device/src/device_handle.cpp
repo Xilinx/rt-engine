@@ -35,9 +35,7 @@ static std::atomic<unsigned> naive_resource_mgr_cu_idx_(0);
 DeviceResource::DeviceResource(std::string kernelName, std::string xclbin, xir::Attrs* attrs) {
   // fallback unmanaged/caveman resource manager
   auto num_devices = xclProbe();
-  if (num_devices == 0)
-    throw std::runtime_error("Error: no devices available");
-
+  UNI_LOG_CHECK(num_devices != 0, VART_XRT_DEVICE_AVAILABLE_ERROR);
   // simulate assigning a new cuIdx each time Controller creates DeviceResource 
   // TODO support multiple devices
   //const int deviceIdx = 0;
@@ -63,14 +61,12 @@ DeviceResource::DeviceResource(std::string kernelName, std::string xclbin, xir::
   }
   if (attrs->has_attr("__device_id__")) { 
     auto device_index = attrs->get_attr<size_t>("__device_id__");
-    if (device_index > (num_devices-1))
-      throw std::runtime_error("Error: no devices available");
+    UNI_LOG_CHECK(device_index <  num_devices, VART_XRT_DEVICE_AVAILABLE_ERROR);
     deviceIdx = device_index;
   }
   if (attrs->has_attr("__device_core_id__")) {
     auto cu_index = attrs->get_attr<size_t>("__device_core_id__");
-    if (cu_index > (binstream.get_num_of_cu()-1))
-      throw std::runtime_error("Error: no CU available");
+    UNI_LOG_CHECK(cu_index < binstream.get_num_of_cu(), VART_XRT_CU_AVAILABLE_ERROR);
     cuIdx_xrt = cu_index;
     auto item = cuIdxMap.find(cuIdx_xrt);
     if (item == cuIdxMap.end()) {
@@ -91,8 +87,7 @@ DeviceResource::DeviceResource(std::string kernelName, std::string xclbin, xir::
   xclClose(handle);
   naive_resource_mgr_on_ = true;
 
-  if (cuIdx_xrt >= binstream.get_num_of_cu())
-    throw std::runtime_error("Error: no CUs available");
+  UNI_LOG_CHECK(cuIdx_xrt < binstream.get_num_of_cu(), VART_XRT_CU_AVAILABLE_ERROR);
 
   auto cu_full_name = kernelName + ":" 
     + std::to_string(deviceIdx) + ":" + std::to_string(cuIdx_xrt);
@@ -228,8 +223,7 @@ XrtContext::XrtContext(XrtDeviceHandle &handle) : handle_(handle) {
   dev_handle_ = xclOpen(handle.get_device_info().device_index, NULL, XCL_INFO);
   auto ret = xclOpenContext(dev_handle_, handle.get_device_info().uuid, 
     handle.get_device_info().cu_index, true);
-  if (ret)
-    throw std::runtime_error("Error: xclOpenContext failed");
+  UNI_LOG_CHECK(ret == 0, VART_XRT_OPEN_CONTEXT_ERROR);
   bo_handle_ = xclAllocBO(dev_handle_, 4096, 0, XCL_BO_FLAGS_EXECBUF);
   bo_addr_ = xclMapBO(dev_handle_, bo_handle_, true);
 }
