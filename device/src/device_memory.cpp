@@ -19,8 +19,9 @@ DeviceBuffer::DeviceBuffer(const DeviceHandle *handle, vart::TensorBuffer *tbuf,
  : handle_(handle), tbuf_(tbuf), bank_(bank), size_(0), phys_addr_(0)
 {
   const size_t dataSize =  std::ceil((tbuf->get_tensor())->get_data_type().bit_width / 8.f);
-  if (dataSize == 0)
-    throw std::runtime_error("Error: cannot alloc device buffer -- unknown datatype");
+  UNI_LOG_CHECK(dataSize != 0, VART_DEVICE_BUFFER_ALLOC_ERROR);
+  //if (dataSize == 0)
+  //  throw std::runtime_error("Error: cannot alloc device buffer -- unknown datatype");
 
   size_ = tbuf->get_tensor()->get_element_num() * dataSize;
 }

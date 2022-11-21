@@ -25,7 +25,7 @@
 #include <string>
 #include <xrt.h>
 #include "xir/attrs/attrs.hpp"
-
+#include <UniLog/UniLog.hpp>
 namespace xir {
 //class Subgraph;
 class Attrs;
