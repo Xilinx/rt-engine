@@ -105,11 +105,9 @@ int XrmResource::alloc_from_attrs(std::string kernelName, char* xclbinPath, xir:
 XrmResource::XrmResource(std::string kernelName, std::string xclbin, xir::Attrs* attrs)
     : cu_prop_(new xrmCuProperty()), cu_rsrc_(new xrmCuResource()) {
   context_ = xrmCreateContext(XRM_API_VERSION_1);
-  if (context_ == NULL)
-    throw std::runtime_error("Error: failed to create XRM context");
+  UNI_LOG_CHECK(context_ != NULL, VART_XRM_CREATE_CONTEXT_ERROR);
 
-  if (!xrmIsDaemonRunning(context_))
-    throw std::runtime_error("Error: failed to connect to XRM");
+  UNI_LOG_CHECK(xrmIsDaemonRunning(context_) == true, VART_XRM_CONNECT_ERROR);
 
   // prepare request
   std::memset(cu_prop_.get(), 0, sizeof(xrmCuProperty));
@@ -142,7 +140,7 @@ XrmResource::XrmResource(std::string kernelName, std::string xclbin, xir::Attrs*
       xrmEnableOneDevice(context_, idx);
     }
   }
-
+  int ret = 1;
   for (unsigned i = 0; i < xclbins.size(); i++) 
   {
     // try to load xclbin
@@ -182,7 +180,7 @@ XrmResource::XrmResource(std::string kernelName, std::string xclbin, xir::Attrs*
     return;
   }
 
-  throw std::runtime_error("Error: Could not acquire CU");
+  UNI_LOG_CHECK(ret == 0, VART_XRM_ACQUIRE_CU_ERROR);
 }
 
 XrmResource::~XrmResource() { 

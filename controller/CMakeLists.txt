@@ -3,6 +3,7 @@ set(CONTROLLER_SRCS
   ${CMAKE_CURRENT_SOURCE_DIR}/src/dpu_controller.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/src/common/dpucloud_controller.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/src/common/graph.cpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/src/common/err_code.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/src/common/tensor_buffer_imp_host.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/src/common/tensor_buffer_imp_host_phy.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/src/common/tensor_buffer_imp_view.cpp
