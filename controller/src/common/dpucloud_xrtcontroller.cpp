@@ -73,6 +73,7 @@ using namespace chrono;
 DEF_ENV_PARAM(DEBUG_DPU_CONTROLLER, "0")
 DEF_ENV_PARAM(XLNX_SHOW_DPU_COUNTER, "0");
 DEF_ENV_PARAM(XLNX_BUFFER_POOL, "0");
+DEF_ENV_PARAM(DEBUG_SHOW_DPU_REG, "0");
 DEF_ENV_PARAM(XLNX_ENABLE_FINGERPRINT_CHECK, "1");
 /*
  * a contiguous memory block is allocated for each requests' I/O
@@ -1640,7 +1641,7 @@ vitis::ai::trace::add_trace("dpu-controller", vitis::ai::trace::func_end, core_i
     UNI_LOG_CHECK(ecmd->state == ERT_CMD_STATE_COMPLETED, VART_DPU_TIMEOUT_ERROR);
   }
 
-  if(ENV_PARAM(XLNX_SHOW_DPU_COUNTER)) {
+  if(ENV_PARAM(DEBUG_SHOW_DPU_REG)) {
     std::cout << "LOAD START:" << read32_dpu_reg(kernel, DPUREG_LOAD_START) << std::endl;
     std::cout << "LOAD END  :" << read32_dpu_reg(kernel, DPUREG_LOAD_END) << std::endl;
     std::cout << "SAVE START:" << read32_dpu_reg(kernel, DPUREG_SAVE_START) << std::endl;
@@ -1649,6 +1650,8 @@ vitis::ai::trace::add_trace("dpu-controller", vitis::ai::trace::func_end, core_i
     std::cout << "CONV END  :" << read32_dpu_reg(kernel, DPUREG_CONV_END) << std::endl;
     std::cout << "MISC START:" << read32_dpu_reg(kernel, DPUREG_MISC_START) << std::endl;
     std::cout << "MISC END  :" << read32_dpu_reg(kernel, DPUREG_MISC_END) << std::endl;
+  }
+  if(ENV_PARAM(XLNX_SHOW_DPU_COUNTER)) {
     std::cout << "IP COUNTER:" << read32_dpu_reg(kernel, DPUREG_CYCLE_COUNTER) <<std::endl;
   }
 }
