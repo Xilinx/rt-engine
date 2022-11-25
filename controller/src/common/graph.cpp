@@ -251,7 +251,8 @@ void DpuXmodel::init_graph(const xir::Subgraph* subgraph) {
           "reg_id_to_hw_segment");
     for(auto &r : reg_id_to_hw_segment) {
       auto reg_id_str = r.first;
-      int reg_id = reg_id_str[reg_id_str.length()-1]- '0';
+      int reg_id =std::stoi(reg_id_str.substr(4,reg_id_str.length() ));
+      //int reg_id = reg_id_str[reg_id_str.length()-1]- '0';
       xdpu_regid_to_hw_segment.emplace(std::make_pair(reg_id,r.second));
     }
   }
@@ -268,7 +269,8 @@ void DpuXmodel::init_graph(const xir::Subgraph* subgraph) {
       }
       if ((r.second != "CONST")) {
         auto reg_id_str = r.first;
-        int reg_id = reg_id_str[reg_id_str.length()-1]- '0';
+	int reg_id =std::stoi(reg_id_str.substr(4,reg_id_str.length() ));
+        //int reg_id = reg_id_str[reg_id_str.length()-1]- '0';
         xdpu_total_reg_map.emplace(std::make_pair(reg_id,  reg_id_to_size.at(r.first)));
         if (r.second == "WORKSPACE") {
           xdpu_workspace_reg_map.emplace_back(std::make_pair(reg_id,  reg_id_to_size.at(r.first)));
