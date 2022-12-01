@@ -163,19 +163,22 @@ void Dpuv3Int8Controller::runKernel(ert_start_kernel_cmd* ecmd, uint64_t* buf_ad
 
 void Dpuv3Int8Controller::readRegs(xclDeviceHandle xcl_handle)
 {
+  auto handle = contexts_[0]->get_dev_handle();
+  auto cu_index = handle_->get_device_info().cu_index;
+  xclIPSetReadRange(handle, cu_index, 0x10, 0x200);
   std::cout<<"--------------------------------------------------------"<<std::endl;
   std::cout<<"CU BASE ADDR: "<<handle_->get_device_info().cu_base_addr<<std::endl;
-  std::cout << "VERSION: " << read32_dpu_reg(xcl_handle,  handle_->get_device_info().cu_base_addr+ 0x07C) << std::endl;
-  std::cout << "LOAD START:" << read32_dpu_reg(xcl_handle,  handle_->get_device_info().cu_base_addr+ 0x098) << std::endl;
-  std::cout << "LOAD END  :" << read32_dpu_reg(xcl_handle,  handle_->get_device_info().cu_base_addr+ 0x0A8) << std::endl;
-  std::cout << "SAVE START:" << read32_dpu_reg(xcl_handle,  handle_->get_device_info().cu_base_addr+ 0x09C) << std::endl;
-  std::cout << "SAVE END  :" << read32_dpu_reg(xcl_handle,  handle_->get_device_info().cu_base_addr+ 0x0AC) << std::endl;
-  std::cout << "CONV START:" << read32_dpu_reg(xcl_handle,  handle_->get_device_info().cu_base_addr+ 0x0A0) << std::endl;
-  std::cout << "CONV END  :" << read32_dpu_reg(xcl_handle,  handle_->get_device_info().cu_base_addr+ 0x0B0) << std::endl;
-  std::cout << "MISC START:" << read32_dpu_reg(xcl_handle,  handle_->get_device_info().cu_base_addr+ 0x0A4) << std::endl;
-  std::cout << "MISC END  :" << read32_dpu_reg(xcl_handle,  handle_->get_device_info().cu_base_addr+ 0x0B4) << std::endl;
-  std::cout << "DPU STATUS :" << read32_dpu_reg(xcl_handle,  handle_->get_device_info().cu_base_addr+ 0x0B8) << std::endl;
-  std::cout << "DRU STATUS :" << read32_dpu_reg(xcl_handle,  handle_->get_device_info().cu_base_addr+ 0x0BC) << std::endl;
+  std::cout << "VERSION: " << read32_dpu_reg(xcl_handle,  cu_index, 0x07C) << std::endl;
+  std::cout << "LOAD START:" << read32_dpu_reg(xcl_handle, cu_index,  0x098) << std::endl;
+  std::cout << "LOAD END  :" << read32_dpu_reg(xcl_handle, cu_index,  0x0A8) << std::endl;
+  std::cout << "SAVE START:" << read32_dpu_reg(xcl_handle, cu_index,  0x09C) << std::endl;
+  std::cout << "SAVE END  :" << read32_dpu_reg(xcl_handle, cu_index,  0x0AC) << std::endl;
+  std::cout << "CONV START:" << read32_dpu_reg(xcl_handle, cu_index,  0x0A0) << std::endl;
+  std::cout << "CONV END  :" << read32_dpu_reg(xcl_handle, cu_index,  0x0B0) << std::endl;
+  std::cout << "MISC START:" << read32_dpu_reg(xcl_handle, cu_index,  0x0A4) << std::endl;
+  std::cout << "MISC END  :" << read32_dpu_reg(xcl_handle, cu_index,  0x0B4) << std::endl;
+  std::cout << "DPU STATUS :" << read32_dpu_reg(xcl_handle,  cu_index,  0x0B8) << std::endl;
+  std::cout << "DRU STATUS :" << read32_dpu_reg(xcl_handle,  cu_index, 0x0BC) << std::endl;
   std::cout<<"----------------------------------------------------------"<<std::endl;
 
 }
@@ -184,9 +187,9 @@ void Dpuv3Int8Controller::readRegs(xclDeviceHandle xcl_handle)
 // Not sure what the replacement will be
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
-uint32_t Dpuv3Int8Controller::read32_dpu_reg(xclDeviceHandle dpu_handle, uint64_t offset) {
+uint32_t  Dpuv3Int8Controller::read32_dpu_reg(xclDeviceHandle dpu_handle,int cu_index, uint64_t offset) {
   uint32_t val;
-  xclRead(dpu_handle, XCL_ADDR_KERNEL_CTRL, offset, (void *)(&val), 4);
+  xclRegRead(dpu_handle, cu_index, offset, &val);
   return val;
 }
 #pragma GCC diagnostic pop

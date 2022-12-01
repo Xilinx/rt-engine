@@ -52,7 +52,7 @@ class Dpuv3Int8Controller : public XclDpuController<XrtDeviceHandle, XrtDeviceBu
 //  virtual void runKernel(xrtcpp::exec::exec_write_command cmd, uint64_t* buf_addr, uint32_t* reg_val);
   virtual void initRunBufs(uint64_t *buf_addr, XrtDeviceBuffer* swap_buf, XrtDeviceBuffer* druSrc_buf, XrtDeviceBuffer* druDst_buf);
   void readRegs(xclDeviceHandle xcl_handle);
-  static uint32_t read32_dpu_reg(xclDeviceHandle dpu_handle, uint64_t offset); 
+  static uint32_t read32_dpu_reg(xclDeviceHandle dpu_handle,int cu_index, uint64_t offset);
   std::unique_ptr<Xmodel> xmodel_;
   std::unique_ptr<XrtDeviceBuffer> instr_buf_;
   std::unique_ptr<XrtDeviceBuffer> params_buf_;
