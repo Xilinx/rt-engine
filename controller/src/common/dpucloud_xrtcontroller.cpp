@@ -963,7 +963,7 @@ uint32_t DpuXrtCloudController::tensorbuffer_trans(std::vector<vart::TensorBuffe
       scale = pow(2,tensors[i]->get_attr<std::int32_t>("fix_point"));
 
     for (unsigned j=0; j < buffers.size(); j++) {
-      if (tensors[i]->get_name().find(buffers[j]->get_tensor()->get_name()) != std::string::npos) {
+      if (tensors[i]->get_name() == buffers[j]->get_tensor()->get_name())  {
         if (ibs == inputBs) { //one tensrobuffer store batch
           for (int b=0; b < tsize; b++) {
             dims_idx[0] = b;
