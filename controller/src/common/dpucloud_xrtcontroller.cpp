@@ -452,6 +452,7 @@ void DpuXrtCloudController::init_graph(vector<unsigned> hbmw, vector<unsigned> h
       vector<std::pair<bounding, xrt_bo_share>>::iterator iter;
       std::unique_lock<std::mutex> lock(xrt_bo_mtx_);
       iter = xdpu_workspace_xrt_bo.begin();
+      std::vector<xrt::bo> bos;
       if (share_check) {
         while ( iter !=  xdpu_workspace_xrt_bo.end()) {
           if ((model_->get_md5())[0] == iter->first.md5value[0]) {
@@ -460,14 +461,17 @@ void DpuXrtCloudController::init_graph(vector<unsigned> hbmw, vector<unsigned> h
               vector<uint64_t> addrs;
               for (unsigned int i=0; i< iter->second.bo_handles.size(); i++) {
                 auto handle = contexts_[0]->get_dev_device();
-                auto bo = iter->second.bo_handles[i];//{handle,  iter->second.bo_handles[i] };
+                auto bo_tmp = iter->second.bo_handles[i];//{handle,  iter->second.bo_handles[i] };
+		auto bo = xrt::bo(handle, bo_tmp.export_buffer());
+		bos.emplace_back(bo);
                 LOG_IF(INFO, ENV_PARAM(DEBUG_DPU_CONTROLLER))
                   <<"Engine : " << i<<  " workspace reg_id: " 
                   << iter->second.reg_id
                   << " phy_addr: "
-                  <<  iter->second.bo_handles[i].address();
+                  <<  bo.address();
                 addrs.emplace_back(bo.address());
               }
+	      reg2bos_.emplace(iter->second.reg_id, bos);
               workspace_addr.emplace_back(workspace.first, addrs);
               iter->second.cnt++;
               LOG_IF(INFO, ENV_PARAM(DEBUG_DPU_CONTROLLER))
@@ -532,6 +536,7 @@ void DpuXrtCloudController::init_graph(vector<unsigned> hbmw, vector<unsigned> h
         bo_s.cnt = 1; 
         bo_s.bo_handles = handles;
         bo_s.reg_id=workspace.first;
+	reg2bos_.emplace(workspace.first, handles);
         workspace_addr.emplace_back(workspace.first, addrs);
         {
           xdpu_workspace_xrt_bo.emplace_back(std::make_pair(bd, bo_s));
@@ -539,18 +544,6 @@ void DpuXrtCloudController::init_graph(vector<unsigned> hbmw, vector<unsigned> h
       }
     }
   }
-            //auto iter_t = xdpu_workspace_xrt_bo.begin();
-            //while ( iter_t !=  xdpu_workspace_xrt_bo.end()) {
-            //  if ((model_->get_md5())[0] == iter_t->first.md5value[0]) {
-            //    if ((handle_->get_device_info().cu_index == iter_t->first.cu_id) && 
-            //         (handle_->get_device_info().device_index== iter_t->first.device_id)) {
-            //      for (unsigned int i=0; i< iter_t->second.bo_handles.size(); i++) {
-            //        iter_t->second.bo_handles[i].sync(XCL_BO_SYNC_BO_FROM_DEVICE);
-            //      }
-	    //    }
-            //  }
-	    //  iter_t++;
-	    //}
   model_->init_vitis_tensors(batch_size_, handle_->get_device_info().device_index);
   cu_index_=handle_->get_device_info().cu_index;
   device_index_=handle_->get_device_info().device_index;
@@ -1474,25 +1467,17 @@ void DpuXrtCloudController::run(const std::vector<vart::TensorBuffer*> &inputs,
             }
 
           } else {
-	    std::unique_lock<std::mutex> lock(xrt_bo_mtx_);
-            auto iter = xdpu_workspace_xrt_bo.begin();
-            while ( iter !=  xdpu_workspace_xrt_bo.end()) {
-              if ((model_->get_md5())[0] == iter->first.md5value[0]) {
-                if ((handle_->get_device_info().cu_index == iter->first.cu_id) && 
-                     (handle_->get_device_info().device_index== iter->first.device_id)) {
-                  for (unsigned int i=0; i< iter->second.bo_handles.size(); i++) {
-                    std::stringstream ss;
-                    iter->second.bo_handles[i].sync(XCL_BO_SYNC_BO_FROM_DEVICE);
-                    ss << dump_folder_ << "/E" << i << "/" << std::get<2>(out);
-                    std::ofstream ofs(ss.str(), std::ofstream::binary);
-                    ofs.write((char*)iter->second.bo_handles[i].map<unsigned char*>(), size);
-                    ofs.close();
-                  }
-		}
+            if (reg2bos_.find(reg_id) != reg2bos_.end()) {
+              auto iter =  reg2bos_.find(reg_id);
+              for (unsigned int i=0; i< iter->second.size(); i++) {
+                std::stringstream ss;
+                iter->second[i].sync(XCL_BO_SYNC_BO_FROM_DEVICE);
+                ss << dump_folder_ << "/E" << i << "/" << std::get<2>(out);
+                std::ofstream ofs(ss.str(), std::ofstream::binary);
+                ofs.write((char*)iter->second[i].map<unsigned char*>(), size);
+                ofs.close();
               }
-	      iter++;
 	    }
-
           }
           tensor_idx++;
         }

@@ -91,6 +91,7 @@ class DpuXrtCloudController
   xrt::bo get_xrt_bo(int size, unsigned hbm);
   std::unordered_map<vart::TensorBuffer*, std::unordered_map<int, std::vector<vart::TensorBuffer*>>> tbuf2hwbufsio_;
   std::unordered_map<vart::TensorBuffer*, xrt::bo> tbuf2reg_;
+  std::unordered_map<int, std::vector<xrt::bo>> reg2bos_;
   std::mutex hwbufio_mtx_;
   std::list<std::unique_ptr<vart::TensorBuffer>> bufs_;
   std::unordered_map<vart::TensorBuffer*, vart::TensorBuffer*> bufsView2Phy_;
