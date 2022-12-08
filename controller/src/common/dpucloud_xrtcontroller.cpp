@@ -1546,8 +1546,10 @@ void Dpu::dpu_trigger_run(xrt::kernel kernel,
       }
       ecmd->count = 1 + p;
       run_k.start();
-      for (int wait_count=0; wait_count < 15 && run_k.wait(1000) == 0
-          && ecmd->state != ERT_CMD_STATE_COMPLETED; wait_count++);
+      for (int wait_count=0; wait_count < 15; wait_count++) {
+        if (run_k.wait(1000) == ERT_CMD_STATE_COMPLETED)
+          break;
+      }
 
       if (ecmd->state != ERT_CMD_STATE_COMPLETED) {
 
@@ -1602,8 +1604,10 @@ void Dpu::dpu_trigger_run(xrt::kernel kernel,
   run_k.start();
 
   // wait for kernel
-  for (int wait_count=0; wait_count < 15 && run_k.wait(1000) == 0
-          && ecmd->state != ERT_CMD_STATE_COMPLETED; wait_count++);
+  for (int wait_count=0; wait_count < 15; wait_count++) {
+    if (run_k.wait(1000) == ERT_CMD_STATE_COMPLETED)
+      break;
+  }
 
   __TOC__(DPU_RUN)
 #ifndef _WIN32
