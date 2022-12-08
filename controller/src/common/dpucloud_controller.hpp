@@ -88,6 +88,7 @@ class DpuCloudController
   std::mutex hwbufio_mtx_;
   std::list<std::unique_ptr<vart::TensorBuffer>> bufs_;
   std::unordered_map<vart::TensorBuffer*, vart::TensorBuffer*> bufsView2Phy_;
+  std::unordered_map<vart::TensorBuffer*, std::vector<vart::TensorBuffer*>> bufsView2Phys_;
   std::list<std::unique_ptr<vart::TensorBufferExtImpView>> bufsView_;
   std::vector<std::unique_ptr<XrtContext>> contexts_;
   uint64_t code_addr_;
