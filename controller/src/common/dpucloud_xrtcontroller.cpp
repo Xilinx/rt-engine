@@ -741,6 +741,7 @@ std::vector<vart::TensorBuffer*> DpuXrtCloudController::create_tensorbuffer_for_
                 tbufs.emplace_back(buf.get());
                 {
                   std::unique_lock<std::mutex> lock(hwbufio_mtx_);
+                  bufsView2Phys_.emplace(buf.get(), bufPhy);
                   bufsView_.push_back(std::move(buf));
                 }
               }
@@ -831,7 +832,6 @@ void DpuXrtCloudController::free_buffers(std::vector<vart::TensorBuffer*> &tbufs
   for (auto tb : tbufs) {
     // free buffer if io-split disable
     if (tb->get_location() == vart::TensorBuffer::location_t::HOST_VIRT) {
-
       for (auto it=bufs_.begin(); it != bufs_.end(); it++)
         if (it->get() == tb)
         {
@@ -843,36 +843,41 @@ void DpuXrtCloudController::free_buffers(std::vector<vart::TensorBuffer*> &tbufs
            break;
         }
     } else {
-      auto buf = bufsView2Phy_.find(tb);
-      if (buf != bufsView2Phy_.end()) {
+      auto shape = tb->get_tensor()->get_shape();
+      auto dims = std::vector<int>(shape.size(),0);
+      auto addr = tb->data_phy(dims).first;
+      auto it2 = tbuf2reg_.find(addr);
+      if (it2 != tbuf2reg_.end()) {
+        tbuf2reg_.erase(addr);
+      }
+      auto buf = bufsView2Phys_.find(tb);
+      if (buf != bufsView2Phys_.end()) {
         //auto tensor_sz = tbufs.size()/batch_size_;
         //if ((ti%tensor_sz)==(tensor_sz-1)) {  
         std::unique_lock<std::mutex> lock(tbuf_mtx_);
-        auto it = tbufs2dbufs_.find(buf->second);
-        if (it != tbufs2dbufs_.end()) {
-          tbufs2dbufs_.erase(buf->second);
-          for (auto it=tbufs_.begin(); it != tbufs_.end(); it++) {
-            if (it->get() == buf->second)
-            {
-               rte::aligned_ptr_deleter pDel;  
-               pDel(reinterpret_cast<void*>(it->get()->data().first));
-	       //free(reinterpret_cast<void*>(it->get()->data().first));
-               tbufs_.erase(it);
-               break;
+	for (unsigned i = 0; i < buf->second.size(); i++) {
+          auto it = tbufs2dbufs_.find(buf->second[i]);
+          if (it != tbufs2dbufs_.end()) {
+            tbufs2dbufs_.erase(buf->second[i]);
+            for (auto it=tbufs_.begin(); it != tbufs_.end(); it++) {
+              if (it->get() == buf->second[i])
+              {
+                 rte::aligned_ptr_deleter pDel;
+                 pDel(reinterpret_cast<void*>(it->get()->data().first));
+                 //free(reinterpret_cast<void*>(it->get()->data().first));
+                 tbufs_.erase(it);
+                 break;
+              }
             }
           }
-        }
-        bufsView2Phy_.erase(buf);
+	}
+        bufsView2Phys_.erase(buf);
       } 
       auto it = tbuf2hwbufsio_.find(tb);
       if (it != tbuf2hwbufsio_.end()) {
         auto hwbufs = it->second;
         hwbufs.clear();
         tbuf2hwbufsio_.erase(tb);
-        auto shape = tb->get_tensor()->get_shape();
-        auto dims = std::vector<int>(shape.size(),0);
-	auto addr = tb->data_phy(dims).first;
-        tbuf2reg_.erase(addr);
       }
  
       for (auto it=bufsView_.begin(); it != bufsView_.end(); it++) {

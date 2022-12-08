@@ -721,6 +721,7 @@ std::vector<vart::TensorBuffer*> DpuCloudController::create_tensorbuffer_for_bat
                 tbufs.emplace_back(buf.get());
                 {
                   std::unique_lock<std::mutex> lock(hwbufio_mtx_);
+                  bufsView2Phys_.emplace(buf.get(), bufPhy);
                   bufsView_.push_back(std::move(buf));
                 }
               }
@@ -812,26 +813,26 @@ void DpuCloudController::free_buffers(std::vector<vart::TensorBuffer*> &tbufs) {
            break;
         }
     } else {
-      auto buf = bufsView2Phy_.find(tb);
-      if (buf != bufsView2Phy_.end()) {
-        //auto tensor_sz = tbufs.size()/batch_size_;
-        //if ((ti%tensor_sz)==(tensor_sz-1)) {  
+      auto buf = bufsView2Phys_.find(tb);
+      if (buf != bufsView2Phys_.end()) {
         std::unique_lock<std::mutex> lock(tbuf_mtx_);
-        auto it = tbufs2dbufs_.find(buf->second);
-        if (it != tbufs2dbufs_.end()) {
-          tbufs2dbufs_.erase(buf->second);
-          for (auto it=tbufs_.begin(); it != tbufs_.end(); it++) {
-            if (it->get() == buf->second)
-            {
-               rte::aligned_ptr_deleter pDel;  
-               pDel(reinterpret_cast<void*>(it->get()->data().first));
-	       //free(reinterpret_cast<void*>(it->get()->data().first));
-               tbufs_.erase(it);
-               break;
+	for (unsigned i = 0; i < buf->second.size(); i++) {
+          auto it = tbufs2dbufs_.find(buf->second[i]);
+          if (it != tbufs2dbufs_.end()) {
+            tbufs2dbufs_.erase(buf->second[i]);
+            for (auto it=tbufs_.begin(); it != tbufs_.end(); it++) {
+              if (it->get() == buf->second[i])
+              {
+                 rte::aligned_ptr_deleter pDel;
+                 pDel(reinterpret_cast<void*>(it->get()->data().first));
+	         //free(reinterpret_cast<void*>(it->get()->data().first));
+                 tbufs_.erase(it);
+                 break;
+              }
             }
           }
-        }
-        bufsView2Phy_.erase(buf);
+	}
+        bufsView2Phys_.erase(buf);
       } 
       auto it = tbuf2hwbufsio_.find(tb);
       if (it != tbuf2hwbufsio_.end()) {
