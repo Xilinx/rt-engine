@@ -74,6 +74,7 @@ DEF_ENV_PARAM(DEBUG_DPU_CONTROLLER, "0")
 DEF_ENV_PARAM(XLNX_SHOW_DPU_COUNTER, "0");
 DEF_ENV_PARAM(XLNX_BUFFER_POOL, "0");
 DEF_ENV_PARAM(DEBUG_SHOW_DPU_REG, "0");
+DEF_ENV_PARAM(DEBUG_SAVE_REG, "0");
 DEF_ENV_PARAM(XLNX_ENABLE_FINGERPRINT_CHECK, "1");
 /*
  * a contiguous memory block is allocated for each requests' I/O
@@ -808,7 +809,9 @@ std::vector<vart::TensorBuffer*> DpuXrtCloudController::get_outputs_inner(vector
     //}
     {
       std::unique_lock<std::mutex> lock(hwbufio_mtx_);
-      tbuf2reg_.emplace(tbufs[0], bo);
+      auto shape = tbufs[0]->get_tensor()->get_shape();
+      auto dims = std::vector<int>(shape.size(),0);
+      tbuf2reg_.emplace(tbufs[0]->data_phy(dims).first, bo);
     }
   }
   return tbufs;
@@ -866,7 +869,10 @@ void DpuXrtCloudController::free_buffers(std::vector<vart::TensorBuffer*> &tbufs
         auto hwbufs = it->second;
         hwbufs.clear();
         tbuf2hwbufsio_.erase(tb);
-        tbuf2reg_.erase(tb);
+        auto shape = tb->get_tensor()->get_shape();
+        auto dims = std::vector<int>(shape.size(),0);
+	auto addr = tb->data_phy(dims).first;
+        tbuf2reg_.erase(addr);
       }
  
       for (auto it=bufsView_.begin(); it != bufsView_.end(); it++) {
@@ -1018,7 +1024,9 @@ vector<std::tuple<int, int,uint64_t>>  DpuXrtCloudController::get_dpu_reg_inside
   xrt::bo bo;
   {
     std::unique_lock<std::mutex> lock(hwbufio_mtx_);
-    auto it = tbuf2reg_.find(output_tensor_buffers[0]);
+    auto shape = output_tensor_buffers[0]->get_tensor()->get_shape();
+    auto dims = std::vector<int>(shape.size(),0);
+    auto it = tbuf2reg_.find(output_tensor_buffers[0]->data_phy(dims).first);
     UNI_LOG_CHECK(it != tbuf2reg_.end(), VART_TENSOR_BUFFER_INVALID);
     bo = it->second;
    
@@ -1167,7 +1175,9 @@ vector<std::tuple<int, int,uint64_t>>  DpuXrtCloudController::get_dpu_reg_outsid
   xrt::bo bo;
   {
     std::unique_lock<std::mutex> lock(hwbufio_mtx_);
-    auto it = tbuf2reg_.find(outputs[0]);
+    auto shape = outputs[0]->get_tensor()->get_shape();
+    auto dims = std::vector<int>(shape.size(),0);
+    auto it = tbuf2reg_.find(outputs[0]->data_phy(dims).first);
     UNI_LOG_CHECK(it != tbuf2reg_.end(), VART_TENSOR_BUFFER_INVALID);
     bo = it->second;
    
@@ -1180,10 +1190,6 @@ vector<std::tuple<int, int,uint64_t>>  DpuXrtCloudController::get_dpu_reg_outsid
   }
   //vector<std::tuple<int, int,uint64_t>> xdpu_total_dpureg_map2;
   if (split_io) {
-    auto dims_size = (inputs[0]->get_tensor()->get_shape()).size();
-    auto dims_out_size = (outputs[0]->get_tensor()->get_shape()).size();
-    auto dims = std::vector<int32_t>(dims_size, 0);
-    auto dims_out = std::vector<int32_t>(dims_out_size, 0);
     int tensor_batch = 1;
     if (!create_tb_batch) {
       tensor_batch = batch_size_;
@@ -1203,16 +1209,20 @@ vector<std::tuple<int, int,uint64_t>>  DpuXrtCloudController::get_dpu_reg_outsid
     for (auto iter : in_regs) {
       for (int ts=0; ts < tensor_batch; ts++) {
         for (int i=0; i < batch_size_/tensor_batch; i++) {
-          dims[0] = i;
           auto intensors = model_->get_input_tensors();
-          int input_idx = ts*intensors.size();
-          auto tensor = inputs[input_idx]->get_tensor();
           for (unsigned t=0; t<intensors.size(); t++) {
+	    auto tensor = inputs[t]->get_tensor();
+            auto dims_size = (tensor->get_shape()).size();
+            auto dims = std::vector<int32_t>(dims_size, 0);
+            dims[0] = i;
             if (tensor->get_attr<int32_t>("reg_id") == iter.first) {
-              uint64_t in_addr = inputs[input_idx+t]->data_phy(dims).first-model_->get_input_offset()[t];
+              auto ddr_addr = tensor->get_attr<std::int32_t>("ddr_addr");
+              uint64_t in_addr = inputs[t]->data_phy(dims).first-ddr_addr;
+              uint64_t data[1];
+              data[0] = in_addr;
               //xdpu_total_dpureg_map2.push_back(std::make_tuple(iter.first,i+ts,in_addr));
-              xdpu_total_buffer_dump.push_back(std::make_tuple(iter.first, ts+i, inputs[input_idx+t]));
-              memcpy(addrs_vir[ts+i] + iter.first*sizeof(uint64_t),(uint8_t*)in_addr , sizeof(uint64_t));
+              xdpu_total_buffer_dump.push_back(std::make_tuple(iter.first, ts+i, inputs[t]));
+              memcpy(addrs_vir[i] + iter.first*sizeof(uint64_t),(uint8_t*)data , sizeof(uint64_t));
 
               LOG_IF(INFO, ENV_PARAM(DEBUG_DPU_CONTROLLER))
               <<"Engine : " << i+ts<<  " " 
@@ -1228,16 +1238,20 @@ vector<std::tuple<int, int,uint64_t>>  DpuXrtCloudController::get_dpu_reg_outsid
     for (auto iter : out_regs) {
       for (int ts=0; ts < tensor_batch; ts++) {
         for (int i=0; i < batch_size_/tensor_batch; i++) {
-          dims_out[0] = i;
           auto outtensors = model_->get_output_tensors();
-          int output_idx = ts*outtensors.size();
-          auto tensor = outputs[output_idx]->get_tensor();
           for (unsigned t=0; t<outtensors.size(); t++) {
+	    auto tensor = outputs[t]->get_tensor();
+            auto dims_out_size = (tensor->get_shape()).size();
+            auto dims_out = std::vector<int32_t>(dims_out_size, 0);
+            dims_out[0] = i;
             if (tensor->get_attr<int32_t>("reg_id") == iter.first) {
-              uint64_t out_addr = outputs[output_idx+t]->data_phy(dims_out).first-model_->get_output_offset()[t];
+              auto ddr_addr = tensor->get_attr<std::int32_t>("ddr_addr");
+              uint64_t out_addr = outputs[t]->data_phy(dims_out).first-ddr_addr;
+              uint64_t data[1];
+              data[0] = out_addr; 
               //xdpu_total_dpureg_map2.push_back(std::make_tuple(iter.first,i+ts,out_addr));
-              xdpu_total_buffer_dump.push_back(std::make_tuple(iter.first, ts+i, outputs[output_idx+t]));
-              memcpy(addrs_vir[ts+i] + iter.first*sizeof(uint64_t),(uint8_t*)out_addr , sizeof(uint64_t));
+              xdpu_total_buffer_dump.push_back(std::make_tuple(iter.first, ts+i, outputs[t]));
+              memcpy(addrs_vir[i] + iter.first*sizeof(uint64_t),(uint8_t*)data , sizeof(uint64_t));
               LOG_IF(INFO, ENV_PARAM(DEBUG_DPU_CONTROLLER))
               <<"Engine : " << i+ts<<  " workspace reg_id: " 
               << iter.first
@@ -1375,17 +1389,19 @@ void DpuXrtCloudController::run(const std::vector<vart::TensorBuffer*> &inputs,
 #ifndef _WIN32
     vitis::ai::trace::add_trace("dpu-runner", info.name, batch_size_, info.workload, info.depth);
 #endif
+    if (ENV_PARAM(DEBUG_SAVE_REG) == 1) {
+      const auto mode = std::ios_base::out | std::ios_base::binary | std::ios_base::trunc;
+      std::unique_lock<std::mutex> lock(hwbufio_mtx_);
+      auto it = tbuf2reg_.find(output_tensor_buffers[0]->data_phy({0,0,0,0}).first);
+      if ((it == tbuf2reg_.end()))
+        throw std::runtime_error("TensorBuffer not found for reg");
+      auto bo = it->second;
+      for (int i = 0; i< batch_size_ ; i++) {
+        auto output_file1 = "./reg_" + to_string(i)+ ".bin";
+        std::ofstream(output_file1, mode).write(bo.map<const char*>()+sizeof(uint64_t)*REG_SIZE*i, bo.size()/batch_size_);
+      }
+    }
     dpu->dpu_trigger_run(kernel, xdpu_total_dpureg_map_io, xdpu_total_dpureg_map, workspace_addr, preload_code_addr_, code_addr_);
-    //const auto mode = std::ios_base::out | std::ios_base::binary | std::ios_base::trunc;
-    //std::unique_lock<std::mutex> lock(hwbufio_mtx_);
-    //auto it = tbuf2reg_.find(output_tensor_buffers[0]);
-    //if ((it == tbuf2reg_.end()))
-    //  throw std::runtime_error("TensorBuffer not found for reg");
-    //auto bo = it->second;
-    //for (int i = 0; i< batch_size_ ; i++) {
-    //  auto output_file1 = "./reg_" + to_string(i)+ ".bin";
-    //  std::ofstream(output_file1, mode).write(bo.map<const char*>()+sizeof(uint64_t)*REG_SIZE*i, bo.size()/batch_size_);
-    //}
     if(dump_mode_ ) {  // dump final output
       int tensor_idx = 0;
       for(auto& out: dbg_layers[0].outputs) {
