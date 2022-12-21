@@ -271,18 +271,11 @@ xrt::bo  DpuXrtCloudController::get_xrt_bo(int size, vector<unsigned> hbm) {
   xrt::bo reg0Mem;
   if (hbm.size() == 0)
     throw std::runtime_error("Error: hbm not initialized");
-  for (unsigned idx = 0; idx<hbm.size(); idx++) {
-    reg0Mem = xrt::bo(handle, size, hbm[idx]);
-    //TODO 
-    //if (reg0Mem == NULLBO) {
-    //  if (idx == (hbm.size()-1)) {
-    //    throw std::bad_alloc();
-    //  }else {
-    //    continue;
-    //  }
-    //}
-    break;
-  }
+  //for (unsigned idx = 0; idx<hbm.size(); idx++) {
+    reg0Mem = xrt::bo(handle, size, hbm[0]);
+    //TODO if (reg0Mem == NULLBO) {
+  //  break;
+  //}
   return reg0Mem;
 
 }
@@ -292,18 +285,11 @@ xrt::bo  DpuXrtCloudController::get_xrt_bo(void* data, int size, vector<unsigned
   xrt::bo reg0Mem;
   if (hbm.size() == 0)
     throw std::runtime_error("Error: hbm not initialized");
-  for (unsigned idx = 0; idx<hbm.size(); idx++) {
-    reg0Mem = xrt::bo(handle, data, size, hbm[idx]);
+  //for (unsigned idx = 0; idx<hbm.size(); idx++) {
+    reg0Mem = xrt::bo(handle, data, size, hbm[0]);
     //TODO 
-    //if (reg0Mem == NULLBO) {
-    //  if (idx == (hbm.size()-1)) {
-    //    throw std::bad_alloc();
-    //  }else {
-    //    continue;
-    //  }
-    //}
-    break;
-  }
+  //  break;
+  //}
   return reg0Mem;
 
 }
@@ -407,7 +393,7 @@ void DpuXrtCloudController::init_graph(vector<unsigned> hbmw, vector<unsigned> h
   preload_code_addr_=0x0ul;
   // Load mc_code
   if(!debug_mode_) { 
-    for (auto c : model_->get_code()) {
+    for (auto& c : model_->get_code()) {
         auto codeMem = get_xrt_bo(c.first, c.second.first, hbmc);
         codeMem.sync(XCL_BO_SYNC_BO_TO_DEVICE, c.second.first, 0);
         bos_.emplace_back(codeMem);
@@ -448,7 +434,7 @@ void DpuXrtCloudController::init_graph(vector<unsigned> hbmw, vector<unsigned> h
   }
   if (model_->get_xdpu_workspace_reg_map().size()>0) {
     int share_check=1;
-    for(auto workspace : model_->get_xdpu_workspace_reg_map()) {
+    for(auto& workspace : model_->get_xdpu_workspace_reg_map()) {
       int flag = 0;
       vector<std::pair<bounding, xrt_bo_share>>::iterator iter;
       std::unique_lock<std::mutex> lock(xrt_bo_mtx_);
@@ -774,7 +760,7 @@ std::vector<vart::TensorBuffer*> DpuXrtCloudController::create_tensorbuffer_for_
     } else {
       for (int i=0;i<batch_size_;i++) {
         std::unordered_map<int,vector<vart::TensorBuffer*>>  hwbuf2;
-        for (auto t:hwbuf) {
+        for (auto& t:hwbuf) {
           hwbuf2.emplace(std::make_pair(t.first,vector<vart::TensorBuffer*>(1,(t.second)[i])));
         }
         tbuf2hwbufsio_.emplace(tbufs[i],hwbuf2);
@@ -1154,7 +1140,7 @@ vector<std::tuple<int, int,uint64_t>>  DpuXrtCloudController::get_dpu_reg_inside
 vart::TensorBuffer* DpuXrtCloudController::get_buffer(int32_t regid, int idx,vector<std::tuple<int, int,vart::TensorBuffer*>>& xdpu_total_buffer_dump) {
   vart::TensorBuffer* buf;
  
-  for (auto iter2 : xdpu_total_buffer_dump) {
+  for (auto& iter2 : xdpu_total_buffer_dump) {
     if (regid == std::get<0>(iter2))
     {
       if (idx == std::get<1>(iter2)) {
@@ -1211,7 +1197,7 @@ vector<std::tuple<int, int,uint64_t>>  DpuXrtCloudController::get_dpu_reg_outsid
     }
 
  
-    for (auto iter : in_regs) {
+    for (auto& iter : in_regs) {
       for (int ts=0; ts < tensor_batch; ts++) {
         for (int i=0; i < batch_size_/tensor_batch; i++) {
           auto intensors = model_->get_input_tensors();
@@ -1428,9 +1414,9 @@ void DpuXrtCloudController::run(const std::vector<vart::TensorBuffer*> &inputs,
   } else {//=== run debug instructions
     // dump first layer's inputs
     if(dump_mode_ && (dbg_layers.size() > 0)) {
-      auto& inputs = dbg_layers[0].inputs;
+      auto& inputs_l = dbg_layers[0].inputs;
       int tensor_idx = 0;
-      for(auto& input: inputs) {
+      for(auto& input: inputs_l) {
         auto offset = std::get<0>(input);
         auto size = std::get<1>(input);
         auto data = std::make_unique<char[]>(size);
@@ -1600,7 +1586,7 @@ void Dpu::dpu_trigger_run(xrt::kernel kernel,
 //  std::ofstream(output_file2, mode).write(reg0.map<const char*>(), reg0.size());
 
   // puogram DPU input/output addrs
-  for (auto iter2 : xdpu_total_dpureg_map_io) {
+  for (auto& iter2 : xdpu_total_dpureg_map_io) {
     regVals.push_back(  { (XDPU_CONTROL_ADDR_0_L + 8*std::get<0>(iter2))/ 4, std::get<2>(iter2) & 0xFFFFFFFF });
     regVals.push_back(  { (XDPU_CONTROL_ADDR_0_H + 8*std::get<0>(iter2)) / 4, (std::get<2>(iter2) >> 32) & 0xFFFFFFFF });
     LOG_IF(INFO, ENV_PARAM(DEBUG_DPU_CONTROLLER))
@@ -1665,7 +1651,7 @@ vitis::ai::trace::add_trace("dpu-controller", vitis::ai::trace::func_end, core_i
     std::cout << "IP COUNTER:" << read32_dpu_reg(kernel, DPUREG_CYCLE_COUNTER) <<std::endl;
   }
 }
-Dpu::Dpu(bool debug_mode, DeviceInfo info, int batch_size) 
+Dpu::Dpu(bool debug_mode, const DeviceInfo& info, int batch_size) 
 	: debug_mode_(debug_mode), info_(info), batch_size_(batch_size){
   program_once_complete = 0;
 }

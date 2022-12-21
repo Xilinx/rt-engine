@@ -76,8 +76,9 @@ DeviceResource::DeviceResource(std::string kernelName, std::string xclbin, xir::
     }
   } else {
     //seed to make sure rand() is differnet in differnet process 
-    srand((int)time(0));
-    if (cuIdx > (binstream.get_num_of_cu()-1)) cuIdx = rand()%binstream.get_num_of_cu(); 
+    //srand((int)time(0));
+    UNI_LOG_CHECK(cuIdx < binstream.get_num_of_cu(), VART_XRT_CU_AVAILABLE_ERROR);
+    //if (cuIdx > (binstream.get_num_of_cu()-1)) cuIdx = rand()%binstream.get_num_of_cu(); 
     #ifndef _WIN32
     cuIdx_xrt = xclIPName2Index(handle, binstream.get_cu(cuIdx).c_str());
     #else

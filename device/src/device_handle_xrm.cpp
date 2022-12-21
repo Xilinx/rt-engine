@@ -34,6 +34,7 @@ static std::vector<std::string> get_xclbins_in_dir(std::string path) {
 int XrmResource::alloc_without_deviceId(std::string kernelName, char* xclbinPath) {
   KernelNameManager& kernelNameManager = KernelNameManager::getInstance();
   auto realKernel = kernelNameManager.getRealKernelName(xclbinPath, kernelName);
+  UNI_LOG_CHECK(kernelName.length() <= XRM_MAX_NAME_LEN, VART_XRM_ACQUIRE_CU_ERROR);
   std::strcpy(cu_prop_->kernelName, std::string(realKernel).c_str());
   auto err = xrmCuAllocLeastUsedWithLoad(context_, cu_prop_.get(), xclbinPath, cu_rsrc_.get());
   return err;
@@ -43,6 +44,8 @@ int XrmResource::alloc_with_deviceId(std::string kernelName, char* xclbinPath, x
   auto device_index = attrs->get_attr<size_t>("__device_id__");
   xrmLoadOneDevice(context_, device_index, xclbinPath); // if already load, here may fail, so not check status
   KernelNameManager& kernelNameManager = KernelNameManager::getInstance();
+  
+  UNI_LOG_CHECK(kernelName.length() <= XRM_MAX_NAME_LEN, VART_XRM_ACQUIRE_CU_ERROR);
   auto realKernel = kernelNameManager.getRealKernelName(xclbinPath, kernelName);
   std::strcpy(cu_prop_->kernelName, std::string(realKernel).c_str());
   auto err = xrmCuAllocLeastUsedFromDev(context_, device_index, cu_prop_.get(), cu_rsrc_.get());

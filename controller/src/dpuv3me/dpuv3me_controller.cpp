@@ -157,6 +157,8 @@ std::tuple<uint64_t,int32_t,std::string> DpuV3meController::alloc_and_fill_devic
     std::get<1>(data) = size;
     break;
   }
+  rte::aligned_ptr_deleter pDel;
+  pDel(reinterpret_cast<void*>(codePtr));
   //free(codePtr);
   return data;
 }
@@ -262,10 +264,10 @@ void DpuV3meController::run(const std::vector<vart::TensorBuffer*> &inputs,
     tensorbuffer_phy=false;
   //if ((!create_tb_outside) || tensorbuffer_phy) {
 
-    if (((ibs == inputBs)&&(ibs > 1) && (batch_size_ > 1)) || (batch_size_==1))
-    {
+  //  if (((ibs == inputBs)&&(ibs > 1) && (batch_size_ > 1)) || (batch_size_==1))
+  //  {
       create_tb_batch = true;
-    }
+  //  }
 
   //}
   uint32_t buf_id=0;
@@ -440,7 +442,7 @@ auto trigger_dpu_func = [&](){
       iter3++;
     }
 
-    for (auto iter2 : xdpu_total_dpureg_map2) {
+    for (auto& iter2 : xdpu_total_dpureg_map2) {
       regVals.push_back(  { (XDPU_CONTROL_ADDR_0_L + 8*std::get<0>(iter2) + std::get<1>(iter2)*0x100) / 4, std::get<2>(iter2) & 0xFFFFFFFF });
       regVals.push_back(  { (XDPU_CONTROL_ADDR_0_H + 8*std::get<0>(iter2) + std::get<1>(iter2)*0x100) / 4, (std::get<2>(iter2) >> 32) & 0xFFFFFFFF });
    LOG_IF(INFO, ENV_PARAM(DEBUG_DPU_CONTROLLER))
@@ -551,8 +553,8 @@ auto trigger_dpu_func = [&](){
   } else {//=== run debug instructions
     // dump first layer's inputs
     if(dump_mode_ && (dbg_layers.size() > 0)) {
-      auto& inputs = dbg_layers[0].inputs;
-      for(auto& input: inputs) {
+      auto& inputs_l = dbg_layers[0].inputs;
+      for(auto& input: inputs_l) {
         auto offset = std::get<0>(input);
         auto size = std::get<1>(input);
         auto reg_id = std::get<3>(input);
@@ -600,7 +602,7 @@ auto trigger_dpu_func = [&](){
           auto reg_id = std::get<3>(out);
           auto data = std::make_unique<char[]>(size);
           //for (unsigned i=0; i < io_bufs.size(); i++) {
-          for (auto it :  xdpu_total_dpureg_map2 ) {
+          for (auto& it :  xdpu_total_dpureg_map2 ) {
             auto regid = std::get<0>(it);
             if (regid == reg_id) {
               if (xclUnmgdPread(xcl_handle, 0, data.get(), size, std::get<2>(it) + offset))

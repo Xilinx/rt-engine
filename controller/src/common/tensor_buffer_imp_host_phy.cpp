@@ -139,14 +139,14 @@ std::vector<std::tuple<int, uint64_t, int>> TensorBufferExtImpHostPhy::host_to_d
 
 void TensorBufferExtImpHostPhy::sync_for_read(uint64_t offset, size_t size) {
   std::vector<std::tuple<int, uint64_t, int>> dev_buffers = host_to_dev_range(0, offset, size);
-  for (auto iter : dev_buffers) {
+  for (auto& iter : dev_buffers) {
     dbufs_[std::get<0>(iter)]->sync_for_read(std::get<1>(iter), std::get<2>(iter));
   }
 }
 
 void TensorBufferExtImpHostPhy::sync_for_write(uint64_t offset, size_t size) {
   std::vector<std::tuple<int, uint64_t, int>> dev_buffers = host_to_dev_range(0, offset, size);
-  for (auto iter : dev_buffers) {
+  for (auto& iter : dev_buffers) {
     dbufs_[std::get<0>(iter)]->sync_for_write(std::get<1>(iter), std::get<2>(iter));
   }
 }
@@ -155,7 +155,7 @@ void TensorBufferExtImpHostPhy::copy_from_host(size_t batch_idx,
                                                const void* buf, size_t size,
                                                size_t offset) {
   std::vector<std::tuple<int, uint64_t, int>> dev_buffers = host_to_dev_range(batch_idx, offset, size);
-  for (auto iter : dev_buffers) {
+  for (auto& iter : dev_buffers) {
     dbufs_[std::get<0>(iter)]->copy_from_host(buf, std::get<2>(iter), std::get<1>(iter));
   }
 }
@@ -163,7 +163,7 @@ void TensorBufferExtImpHostPhy::copy_from_host(size_t batch_idx,
 void TensorBufferExtImpHostPhy::copy_to_host(size_t batch_idx, void* buf,
                                              size_t size, size_t offset) {
   std::vector<std::tuple<int, uint64_t, int>> dev_buffers = host_to_dev_range(batch_idx, offset, size);
-  for (auto iter : dev_buffers) {
+  for (auto& iter : dev_buffers) {
     dbufs_[std::get<0>(iter)]->copy_to_host(buf, std::get<2>(iter), std::get<1>(iter));
   }
 }
