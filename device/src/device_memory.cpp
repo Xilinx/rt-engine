@@ -27,7 +27,7 @@ DeviceBuffer::DeviceBuffer(const DeviceHandle *handle, vart::TensorBuffer *tbuf,
 }
 
 DeviceBuffer::DeviceBuffer(const DeviceHandle *handle, void *data, size_t size, unsigned bank)
-  : handle_(handle), bank_(bank), size_(size), phys_addr_(0), data_(data) {
+  : handle_(handle), tbuf_(nullptr), bank_(bank), size_(size), phys_addr_(0), data_(data) {
 }
 
 /*
@@ -108,11 +108,11 @@ XrtDeviceBuffer::~XrtDeviceBuffer() {
  */
 // This is all dummy code to keep the infrastructure happy
 IpuDeviceBuffer::IpuDeviceBuffer(const IpuDeviceHandle *handle, size_t size, unsigned int bank)
-  : DeviceBuffer(handle, (void*)nullptr, size, bank) {}
+  : DeviceBuffer(handle, (void*)nullptr, size, bank) {mem_=0;}
 IpuDeviceBuffer::IpuDeviceBuffer(const IpuDeviceHandle *handle, vart::TensorBuffer *tbuf, unsigned bank)
- : DeviceBuffer(handle, tbuf, bank) {}
+ : DeviceBuffer(handle, tbuf, bank) {mem_=0;}
 IpuDeviceBuffer::IpuDeviceBuffer(const IpuDeviceHandle *handle, void *data, size_t size, unsigned bank)
-  : DeviceBuffer(handle, data, size, bank) {}
+  : DeviceBuffer(handle, data, size, bank) {mem_=0;}
 void IpuDeviceBuffer::upload() const {}
 void IpuDeviceBuffer::download() const {}
 void IpuDeviceBuffer::sync_for_read(uint64_t offset, size_t size) {}

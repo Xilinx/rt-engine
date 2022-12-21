@@ -85,6 +85,7 @@ DpuXmodel::DpuXmodel(const xir::Subgraph *subgraph) : dump_mode_(false),debug_mo
 }
 
 DpuXmodel::DpuXmodel(const std::string meta): dump_mode_(false),debug_mode_(false) {
+  fingerprint = 0;
   init(meta);
 }
 
@@ -415,6 +416,8 @@ void DpuXmodel::init_graph(const xir::Subgraph* subgraph) {
     //xdpu_total_out_size += tensor->get_element_num(); 
 
   }
+  layer.workload = subgraph_->get_attr<uint64_t>("workload");
+  layer.depth = subgraph_->get_depth();
   //xdpu_total_out_size = xdpu_total_reg_map.find(output_regid)->second; 
   //in release mode: using dbg_layers_ to store first inputs and final outputs information  
   dbg_layers_.clear();

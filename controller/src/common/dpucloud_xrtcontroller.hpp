@@ -24,7 +24,7 @@
 #include "tensorbuffer_pool.hpp"
 class Dpu {
 public:
-  Dpu(bool debug_mode, DeviceInfo info, int batch_size); 
+  Dpu(bool debug_mode, const DeviceInfo& info, int batch_size); 
   virtual void dpu_trigger_run(xrt::kernel kernel,  std::vector<std::tuple<int, int,uint64_t>> xdpu_total_dpureg_map_io,  std::unordered_map<int,uint64_t>& xdpu_total_dpureg_map,
   std::vector<std::pair<int, std::vector<uint64_t>>>& workspace_addr, uint64_t preload_code_addr, uint64_t code_addr);
   int program_once_complete;
