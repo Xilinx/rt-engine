@@ -1174,7 +1174,7 @@ vector<std::tuple<int, int,uint64_t>>  DpuXrtCloudController::get_dpu_reg_outsid
    
   }
   for (int i = 0; i< batch_size_; i++) {
-     xdpu_total.push_back(std::make_tuple(0, i, bo.address()+REG_SIZE*sizeof(uint64_t)*i));
+     xdpu_total.push_back(std::make_tuple(i, 0, bo.address()+REG_SIZE*sizeof(uint64_t)*i));
      unsigned char* bo_map = bo.map<unsigned char*>()+REG_SIZE*sizeof(uint64_t)*i;
 
      addrs_vir.push_back(bo_map);
