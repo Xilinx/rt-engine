@@ -180,6 +180,7 @@ void DpuXrtCloudController::init_profiler() {
 DpuXrtCloudController::~DpuXrtCloudController() {
   std::unique_lock<std::mutex> lock(xrt_bo_mtx_);
   auto iter = xdpu_workspace_xrt_bo.begin();
+  int flag_e = 0;
   while (iter !=  xdpu_workspace_xrt_bo.end()) {
     if ((model_->get_md5())[0] == iter->first.md5value[0]) {
       if ((cu_index_ == iter->first.cu_id)&& (device_index_ == iter->first.device_id)) {
@@ -192,14 +193,14 @@ DpuXrtCloudController::~DpuXrtCloudController() {
             << "free featuremap bo " << "cu_index: "<< iter->first.cu_id 
             << ", device_id: " << iter->first.device_id
             ;
-          flag = 1;
+          flag_e = 1;
         }
         break;
       }
     } 
     iter++; 
   }
-  if (flag == 1) {
+  if (flag_e == 1) {
     xdpu_workspace_xrt_bo.erase(iter);
   }
 
