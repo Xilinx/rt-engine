@@ -68,7 +68,7 @@ int XrmResource::alloc_from_attrs(std::string kernelName, char* xclbinPath, xir:
     } 
     if (0==err) {   
       //select correct core
-      if ((kernelName == "DPUCVDX8H")||(kernelName == "DPUCAHX8L")||(kernelName == "DPUCAHX8H")) {
+      if ((kernelName == "DPUCVDX8H")||(kernelName == "DPUCAHX8L")||(kernelName == "DPUCAHX8H") || (kernelName == "DPUCV2DX8G")) {
         if (attrs->has_attr("__device_core_id__")) { // this only used in runtime and can't be set outside
           auto core_id = attrs->get_attr<size_t>("__device_core_id__");
           if (cu_rsrc_->cuId != (int)core_id ) {
