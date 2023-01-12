@@ -416,8 +416,8 @@ void DpuXmodel::init_graph(const xir::Subgraph* subgraph) {
     //xdpu_total_out_size += tensor->get_element_num(); 
 
   }
-  layer.workload = subgraph_->get_attr<uint64_t>("workload");
-  layer.depth = subgraph_->get_depth();
+  layer.set_workload(subgraph_->get_attr<uint64_t>("workload"));
+  layer.set_depth(subgraph_->get_depth());
   //xdpu_total_out_size = xdpu_total_reg_map.find(output_regid)->second; 
   //in release mode: using dbg_layers_ to store first inputs and final outputs information  
   dbg_layers_.clear();
@@ -450,8 +450,8 @@ void DpuXmodel::init_graph(const xir::Subgraph* subgraph) {
       auto child = std::find_if(children.begin(), children.end(),
           [&child_name](auto g) { return g->get_name() == child_name; });
       layer_info layer(child_name); 
-      layer.workload = subgraph_->get_attr<uint64_t>("workload");
-      layer.depth = subgraph_->get_depth();
+      layer.set_workload((*child)->get_attr<uint64_t>("workload"));
+      layer.set_depth((*child)->get_depth());
       if ((*child)->has_attr("mc_code")) {
         auto& mc_code = (*child)->get_attr<std::vector<char> >("mc_code"); 
 

@@ -1226,7 +1226,7 @@ vector<std::tuple<int, int,uint64_t>>  DpuXrtCloudController::get_dpu_reg_outsid
         }
       }
     }
-    for (auto iter : out_regs) {
+    for (auto& iter : out_regs) {
       for (int ts=0; ts < tensor_batch; ts++) {
         for (int i=0; i < batch_size_/tensor_batch; i++) {
           auto outtensors = model_->get_output_tensors();

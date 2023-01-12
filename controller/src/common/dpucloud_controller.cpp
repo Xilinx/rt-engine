@@ -1113,7 +1113,7 @@ vector<std::tuple<int, int,uint64_t>>  DpuCloudController::get_dpu_reg_outside_h
         }
       }
     }
-    for (auto iter : out_regs) {
+    for (auto& iter : out_regs) {
       for (int ts=0; ts < tensor_batch; ts++) {
         for (int i=0; i < batch_size_/tensor_batch; i++) {
           dims_out[0] = i;
