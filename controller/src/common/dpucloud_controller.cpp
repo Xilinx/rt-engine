@@ -641,6 +641,11 @@ std::vector<vart::TensorBuffer*> DpuCloudController::create_tensorbuffer_for_bat
   if (isTensorsBatch)
     tensor_batch = batch_size_;
   auto iter = xdpu_total_reg_map.begin();
+  if (isTensorsBatch) { // if create tensorbuffers in batch, tensor->get_shape()[0] is 1
+      tbufs.reserve(tensors.size()*batch_size_);
+  } else {
+      tbufs.reserve(tensors.size());
+  }
   while(iter !=xdpu_total_reg_map.end()) {
     int is_workspace=0;
     auto reg_workspace = workspace_addr.begin();

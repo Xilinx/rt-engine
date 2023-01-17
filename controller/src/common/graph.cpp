@@ -196,12 +196,13 @@ std::vector<const xir::Tensor*> DpuXmodel::get_input_tensors() {
 }
 std::vector<const xir::Tensor*> DpuXmodel::get_output_tensors() {
   auto ret = std::vector<const xir::Tensor*>();
-  ret.reserve(intensors_.size());
+  ret.reserve(outtensors_.size());
   std::transform(outtensors_.begin(), outtensors_.end(), std::back_inserter(ret),
                  [](auto& tensor) { return tensor.get(); });
   return ret;
 }
 void DpuXmodel::init_vitis_tensors(int batch_size, size_t device_index) {
+  intensors_.reserve(graph_intensors_.size());
   for (unsigned int i=0; i< graph_intensors_.size(); i++) {
       auto tensor = graph_intensors_[i].get();
       auto dims = tensor->get_shape();
@@ -216,6 +217,7 @@ void DpuXmodel::init_vitis_tensors(int batch_size, size_t device_index) {
       vitis_tensor->set_attrs(std::move(attrs));
       intensors_.emplace_back(std::move(vitis_tensor));
   }
+  outtensors_.reserve(graph_outtensors_.size());
   for (unsigned int i=0; i< graph_outtensors_.size(); i++) {
       auto tensor = graph_outtensors_[i].get();
       auto dims = tensor->get_shape();
@@ -361,10 +363,11 @@ void DpuXmodel::init_graph(const xir::Subgraph* subgraph) {
   subgraph_info.depth = subgraph_->get_depth();
   subgraph_info.name = subgraph_->get_name();
   // Get input offset
-  auto input_tensors = subgraph_->get_input_tensors();
-  auto output_tensors = subgraph_->get_output_tensors();
+  auto input_tensors = subgraph_->get_sorted_input_tensors();
+  auto output_tensors = subgraph_->get_sorted_output_tensors();
   //xdpu_total_in_size=0;
   //xdpu_total_out_size=0;
+  graph_intensors_.reserve(input_tensors.size());
   for (auto &in_tensor : input_tensors) {
     auto out = find_tensor(in_tensor,subgraph_,true);
     auto ddr_addr = out->get_attr<std::int32_t>("ddr_addr");
@@ -393,6 +396,7 @@ void DpuXmodel::init_graph(const xir::Subgraph* subgraph) {
   //xdpu_total_in_size = xdpu_total_reg_map.find(input_regid)->second; 
 
   // Get output offset
+  graph_outtensors_.reserve(output_tensors.size());
   for(auto &out_tensor : output_tensors) {
     auto out = find_tensor(out_tensor,subgraph_,false);
     auto ddr_addr = out->get_attr<std::int32_t>("ddr_addr");
