@@ -113,10 +113,7 @@ public:
 	}
 };
 #elif defined(__MACH__)
-//---------------------------------------------------------
-// Semaphore (Apple iOS and OSX)
-// Can't use POSIX semaphores due to http://lists.apple.com/archives/darwin-kernel/2009/Apr/msg00010.html
-//---------------------------------------------------------
+
 class Semaphore
 {
 private:
@@ -155,7 +152,6 @@ public:
 		ts.tv_sec = static_cast<unsigned int>(timeout_usecs / 1000000);
 		ts.tv_nsec = (timeout_usecs % 1000000) * 1000;
 
-		// added in OSX 10.10: https://developer.apple.com/library/prerelease/mac/documentation/General/Reference/APIDiffsMacOSX10_10SeedDiff/modules/Darwin.html
 		kern_return_t rc = semaphore_timedwait(m_sema, ts);
 		return rc == KERN_SUCCESS;
 	}
