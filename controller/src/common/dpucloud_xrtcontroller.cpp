@@ -148,6 +148,7 @@ DpuXrtCloudController::DpuXrtCloudController(std::string meta, xir::Attrs* attrs
 
   model_ =std::make_shared<DpuXmodel>(meta);
   split_io = check_io_split(model_->get_input_regid(), model_->get_output_regid()); 
+  buf_init_ = 0;
 }
 
 DpuXrtCloudController::DpuXrtCloudController(const xir::Subgraph *subgraph, xir::Attrs* attrs) 
@@ -157,6 +158,7 @@ DpuXrtCloudController::DpuXrtCloudController(const xir::Subgraph *subgraph, xir:
     contexts_.emplace_back(new XrtNativeContext(*handle_));
   model_ =std::make_shared<DpuXmodel>(subgraph);
   split_io = check_io_split(model_->get_input_regid(), model_->get_output_regid()); 
+  buf_init_ = 0;
 }
 
 void DpuXrtCloudController::init_profiler() {
@@ -203,6 +205,9 @@ DpuXrtCloudController::~DpuXrtCloudController() {
   if (flag_e == 1) {
     xdpu_workspace_xrt_bo.erase(iter);
   }
+  free_buffers(inputs_);
+  free_buffers(outputs_);
+
 
 }
 std::vector<unsigned> DpuXrtCloudController::get_hbmw() {
@@ -603,7 +608,11 @@ std::vector<vart::TensorBuffer*> DpuXrtCloudController::get_inputs(int batchsz) 
     }
   } else {
     auto hbmio = get_hbmio();
-    return get_outputs_inner(hbmio, true, batchsz);
+    auto buffers = get_outputs_inner(hbmio, true, batchsz);
+    if (buf_init_ < 2)
+      inputs_ = buffers;
+    buf_init_++;
+    return buffers;
   }
  
 }
@@ -651,7 +660,11 @@ std::vector<vart::TensorBuffer*>  DpuXrtCloudController::create_tensor_buffers_h
 }
 std::vector<vart::TensorBuffer*> DpuXrtCloudController::get_outputs(int batchsz) {
   auto hbmio = get_hbmio();
-  return get_outputs_inner(hbmio, false, batchsz);
+  auto buffers = get_outputs_inner(hbmio, false, batchsz);
+  if (buf_init_< 2) 
+    outputs_ = buffers;
+  buf_init_++;
+  return buffers;
 }
 std::vector<vart::TensorBuffer*> DpuXrtCloudController::create_tensorbuffer_for_batch(vector<unsigned> hbm, bool isInputs, std::vector<const xir::Tensor*> tensors, std::vector<int> tensor_offset, int output_bz, bool isTensorsBatch) {
   std::unordered_map<int,std::vector<vart::TensorBuffer*>>  hwbuf;

@@ -138,6 +138,9 @@ class DpuXrtCloudController
   std::unique_ptr<Dpu> dpu;
   vart::TensorBuffer* get_buffer(int32_t regid, int idx, std::vector<std::tuple<int, int,vart::TensorBuffer*>>& xdpu_total_dpureg_map_io);
  private:
+  int buf_init_;
+  std::vector<vart::TensorBuffer*> inputs_;
+  std::vector<vart::TensorBuffer*> outputs_;
   int flag;
   void init_profiler();
   bool share;

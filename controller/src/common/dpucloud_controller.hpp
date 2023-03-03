@@ -129,6 +129,9 @@ class DpuCloudController
 
   uint64_t get_addr(int32_t regid, int idx, std::vector<std::tuple<int, int,uint64_t>>& xdpu_total_dpureg_map_io);
  private:
+  int buf_init_;
+  std::vector<vart::TensorBuffer*> inputs_;
+  std::vector<vart::TensorBuffer*> outputs_;
   int flag;
   void init_profiler();
   bool share;

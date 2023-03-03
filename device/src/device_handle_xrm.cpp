@@ -205,4 +205,5 @@ XrmResource::XrmResource(std::string kernelName, std::string xclbin, xir::Attrs*
 
 XrmResource::~XrmResource() { 
   xrmCuRelease(context_, cu_rsrc_.get()); 
+  xrmDestroyContext(context_);
 }
