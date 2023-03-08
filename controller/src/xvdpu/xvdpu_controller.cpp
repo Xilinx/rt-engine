@@ -68,6 +68,10 @@ DpuXvdpuController::DpuXvdpuController(const xir::Subgraph *subgraph, xir::Attrs
   auto hbmw = get_hbmw();
   init_graph(hbmw, hbmw, attrs);
   dpu.reset(new Dpu(debug_mode_, handle_->get_device_info(), batch_size_));
+  if(profile_mode_) {
+    dpu->prof_addr_ = prof_.address();
+    dpu->profile_cnt_ = 0;
+  }
   //task_queue = get_xrt_bo(contexts_[0]->get_dev_device(), 64*1024, hbmw);
 }
 DpuXvdpuController::~DpuXvdpuController() {

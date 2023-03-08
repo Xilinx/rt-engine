@@ -31,6 +31,8 @@ public:
   bool debug_mode_;
   DeviceInfo info_;
   int batch_size_;
+  uint64_t prof_addr_;
+  int profile_cnt_;
 
 }; 
 
@@ -137,6 +139,9 @@ class DpuXrtCloudController
   size_t device_index_;
   std::unique_ptr<Dpu> dpu;
   vart::TensorBuffer* get_buffer(int32_t regid, int idx, std::vector<std::tuple<int, int,vart::TensorBuffer*>>& xdpu_total_dpureg_map_io);
+  xrt::bo prof_;
+  int prof_size_;
+  bool profile_mode_;
  private:
   int buf_init_;
   std::vector<vart::TensorBuffer*> inputs_;
@@ -148,5 +153,6 @@ class DpuXrtCloudController
   std::list<std::unique_ptr<xir::Tensor>> tensors_;
   tensorbufferPool pool;
   xrt::bo code_;
+  int file_cnt_;
 };
 

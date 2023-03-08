@@ -55,27 +55,20 @@ using namespace chrono;
 #define XDPU_CONTROL_RESET 0x40  // reset DPU active low
 
 #define BASE_ADDR 0x00000 // NOTE: USE ONLY FOR BEFORE 2020.1
-//#define XDPU_CONTROL_START 0x10  // write 1 to enable DPU start
-//#define XDPU_SAVE_EARLY_DONE 0x14  // write 1 to enable DPU start
-//#define XDPU_CONTROL_HP 0x20
 #define XDPU_CONTROL_INSTR_L 0x50
 #define XDPU_CONTROL_INSTR_H 0x54
 #define XDPU_CONTROL_ADDR_0_L 0x200 // weights / reg0
 #define XDPU_CONTROL_ADDR_0_H 0x204
-//#define XDPU_CONTROL_ADDR_1_L 0x108 // input1
-//#define XDPU_CONTROL_ADDR_1_H 0x10C
-//#define XDPU_CONTROL_ADDR_2_L 0x110
-//#define XDPU_CONTROL_ADDR_2_H 0x114
-//#define XDPU_CONTROL_ADDR_3_L 0x118
-//#define XDPU_CONTROL_ADDR_3_H 0x11C
 #define DPUREG_ENGINE_NUM 0x134  //TODO 0x80
-//#define batch_size_ 8
 DEF_ENV_PARAM(DEBUG_DPU_CONTROLLER, "0")
 DEF_ENV_PARAM(XLNX_SHOW_DPU_COUNTER, "0");
 DEF_ENV_PARAM(XLNX_BUFFER_POOL, "0");
 DEF_ENV_PARAM(DEBUG_SHOW_DPU_REG, "0");
 DEF_ENV_PARAM(DEBUG_SAVE_REG, "0");
 DEF_ENV_PARAM(XLNX_ENABLE_FINGERPRINT_CHECK, "1");
+#define DPU_PROF_SIZE 0x8000
+DEF_ENV_PARAM(DEBUG_PROFILE, "0");
+DEF_ENV_PARAM(DEBUG_PROFILE_SIZE, "0");
 /*
  * a contiguous memory block is allocated for each requests' I/O
  * layout:
@@ -552,7 +545,17 @@ void DpuXrtCloudController::init_graph(vector<unsigned> hbmw, vector<unsigned> h
     auto outputs = get_outputs();
     pool.extend(std::make_pair(inputs,outputs));
   }
-
+  profile_mode_ = false;
+  file_cnt_ = 0;
+  if(ENV_PARAM(DEBUG_PROFILE)==1) {
+    profile_mode_ = true;
+    auto hbm = get_hbmio();
+    if(ENV_PARAM(DEBUG_PROFILE_SIZE) > 1)
+      prof_size_ = ENV_PARAM(DEBUG_PROFILE_SIZE);
+    else
+      prof_size_ = DPU_PROF_SIZE;
+    prof_ = get_xrt_bo(prof_size_, hbm);
+  }
 }
 
 vector<float> DpuXrtCloudController::get_input_scale() {
@@ -1412,6 +1415,18 @@ void DpuXrtCloudController::run(const std::vector<vart::TensorBuffer*> &inputs,
       }
     }
     dpu->dpu_trigger_run(kernel, xdpu_total_dpureg_map_io, xdpu_total_dpureg_map, workspace_addr, preload_code_addr_, code_addr_);
+    if(profile_mode_) {
+      std::stringstream ss;
+      ss << "profile_dump";
+      if (!fs::exists(ss.str()))
+      UNI_LOG_CHECK(fs::create_directory(ss.str()) == true, VART_CONTROLLER_DUMP_FOLDER_CREATE_ERROR);
+      prof_.sync(XCL_BO_SYNC_BO_FROM_DEVICE);
+      ss << "/dpu_profile_" << file_cnt_ << ".bin" ;
+      std::ofstream ofs(ss.str(), std::ofstream::binary);
+      ofs.write((const char*)prof_.map<unsigned char*>(), prof_size_);
+      ofs.close();
+      file_cnt_++;
+    }
     if(dump_mode_ ) {  // dump final output
       int tensor_idx = 0;
       for(auto& out: dbg_layers[0].outputs) {
@@ -1604,6 +1619,8 @@ void Dpu::dpu_trigger_run(xrt::kernel kernel,
 //  reg0.sync(XCL_BO_SYNC_BO_FROM_DEVICE);
 //  std::ofstream(output_file2, mode).write(reg0.map<const char*>(), reg0.size());
 
+  //Yue: this is for xvdpu profiling, and only for lateny profiling.
+
   // puogram DPU input/output addrs
   for (auto& iter2 : xdpu_total_dpureg_map_io) {
     regVals.push_back(  { (XDPU_CONTROL_ADDR_0_L + 8*std::get<0>(iter2))/ 4, std::get<2>(iter2) & 0xFFFFFFFF });
@@ -1614,6 +1631,12 @@ void Dpu::dpu_trigger_run(xrt::kernel kernel,
         << std::get<0>(iter2) << " "
         << std::get<2>(iter2)      //
         ;
+  }
+  if(ENV_PARAM(DEBUG_PROFILE)==1) {
+    regVals.push_back(  { 0xe0 / 4, 0x00000001 });
+    regVals.push_back(  { 0xe4 / 4, profile_cnt_*2028 }); //TODO
+    regVals.push_back(  { 0x58 / 4, prof_addr_ & 0xFFFFFFFF });
+    regVals.push_back(  { 0x5c / 4, (prof_addr_ >> 32) & 0xFFFFFFFF});
   }
   
   p = 6;
@@ -1669,6 +1692,7 @@ vitis::ai::trace::add_trace("dpu-controller", vitis::ai::trace::func_end, core_i
   if(ENV_PARAM(XLNX_SHOW_DPU_COUNTER)) {
     std::cout << "IP COUNTER:" << read32_dpu_reg(kernel, DPUREG_CYCLE_COUNTER) <<std::endl;
   }
+  profile_cnt_++;
 }
 Dpu::Dpu(bool debug_mode, const DeviceInfo& info, int batch_size) 
 	: debug_mode_(debug_mode), info_(info), batch_size_(batch_size){
