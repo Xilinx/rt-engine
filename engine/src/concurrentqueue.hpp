@@ -131,7 +131,6 @@ namespace moodycamel { namespace details {
 	};
 } }
 #else
-// Use a nice trick from this answer: http://stackoverflow.com/a/8438730/21475
 // In order to get a numeric thread ID in a platform-independent way, we use a thread-local
 // static variable's address as a thread identifier :-)
 #if defined(__GNUC__) || defined(__INTEL_COMPILER)
@@ -723,7 +722,6 @@ private: // but shared with ConcurrentQueue
 };
 
 // Need to forward-declare this swap because it's in a namespace.
-// See http://stackoverflow.com/questions/4492062/why-does-a-c-friend-class-need-a-forward-declaration-only-in-other-namespaces
 template<typename T, typename Traits>
 inline void swap(typename ConcurrentQueue<T, Traits>::ImplicitProducerKVP& a, typename ConcurrentQueue<T, Traits>::ImplicitProducerKVP& b) MOODYCAMEL_NOEXCEPT;
 
@@ -1943,7 +1941,6 @@ private:
 				// Note that I believe a compiler (signal) fence here would be sufficient due to the nature of fetch_add (all
 				// read-modify-write operations are guaranteed to work on the latest value in the modification order), but
 				// unfortunately that can't be shown to be correct using only the C++11 standard.
-				// See http://stackoverflow.com/questions/18223161/what-are-the-c11-memory-ordering-guarantees-in-this-corner-case
 				std::atomic_thread_fence(std::memory_order_acquire);
 				
 				// Increment optimistic counter, then check if it went over the boundary
