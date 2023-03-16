@@ -100,6 +100,7 @@ target_link_libraries(
   ${XRT_LINK_LIBS}
   ${XRM_LIBRARIES}
   target-factory::target-factory 
+  vart::util
   vart::runner
   vart::trace
   glog::glog
