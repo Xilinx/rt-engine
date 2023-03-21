@@ -197,7 +197,6 @@ public:
 
 	bool wait()
 	{
-		// http://stackoverflow.com/questions/2013181/gdb-causes-sem-wait-to-fail-with-eintr-error
 		int rc;
 		do {
 			rc = sem_wait(&m_sema);
