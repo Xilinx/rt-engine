@@ -453,8 +453,13 @@ void DpuXmodel::init_graph(const xir::Subgraph* subgraph) {
     for (const auto& child_name : child_order) { 
       auto child = std::find_if(children.begin(), children.end(),
           [&child_name](auto g) { return g->get_name() == child_name; });
-      layer_info layer(child_name); 
-      layer.set_workload((*child)->get_attr<uint64_t>("workload"));
+      if (child == children.end()) {
+        throw std::runtime_error("Error: missing child layer info in xmodel, please enable debug mode in xmodel compile");
+      }
+      layer_info layer(child_name);
+      if ((*child)->has_attr("workload")) {
+        layer.set_workload((*child)->get_attr<uint64_t>("workload"));
+      }
       layer.set_depth((*child)->get_depth());
       if ((*child)->has_attr("mc_code")) {
         auto& mc_code = (*child)->get_attr<std::vector<char> >("mc_code"); 
