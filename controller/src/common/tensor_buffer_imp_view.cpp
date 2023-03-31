@@ -91,6 +91,7 @@ std::pair<uint64_t, size_t> TensorBufferExtImpView::data_x(
   auto size_in_single_batch = tensor_->get_data_size() / batch;
   UNI_LOG_CHECK(offset_in_single_batch <= size_in_single_batch, VART_TENSOR_BUFFER_CHECK_ERROR);
   //CHECK_LE(offset_in_single_batch, size_in_single_batch);
+  int offset_in_single_batch_index = (int)offset_in_single_batch;
   auto size_left_in_single_batch =
       size_in_single_batch - offset_in_single_batch;
   CHECK_GE(size_in_single_batch, 0);
@@ -101,19 +102,19 @@ std::pair<uint64_t, size_t> TensorBufferExtImpView::data_x(
   if (backstore_batch) {
     if (phy) {
       std::tie(data_back, size_back) =
-          backstore_[buf_idx]->data_phy({0, offset_in_single_batch});
+          backstore_[buf_idx]->data_phy({0, offset_in_single_batch_index});
     } else {
       std::tie(data_back, size_back) =
-          backstore_[buf_idx]->data({0, offset_in_single_batch});
+          backstore_[buf_idx]->data({0, offset_in_single_batch_index});
     }
 
   } else {
     if (phy) {
       std::tie(data_back, size_back) =
-          backstore_[0]->data_phy({buf_idx, offset_in_single_batch});
+          backstore_[0]->data_phy({buf_idx, offset_in_single_batch_index});
     } else {
       std::tie(data_back, size_back) =
-          backstore_[0]->data({buf_idx, offset_in_single_batch});
+          backstore_[0]->data({buf_idx, offset_in_single_batch_index});
     }
   }
   //LOG_IF(INFO, ENV_PARAM(DEBUG_TENSOR_BUFFER_ALLOCATOR) >= 3)
