@@ -64,7 +64,7 @@ std::pair<uint64_t, size_t> TensorBufferExtImpView::data_x(
   //}
   //auto tensor = get_tensor();
   auto dims = tensor_->get_shape();
-  auto offset = 0;
+  size_t offset = 0;
 
   if (idx_orig.size()) {
     UNI_LOG_CHECK(dims.size() == idx_orig.size(), VART_TENSOR_BUFFER_DIMS_ERROR);
