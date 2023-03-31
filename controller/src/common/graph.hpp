@@ -43,7 +43,7 @@ class DpuXmodel  {
     uint64_t workload;
     uint64_t depth;
   };
-  using address_info = std::tuple<uint64_t,int32_t,std::string,int32_t>; 
+  using address_info = std::tuple<uint64_t,uint64_t,std::string,int32_t>;
   using address_info_debug = std::tuple<int8_t*,int32_t,std::string>; 
   struct layer_info {
     layer_info(std::string name) {

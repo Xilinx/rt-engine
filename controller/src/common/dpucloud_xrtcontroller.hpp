@@ -122,8 +122,8 @@ class DpuXrtCloudController
   std::vector<int32_t> getInputOffsets();
   //size_t getOutputBufferSize();
   std::vector<int32_t> getOutputOffsets();
-  void data_float2fix(int8_t* dataDst, float* dataSrc, int size, float scale);
-  void data_fix2float(float* dataDst, int8_t* dataSrc, int size, float scale);
+  void data_float2fix(int8_t* dataDst, float* dataSrc, size_t size, float scale);
+  void data_fix2float(float* dataDst, int8_t* dataSrc, size_t size, float scale);
   bool dump_mode_;
   std::string dump_folder_;
   bool debug_mode_;

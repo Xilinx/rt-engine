@@ -826,13 +826,13 @@ std::vector<vart::TensorBuffer*> DpuXrtCloudController::get_outputs_inner(vector
   return tbufs;
 }
 
-void DpuXrtCloudController::data_fix2float(float* dataDst, int8_t* dataSrc, int size, float scale) {
-  for (int i = 0; i < size; i++)
+void DpuXrtCloudController::data_fix2float(float* dataDst, int8_t* dataSrc, size_t size, float scale) {
+  for (size_t i = 0; i < size; i++)
     dataDst[i] = (float)(dataSrc[i]*scale);
 }
 
-void DpuXrtCloudController::data_float2fix(int8_t* dataDst, float* dataSrc, int size, float scale) {
-  for (int i = 0; i < size; i++)
+void DpuXrtCloudController::data_float2fix(int8_t* dataDst, float* dataSrc, size_t size, float scale) {
+  for (size_t i = 0; i < size; i++)
     dataDst[i] = (int8_t)(dataSrc[i]*scale);
 }
 void DpuXrtCloudController::free_buffers(std::vector<vart::TensorBuffer*> &tbufs) {
@@ -962,7 +962,7 @@ uint32_t DpuXrtCloudController::tensorbuffer_trans(std::vector<vart::TensorBuffe
   }
   bool tensor_find = false;
   for (unsigned i=0; i < tensors.size(); i++ ) {
-    int tensor_size = tensors[i]->get_element_num()/batch_size_;
+    size_t tensor_size = tensors[i]->get_element_num()/batch_size_;
     unsigned tensor_idx=0;
     vector<int> shape;
     shape = tensors[i]->get_shape();
