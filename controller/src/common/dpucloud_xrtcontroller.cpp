@@ -312,7 +312,6 @@ void DpuXrtCloudController::init_graph(vector<unsigned> hbmw, vector<unsigned> h
   auto handle = contexts_[0]->get_dev_kernel();
   //auto cu_base_addr = handle_->get_device_info().cu_base_addr;
   uint64_t fingerprint = model_->get_fingerprint();
-  xrt::set_read_range(handle, 0x10, 0x1f0);
   if(ENV_PARAM(XLNX_ENABLE_FINGERPRINT_CHECK)==1) {
     uint32_t low = read32_dpu_reg(handle, VERSION_CODE_L);
     uint32_t high = read32_dpu_reg(handle, VERSION_CODE_H);
