@@ -154,5 +154,6 @@ class DpuXrtCloudController
   tensorbufferPool pool;
   xrt::bo code_;
   int file_cnt_;
+  std::unordered_map<int, int> base_offset;
 };
 

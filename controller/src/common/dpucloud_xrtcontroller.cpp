@@ -69,6 +69,10 @@ DEF_ENV_PARAM(XLNX_ENABLE_FINGERPRINT_CHECK, "1");
 #define DPU_PROF_SIZE 0x8000
 DEF_ENV_PARAM(DEBUG_PROFILE, "0");
 DEF_ENV_PARAM(DEBUG_PROFILE_SIZE, "0");
+
+DEF_ENV_PARAM(DRAM_ADDRESS_MAPPING, "1")
+DEF_ENV_PARAM(DRAM_NUM_OF_BANK, "4")
+DEF_ENV_PARAM(DRAM_BANK_RANGE, "65536")
 /*
  * a contiguous memory block is allocated for each requests' I/O
  * layout:
@@ -306,7 +310,6 @@ xrt::bo  DpuXrtCloudController::get_xrt_bo(int size, unsigned hbm) {
   return reg0Mem;
 
 }
-
 void DpuXrtCloudController::init_graph(vector<unsigned> hbmw, vector<unsigned> hbmc, xir::Attrs* attrs ) {
 
   auto handle = contexts_[0]->get_dev_kernel();
@@ -480,46 +483,103 @@ void DpuXrtCloudController::init_graph(vector<unsigned> hbmw, vector<unsigned> h
          vector<uint64_t> addrs;
          LOG_IF(INFO, ENV_PARAM(DEBUG_DPU_CONTROLLER))
            << "generate new featuremap bo " << "cu_index: "<< bd.cu_id 
-           << ", device_id: " << bd.device_id
-           ;
+           << ", device_id: " << bd.device_id;
          auto hbm = get_hbmio();
+	 int b_c = 0;
+	 int le = 0;//ENV_PARAM(DRAM_BANK_RANGE);
+	 //auto s = workspace.second/le;
+	 if (ENV_PARAM(DRAM_ADDRESS_MAPPING)) {
+	   size_t range_per_bank = ENV_PARAM(DRAM_BANK_RANGE);
+	   if ( workspace.second > (int32_t)range_per_bank  ) {
+	     if (workspace.second%range_per_bank) {
+	       le = (std::floor(workspace.second/range_per_bank)+1)*range_per_bank;
+	     } else {
+	       le = workspace.second;
+	     }
+	   } else {
+	     le = range_per_bank;
+	   }
+	 } else {
+	   le = workspace.second;
+	 }
+         LOG_IF(INFO, ENV_PARAM(DEBUG_DPU_CONTROLLER))
+           <<"real featuremap size : " <<std::hex <<  le ;
          for (int i=0;i<batch_size_;i++) {
            void *ioPtr = NULL;
-           
-           //if (posix_memalign(&ioPtr, getpagesize(),workspace.second ))
-           //  throw std::bad_alloc();
            xrt::bo ioMem;
            if (hbm.size() >= (unsigned int)batch_size_) {
-             ioMem = get_xrt_bo(workspace.second, hbm[i]);
+             ioMem = get_xrt_bo(le, hbm[i]);
            } else {
-             ioMem = get_xrt_bo(workspace.second, hbm[0]);
+             ioMem = get_xrt_bo(le, hbm[0]);
            }
-           //TODO
-           //if (ioMem == NULLBO) {
-           //  if (hbm.size() >= (unsigned int)batch_size_) { 
-       	   //    // V3E has multipe hbms for featuremap, if bouding alloc fail, we can try to use other hbm
-           //    ioMem = get_xrt_bo(ioPtr, workspace.second, hbm);
-           //    if (ioMem == NULLBO)
-           //      throw std::bad_alloc();
-           //  } else {
-           //    throw std::bad_alloc();
-           //  
-           //  }
-           //}
-           //xclGetBOProperties(handle, ioMem, &p);
-           //bos_.emplace_back(ioMem);
-           handles.push_back(ioMem);  
+	   //uint64_t offset = 0;
+	   if (ENV_PARAM(DRAM_ADDRESS_MAPPING)) {
+	     size_t range_per_bank = ENV_PARAM(DRAM_BANK_RANGE);
+             int num_of_bank = ENV_PARAM(DRAM_NUM_OF_BANK);
+	     auto bank_id = (int)std::floor(ioMem.address()/range_per_bank)&(num_of_bank-1); //TODO bit 17 16
+             auto it= base_offset.find(bank_id);
+	     int c = 0;
+             if (it != base_offset.end()) {
+               b_c = it->second+1;
+	       xrt::bo io;
+	       int ref= std::floor(batch_size_/num_of_bank);
+	       if (bank_id < (batch_size_ - std::floor(batch_size_/num_of_bank)*num_of_bank))
+	          ref +=1;
+	       while (b_c > ref) {
+	         c++;
+	         bank_id += c;
+		 bool full = true;
+		 for ( int idx = 0 ; idx < num_of_bank; idx++) {
+                   auto itr0= base_offset.find(idx%num_of_bank);
+	           int ref0 = std::floor(batch_size_/num_of_bank);
+	           if (idx < (batch_size_ - std::floor(batch_size_/num_of_bank)*num_of_bank))
+	             ref0 +=1;
+                   if (itr0 != base_offset.end()) {
+		     if (base_offset.find(idx)->second != ref0) {
+		       full = false;
+		       break;
+		     }
+		   } else {
+	             full = false;
+		     break;
+		   }
+		 }
+		 if(!full) {
+                   xrt::bo place = get_xrt_bo(c*range_per_bank,hbm[0]);
+                   ioMem = get_xrt_bo(le, hbm[0]);
+	           bank_id = (int)std::floor(ioMem.address()/range_per_bank)&(num_of_bank-1); //TODO bit 17 16
+                   auto itr= base_offset.find(bank_id);
+	           ref = std::floor(batch_size_/num_of_bank);
+	           if ((bank_id%num_of_bank) < (batch_size_ - std::floor(batch_size_/num_of_bank)*num_of_bank))
+	             ref +=1;
+                   if (itr != base_offset.end()) {
+                     b_c = itr->second+1;
+	           } else {
+	             b_c = 1;
+	           }
+                 } else {
+	           break;
+	         }
+	       }
+             } else {
+	       b_c = 1;
+	     }
+	     base_offset[bank_id] = b_c;
+	   }
+           handles.push_back(ioMem);
            addrs.emplace_back(ioMem.address());
            LOG_IF(INFO, ENV_PARAM(DEBUG_DPU_CONTROLLER))
-             <<"Engine : " << i<<  " workspace reg_id: " 
+             <<"Engine : " <<std::hex <<  i<<  " workspace reg_id: " 
              << workspace.first << " size: " << workspace.second
              << " phy_addr: "
              << ioMem.address();
+
            free(ioPtr);
         }
         xrt_bo_share bo_s;
         bo_s.cnt = 1; 
         bo_s.bo_handles = handles;
+        //bo_s.bo_addrs = addrs;
         bo_s.reg_id=workspace.first;
 	reg2bos_.emplace(workspace.first, handles);
         workspace_addr.emplace_back(workspace.first, addrs);
