@@ -70,9 +70,10 @@ DEF_ENV_PARAM(XLNX_ENABLE_FINGERPRINT_CHECK, "1");
 DEF_ENV_PARAM(DEBUG_PROFILE, "0");
 DEF_ENV_PARAM(DEBUG_PROFILE_SIZE, "0");
 
-DEF_ENV_PARAM(DRAM_ADDRESS_MAPPING, "1")
-DEF_ENV_PARAM(DRAM_NUM_OF_BANK, "4")
-DEF_ENV_PARAM(DRAM_BANK_RANGE, "65536")
+DEF_ENV_PARAM(DRAM_ADDRESS_MAPPING_RT, "1")
+DEF_ENV_PARAM(DRAM_NUM_OF_BANK_RT, "4")
+DEF_ENV_PARAM(DRAM_BANK_RANGE_RT, "65536")
+DEF_ENV_PARAM(DRAM_REPEAT_RT, "100")
 /*
  * a contiguous memory block is allocated for each requests' I/O
  * layout:
@@ -107,7 +108,6 @@ struct bounding {
 };
 static std::mutex xrt_bo_mtx_;
 static std::vector<std::pair<bounding, xrt_bo_share>> xdpu_workspace_xrt_bo;
-
 static uint32_t read32_dpu_reg(xrt::kernel kernel, uint64_t offset) {
   uint32_t val;
   val = kernel.read_register(offset);
@@ -488,8 +488,8 @@ void DpuXrtCloudController::init_graph(vector<unsigned> hbmw, vector<unsigned> h
 	 int b_c = 0;
 	 int le = 0;//ENV_PARAM(DRAM_BANK_RANGE);
 	 //auto s = workspace.second/le;
-	 if (ENV_PARAM(DRAM_ADDRESS_MAPPING)) {
-	   size_t range_per_bank = ENV_PARAM(DRAM_BANK_RANGE);
+	 if (ENV_PARAM(DRAM_ADDRESS_MAPPING_RT)) {
+	   size_t range_per_bank = ENV_PARAM(DRAM_BANK_RANGE_RT);
 	   if ( workspace.second > (int32_t)range_per_bank  ) {
 	     if (workspace.second%range_per_bank) {
 	       le = (std::floor(workspace.second/range_per_bank)+1)*range_per_bank;
@@ -513,9 +513,10 @@ void DpuXrtCloudController::init_graph(vector<unsigned> hbmw, vector<unsigned> h
              ioMem = get_xrt_bo(le, hbm[0]);
            }
 	   //uint64_t offset = 0;
-	   if (ENV_PARAM(DRAM_ADDRESS_MAPPING)) {
-	     size_t range_per_bank = ENV_PARAM(DRAM_BANK_RANGE);
-             int num_of_bank = ENV_PARAM(DRAM_NUM_OF_BANK);
+	   if (ENV_PARAM(DRAM_ADDRESS_MAPPING_RT)) {
+	     //auto from_idx = xdpu_workspace_xrt_bo.size();
+	     size_t range_per_bank = ENV_PARAM(DRAM_BANK_RANGE_RT);
+             int num_of_bank = ENV_PARAM(DRAM_NUM_OF_BANK_RT);
 	     auto bank_id = (int)std::floor(ioMem.address()/range_per_bank)&(num_of_bank-1); //TODO bit 17 16
              auto it= base_offset.find(bank_id);
 	     int c = 0;
@@ -544,6 +545,8 @@ void DpuXrtCloudController::init_graph(vector<unsigned> hbmw, vector<unsigned> h
 		     break;
 		   }
 		 }
+		 if (c == ENV_PARAM(DRAM_REPEAT_RT))
+		   break; // too many times alloc, exit and use default
 		 if(!full) {
                    xrt::bo place = get_xrt_bo(c*range_per_bank,hbm[0]);
                    ioMem = get_xrt_bo(le, hbm[0]);
