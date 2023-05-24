@@ -213,7 +213,7 @@ XrtNativeContext::XrtNativeContext(XrtNativeDeviceHandle &handle) : handle_(hand
   auto hwctx = xrt::hw_context(device_, handle.get_uuid());
   kernel_ = xrt::kernel(hwctx, handle.get_device_info().kernel_name);
 
-  xrt::set_read_range(kernel_, 0x10, 0x1f0);
+  xrt::set_read_range(kernel_, 0x10, 0x500);
 }
 
 XrtNativeContext::~XrtNativeContext() {
