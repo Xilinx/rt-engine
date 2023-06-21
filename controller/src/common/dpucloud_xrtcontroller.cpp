@@ -741,7 +741,7 @@ std::vector<vart::TensorBuffer*> DpuXrtCloudController::create_tensorbuffer_for_
   if (isTensorsBatch) { // if create tensorbuffers in batch, tensor->get_shape()[0] is 1
       tbufs.reserve(tensors.size()*batch_size_);
   } else {
-      tbufs.reserve(tensors.size());
+      tbufs.resize(tensors.size());
   }
   while(iter !=xdpu_total_reg_map.end()) {
     int is_workspace=0;
@@ -780,6 +780,13 @@ std::vector<vart::TensorBuffer*> DpuXrtCloudController::create_tensorbuffer_for_
           }
           auto bufPhy = create_tensor_buffers_hbm(get_merged_io_tensors(iter->first),false, hbm,1);
           for (int i =0; i < tensor_batch; i++) { 
+            //std::vector<const xir::Tensor*> tensors_xir;//
+            //if (isInputs){
+            //  tensors_xir = model_->get_graph_input_tensors();
+            //}
+            //else
+            //  tensors_xir = model_->get_graph_output_tensors();
+
             for (unsigned int ts=0;ts< tensors.size(); ts++) {
               if(tensors[ts]->get_attr<int32_t>("reg_id") != (int32_t)iter->first) {
                 continue;
@@ -788,12 +795,11 @@ std::vector<vart::TensorBuffer*> DpuXrtCloudController::create_tensorbuffer_for_
               //dims[0] = dims[0]/tensor_batch;
               if (isTensorsBatch) { // if create tensorbuffers in batch, tensor->get_shape()[0] is 1
                 xir::Tensor *tensor;//
-	        if (isInputs){	
-		  tensor = const_cast<xir::Tensor*>(model_->get_graph_input_tensors()[ts]);
+                if (isInputs){
+                  tensor = const_cast<xir::Tensor*>(model_->get_graph_input_tensors()[ts]);
                 }
-		else
-		  tensor = const_cast<xir::Tensor*>(model_->get_graph_output_tensors()[ts]);
-                
+                else
+                  tensor = const_cast<xir::Tensor*>(model_->get_graph_output_tensors()[ts]);
                 std::vector<vart::TensorBuffer*> bufPhy_single;
                 bufPhy_single.emplace_back(bufPhy[i]);
                 //xir::Tensor *tensor = xir::Tensor::create(tensors[ts]->get_name(), dims, tensors[ts]->get_data_type()).release();
@@ -806,9 +812,16 @@ std::vector<vart::TensorBuffer*> DpuXrtCloudController::create_tensorbuffer_for_
                   bufsView_.push_back(std::move(buf));
                 }
               } else {
+                xir::Tensor *tensor = const_cast<xir::Tensor*>(tensors[ts]);
+                //for (unsigned int f=0; f< tensors_xir.size(); f++) {
+		//  if (tensors[f]->get_name() == tensors_xir[ts]->get_name()) {
+		//    tensor = const_cast<xir::Tensor*>(tensors[f]);
+		//    break;
+		//  }
+		//}
                 std::unique_ptr<vart::TensorBufferExtImpView> buf(
-                  new vart::TensorBufferExtImpView(tensors[ts], tensor_offset[ts], bufPhy));
-                tbufs.emplace_back(buf.get());
+                  new vart::TensorBufferExtImpView(tensor, tensor_offset[ts], bufPhy));
+                tbufs[ts] = buf.get();
                 {
                   std::unique_lock<std::mutex> lock(hwbufio_mtx_);
                   bufsView2Phys_.emplace(buf.get(), bufPhy);

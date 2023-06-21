@@ -368,10 +368,12 @@ void DpuXmodel::init_graph(const xir::Subgraph* subgraph) {
   //xdpu_total_in_size=0;
   //xdpu_total_out_size=0;
   graph_intensors_.reserve(input_tensors.size());
+  xdpu_io_input_offset.resize(input_tensors.size());
+  int cnt = 0;
   for (auto &in_tensor : input_tensors) {
     auto out = find_tensor(in_tensor,subgraph_,true);
     auto ddr_addr = out->get_attr<std::int32_t>("ddr_addr");
-    xdpu_io_input_offset.emplace_back(ddr_addr);
+    xdpu_io_input_offset[cnt] = ddr_addr;
     //input_scales_.emplace(in_tensor->get_name(),pow(2,in_tensor->get_attr<std::int32_t>("fix_point")));
     input_scales_.emplace_back(pow(2,in_tensor->get_attr<std::int32_t>("fix_point")));
     auto dims = in_tensor->get_shape();
@@ -389,6 +391,7 @@ void DpuXmodel::init_graph(const xir::Subgraph* subgraph) {
     tensor->set_attrs(std::move(attrs));
     input_regid.emplace_back(out->get_attr<std::int32_t>("reg_id"));
     graph_intensors_.emplace_back(std::move(tensor));
+    cnt++;
     //tensors_.emplace_back(std::move(tensor));
     //xdpu_total_in_size += tensor->get_element_num(); 
 
@@ -397,10 +400,12 @@ void DpuXmodel::init_graph(const xir::Subgraph* subgraph) {
 
   // Get output offset
   graph_outtensors_.reserve(output_tensors.size());
+  xdpu_io_output_offset.resize(output_tensors.size());
+  cnt = 0;
   for(auto &out_tensor : output_tensors) {
     auto out = find_tensor(out_tensor,subgraph_,false);
     auto ddr_addr = out->get_attr<std::int32_t>("ddr_addr");
-    xdpu_io_output_offset.emplace_back(ddr_addr);
+    xdpu_io_output_offset[cnt] = ddr_addr;
     //output_scales_.emplace(out_tensor->get_name(),pow(2,(-1)*out_tensor->get_attr<std::int32_t>("fix_point")));
     output_scales_.emplace_back(pow(2,(-1)*out_tensor->get_attr<std::int32_t>("fix_point")));
     output_dims.emplace_back(out->get_shape());
@@ -417,6 +422,7 @@ void DpuXmodel::init_graph(const xir::Subgraph* subgraph) {
     //auto tensor = out;
     output_regid.emplace_back(out->get_attr<std::int32_t>("reg_id"));
     graph_outtensors_.emplace_back(std::move(tensor));
+    cnt++;
     //xdpu_total_out_size += tensor->get_element_num(); 
 
   }
