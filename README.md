@@ -113,3 +113,5 @@ For rt-engine Testing (You want everything from prebuilt conda packages)
 ```
 conda create -n rt-engine python=3.6 rt-engine -c defaults -c conda-forge/label/gcc7 -c http://artifactory/artifactory/vitis-ai
 ```
+
+AMD is not affiliated with nor distributing the Anaconda software and that the user's installation/use of Anaconda is solely governed by the applicable Anaconda license.
